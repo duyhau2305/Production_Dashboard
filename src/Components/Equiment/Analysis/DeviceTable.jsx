@@ -1,39 +1,79 @@
-const DeviceTable = ({ downtimeData, productionData, employeeData }) => {
+const DeviceTable = ({ downtimeData, telemetryData, productionData, employeeData }) => {
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`; // Định dạng dd-mm-yyyy
   };
+  
+  const formatTimeToGMT7 = (isoString) => {
+    const date = new Date(isoString);
+    const localDate = new Date(date.getTime());
 
-  const formatTime = (time) => time || 'N/A';
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const year = localDate.getFullYear();
+    const hours = String(localDate.getHours()).padStart(2, '0');
+    const minutes = String(localDate.getMinutes()).padStart(2, '0');
+    const seconds = String(localDate.getSeconds()).padStart(2, '0');
+
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+  };
 
   const calculateDuration = (startTime, endTime) => {
-    const [startHour, startMinute, startSecond] = startTime.split(':').map(Number);
-    const [endHour, endMinute, endSecond] = endTime.split(':').map(Number);
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
 
-    let startTotalSeconds = startHour * 3600 + startMinute * 60 + startSecond;
-    let endTotalSeconds = endHour * 3600 + endMinute * 60 + endSecond;
+    let startTotalMinutes = startHour * 60 + startMinute;
+    let endTotalMinutes = endHour * 60 + endMinute;
 
-    if (endTotalSeconds < startTotalSeconds) {
-      endTotalSeconds += 24 * 3600;
+    if (endTotalMinutes < startTotalMinutes) {
+      endTotalMinutes += 24 * 60;
     }
 
-    const totalSeconds = endTotalSeconds - startTotalSeconds;
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
+    const totalMinutes = endTotalMinutes - startTotalMinutes;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
 
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
 
-  // Hàm lấy thông tin nhân viên dựa trên deviceId và ngày
-  const getEmployeeName = (deviceName, date) => {
-    const employeeEntry = employeeData.find(
-      (entry) =>
-        entry.deviceName === deviceName && formatDate(entry.date) === formatDate(date)
+  const getEmployeeName = (date) => {
+    const formattedDate = formatDate(date); // Chuẩn hóa ngày thành yyyy-mm-dd
+  
+    // Tìm bản ghi khớp với ngày trong employeeData
+    const employeeEntry = employeeData.find((entry) => {
+      const entryDate = formatDate(entry.date); // Chuẩn hóa ngày trong employeeData
+      return entryDate === formattedDate;
+    });
+  
+    // Kiểm tra nếu tìm thấy bản ghi và có nhân viên trong ca làm việc
+    if (employeeEntry && employeeEntry.shifts.length > 0) {
+      return employeeEntry.shifts[0].employeeName.join(', ');
+    }
+  
+    return 'N/A'; // Nếu không có bản ghi khớp, trả về 'N/A'
+  };
+  
+ 
+
+  const getDowntimeInfoById = (intervalId) => {
+    const matchingDowntime = downtimeData.find((item) =>
+      item.interval.some((downtimeInterval) => downtimeInterval._id === intervalId)
     );
 
-    // Kiểm tra xem có nhân viên không và trả về tên hoặc 'N/A'
-    return employeeEntry?.shifts[0]?.employeeName.join(', ') || 'N/A';
+    if (matchingDowntime) {
+      const matchedInterval = matchingDowntime.interval.find(
+        (downtimeInterval) => downtimeInterval._id === intervalId
+      );
+      return {
+        reason: matchingDowntime.reasonName || 'De nghi khai bao',
+        reportedAt: formatTimeToGMT7(matchingDowntime.createdAt),
+      };
+    }
+
+    return { reason: 'Chưa khai báo', reportedAt: 'De nghi khai bao' };
   };
 
   return (
@@ -48,31 +88,37 @@ const DeviceTable = ({ downtimeData, productionData, employeeData }) => {
             <th className="border px-4 py-2 text-xs">Thời gian kết thúc</th>
             <th className="border px-4 py-2 text-xs">Thời lượng</th>
             <th className="border px-4 py-2 text-xs">Lý do</th>
+            <th className="border px-4 py-2 text-xs">Thời gian khai báo</th>
             <th className="border px-4 py-2 text-xs">Nhân viên vận hành</th>
           </tr>
         </thead>
         <tbody>
-          {downtimeData.flatMap((item, itemIndex) =>
-            item.interval.map((interval, intervalIndex) => (
-              <tr key={`${item._id}-${intervalIndex}`}>
-                <td className="border px-4 py-2">
-                  {itemIndex * item.interval.length + intervalIndex + 1}
-                </td>
-                <td className="border px-4 py-2">{formatDate(item.date)}</td>
-                <td className="border px-4 py-2">{formatTime(interval.startTime)}</td>
-                <td className="border px-4 py-2">{formatTime(interval.endTime)}</td>
+          {telemetryData.map((interval, index) => {
+            const { reason, reportedAt } = getDowntimeInfoById(interval._id);
+
+            return (
+              <tr key={interval._id}>
+                <td className="border px-4 py-2">{index + 1}</td>
+                <td className="border px-4 py-2">{formatDate(interval.date)}</td>
+                <td className="border px-4 py-2">{interval.startTime}</td>
+                <td className="border px-4 py-2">{interval.endTime}</td>
                 <td className="border px-4 py-2">
                   {calculateDuration(interval.startTime, interval.endTime)}
                 </td>
-                <td className="border px-4 py-2">{item.reasonName}</td>
+                <td className="border px-4 py-2">{reason}</td>
+                <td className="border px-4 py-2">{reportedAt}</td>
                 <td className="border px-4 py-2">
-                  {getEmployeeName(item.deviceName, item.date)}
+                  {getEmployeeName(interval.date)}
                 </td>
               </tr>
-            ))
-          )}
+            );
+          })}
         </tbody>
       </table>
+  
+
+
+
 
       <h3 className="mt-6 font-semibold">Thống kê sản xuất</h3>
       <table className="min-w-full bg-white border border-gray-200 mt-4">
@@ -92,7 +138,7 @@ const DeviceTable = ({ downtimeData, productionData, employeeData }) => {
           </tr>
         </thead>
         <tbody>
-          {productionData.map((item, index) => ( 
+          {productionData.map((item, index) => (
             <tr key={index}>
               <td className="border px-4 py-2">{index + 1}</td>
               <td className="border px-4 py-2">{formatDate(item.date)}</td>

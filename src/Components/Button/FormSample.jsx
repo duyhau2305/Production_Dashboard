@@ -16,7 +16,7 @@ function FormSample({ onClick, label = "Tải Mẫu", href }) {
   return (
     <div>
       <button
-        className="bg-green-400 text-sm text-white px-3 py-2 rounded-md flex items-center hover:bg-green-600 transition-colors"
+        className="bg-[#080f4c] text-sm text-white px-3 py-2 rounded-md flex items-center hover:bg-blue-700 transition-colors"
         onClick={handleDownload}
       >
         <FiDownload className="mr-2" />
