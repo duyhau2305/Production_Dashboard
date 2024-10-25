@@ -8,7 +8,7 @@ const getHeaderColor = (status) => {
   if (status === 'Chạy') return '#60ec60';  // Green for Active
   if (status === 'Chờ') return '#f8f867';   // Yellow for Idle
   if (status === 'Cài Đặt') return '#f8f867';  // Yellow for Set up
-  if (status === 'Lỗi') return '#ff3333';       // Red for Error
+  if (status === 'Dừng') return '#ff3333';       // Red for Error
   if (status === 'Off') return '#f7f5f5';   // Grey for Off
   return 'bg-gray-500';                     // Gray for other statuses
 };
@@ -17,7 +17,7 @@ const getHeaderColor = (status) => {
 const getSignalLightColors = (status) => {
   if (status === 'Chạy') return { red: 'white', yellow: 'white', green: '#13a113' };
   if (status === 'Chờ' || status === 'Cài Đặt') return { red: 'white', yellow: '#f4f41e', green: 'white' };
-  if (status === 'Lỗi') return { red: '#e60000', yellow: 'white', green: 'white' };
+  if (status === 'Dừng') return { red: '#e60000', yellow: 'white', green: 'white' };
   if (status === 'Off') return { red: 'white', yellow: 'white', green: 'white' };
   return { red: 'white', yellow: 'white', green: 'white' }; // Default case
 };
@@ -45,12 +45,12 @@ const MachineCard = ({ machine }) => {
       <div className={`mb-1 flex flex-col items-center justify-center ${blinkClass}`} style={{ backgroundColor: headerColor }}>
         {/* Machine Name */}
         <div className={`text-[#122a35] bg-black-rgba w-full flex justify-center py-1 ${blinkClass}`}> 
-          <h2 className="text-5xl font-bold text-[#375BA9]">CNC {machine.id}</h2>
+          <h2 className="text-4xl font-bold text-[#375BA9]">{machine.deviceName}</h2>
         </div>
 
         {/* Machine Time and Status */}
         <div className="text-center mt-3">
-          <span className="text-2xl font-bold">{machine.time} - {machine.status}</span>
+          <span className="text-2xl font-bold">{machine.elapsedTime} - {machine.status}</span>
         </div>
       </div>
 
@@ -69,7 +69,7 @@ const MachineCard = ({ machine }) => {
         {/* OEE Circular Progress */}
         <div className="relative ml-2 " style={{ width: 200, height: 200 }}>
           <CircularProgressbar
-            value={machine.oee}
+            value={machine.runtimePercentage}
             styles={buildStyles({
               pathColor: '#0782f4',
               textColor: '#122a35',
@@ -80,11 +80,11 @@ const MachineCard = ({ machine }) => {
 
           {/* OEE Value */}
           <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-center w-full h-full">
-            <span className="text-4xl font-bold mb-2">{`${machine.oee}%`}</span>
+            <span className="text-4xl font-bold mb-2">{`${machine.runtimePercentage}%`}</span>
             <span className=" text-sm text-wrap font-bold">{changeIcon} {Math.abs(changePercent).toFixed(2)}% hôm qua</span>
           </div>
           <div className="  absolute mt-2 font-bold text-xl -translate-x-1/4 ml-3 ">
-            {machine.employee}
+            {machine.employeeName}
       </div>
         </div>
         
@@ -95,10 +95,10 @@ const MachineCard = ({ machine }) => {
       {/* 3. Time Labels Section */}
       <div className="flex justify-between bg-white text-black px-2 py-1 ">
         <span className="text-sm">
-          <span>8AM</span>-<span>5PM</span>
+          <span>{machine.startTime}</span>-<span>{machine.endTime}</span>
         </span>
         <span className={`text-sm -ml-1 `}>
-        Total Run: {machine.totalTimeToday} giờ
+        Total Run: {machine.totalTimeToday}
         </span>
       </div>
     </div>

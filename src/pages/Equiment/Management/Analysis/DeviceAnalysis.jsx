@@ -72,6 +72,7 @@ useEffect(() => {
     ]
       console.log(response.data.stopTime)
       setProductionData(newData)
+      console.log(response)
 
     } catch (error) {
       console.log(error)
@@ -247,9 +248,6 @@ const handleDeviceSelect = (deviceId) => {
     }
   };
   
-  
-  
-
   const aggregateDowntimeHoursByReason = (data) => {
     const reasonHours = data.reduce((acc, item) => {
       const reason = item.reasonName;
