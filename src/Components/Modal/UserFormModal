@@ -1,0 +1,61 @@
+// UserFormModal.jsx
+import React from 'react';
+import Modal from 'react-modal';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+
+Modal.setAppElement('#root');
+
+const UserFormModal = ({ isOpen, onClose, onSave, formFields, contentLabel, initialData }) => {
+  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+    resolver: yupResolver(
+      formFields.reduce((schema, field) => ({
+        ...schema,
+        [field.name]: field.validation,
+      }), {})
+    ),
+    defaultValues: initialData,
+  });
+
+  const onSubmit = (data) => {
+    onSave(data);
+    reset(); // Reset the form after submission
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onRequestClose={onClose}
+      contentLabel={contentLabel}
+      className="modal-content"
+      overlayClassName="modal-overlay"
+    >
+      <h2>{contentLabel}</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {formFields.map((field) => (
+          <div key={field.name} className="relative">
+            <label className="block mb-2">{field.label}</label>
+            <input
+              type={field.type}
+              {...register(field.name)}
+              disabled={field.disabled}
+              className={`w-full p-2 border rounded ${errors[field.name] ? 'border-red-500' : 'border-gray-300'}`}
+            />
+            {field.extra && (
+              <div className="absolute inset-y-0 right-3 flex items-center">
+                {field.extra}
+              </div>
+            )}
+            {errors[field.name] && <p className="text-red-500 text-sm mt-1">{errors[field.name].message}</p>}
+          </div>
+        ))}
+        <div className="flex justify-end space-x-4">
+          <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-500 text-white rounded">Hủy</button>
+          <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded">Lưu</button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
+export default UserFormModal;
