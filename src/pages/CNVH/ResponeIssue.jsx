@@ -28,8 +28,42 @@ const ResponeIssue = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHelpTimerModalOpen, setIsHelpTimerModalOpen] = useState(false);
   const [declaredDowntimes, setDeclaredDowntimes] = useState([]); // Lưu downtime đã khai báo
-  
+  const [areas, setAreas] = useState([]);
+  const [devices, setDevices] = useState([]);
   const [elapsedTime, setElapsedTime] = useState("00:00");
+  useEffect(() => {
+    fetchAreas();
+    fetchDevices();
+  }, []);
+
+  const fetchAreas = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/areas`);
+      setAreas(response.data);
+    } catch (error) {
+      console.error('Failed to fetch areas:', error);
+    }
+  };
+
+  const fetchDevices = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/device`);
+      setDevices(response.data);
+    } catch (error) {
+      console.error('Failed to fetch devices:', error);
+    }
+  };
+
+  // Xử lý khi người dùng chọn ngày
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    dispatch(setMachineData({ selectedDate: newDate, selectedMachine }));
+  };
+
+  // Xử lý khi người dùng chọn thiết bị
+  const handleMachineSelect = (device) => {
+    dispatch(setMachineData({ selectedDate, selectedMachine: device }));
+  };
 
   useEffect(() => {
     if (selectedMachine) {
@@ -84,7 +118,7 @@ const ResponeIssue = () => {
     }
   }, [isHelpTimerModalOpen]);
 
-  const handleBackClick = () => navigate(-1);
+  const handleBackClick = () => navigate('/dashboard/mobile');
 
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
@@ -211,7 +245,7 @@ const ResponeIssue = () => {
   
   
   return (
-    <div className="h-screen bg-gray-100">
+    <div className="h-screen ">
       <div className="flex justify-between items-center bg-gradient-to-r from-blue-600 to-sky-500">
         <h1 className="text-5xl text-white font-bold py-8 flex-1 text-center">
           <span className="cursor-pointer" onClick={handleBackClick}>
@@ -222,74 +256,92 @@ const ResponeIssue = () => {
       </div>
 
       <div className="grid grid-cols-2 p-4 gap-4">
-        <div>
+      <div>
           <h2 className="text-3xl font-bold">Ngày:</h2>
           <input
             type="date"
             value={selectedDate}
-            readOnly
+            onChange={handleDateChange}
             className="w-full p-4 text-xl border rounded-lg"
           />
         </div>
 
         <div>
           <h2 className="text-3xl font-bold">Thiết bị:</h2>
-          {selectedMachine ? (
-            <InfoCard machine={selectedMachine.deviceName} />
-          ) : (
-            <p className="text-red-500 text-xl">Chưa chọn thiết bị</p>
-          )}
+          
+          <select
+            value={selectedMachine?.deviceId || ''}
+            onChange={(e) => {
+              const selectedDevice = devices.find((d) => d.deviceId === e.target.value);
+              handleMachineSelect(selectedDevice);
+            }}
+            className="w-full p-4 text-xl border rounded-lg"
+          >
+            <option value="">Chọn thiết bị</option>
+            {devices.map((device) => (
+              <option key={device.deviceId} value={device.deviceId}>
+                {device.deviceName}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="p-4">
-  <h2 className="text-3xl font-bold text-center mb-4">Danh sách các khoảng thời gian ngừng máy:</h2>
-  {telemetryData.map((interval, index) => {
-    const [startHour, startMinute] = interval.startTime.split(':').map(Number);
-    const [endHour, endMinute] = interval.endTime.split(':').map(Number);
+      <h2 className="text-3xl font-bold text-center mb-4">Danh sách các khoảng thời gian ngừng máy:</h2>
+      {telemetryData.map((interval, index) => {
+  const [startHour, startMinute, startSecond = 0] = interval.startTime.split(':').map(Number);
+  const [endHour, endMinute, endSecond = 0] = interval.endTime.split(':').map(Number);
 
-    let totalMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-    if (totalMinutes < 0) totalMinutes += 24 * 60; // Xử lý qua ngày
+  let startTotalSeconds = startHour * 3600 + startMinute * 60 + startSecond;
+  let endTotalSeconds = endHour * 3600 + endMinute * 60 + endSecond;
 
-    const isDeclared = isIntervalDeclared(interval); // Kiểm tra đã khai báo chưa
-    const reasonName = isDeclared ? getReasonName(interval) : 'Chưa có lý do';
+  // Tính tổng giây và xử lý qua ngày nếu cần
+  let totalSeconds = endTotalSeconds - startTotalSeconds;
+  if (totalSeconds < 0) totalSeconds += 24 * 3600; // Qua ngày cộng thêm 24 giờ
 
-    const isSelected = selectedDiv.includes(index);
+  // Chuyển đổi tổng giây thành giờ, phút và giây
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
-    return (
-      <div
-        key={interval._id}
-        className={`transition-transform transform border-4 rounded-3xl grid grid-cols-2 py-8 mt-4 px-8 w-[90%] justify-center items-center ml-8 gap-10 text-4xl cursor-pointer ${
-          isDeclared ? 'bg-gray-300' : 'border-red-500'
-        } ${isSelected ? 'scale-105 bg-green-200 border-green-500' : ''}`}
-        onClick={() => handleTimeClick(interval, index)}
-        style={{ boxShadow: `inset 0px 10px 40px 10px rgba(255, 0, 0, 0.8)` }}
-      >
-        <span className="col-span-1 flex ml-2">Trong khoảng</span>
-        <span className="col-span-1 flex">{`${interval.startTime} - ${interval.endTime}`}</span>
-        <span className="col-span-1 flex ml-2">Thời lượng</span>
-        <span className="col-span-1 flex">{`${Math.floor(totalMinutes / 60)} giờ ${totalMinutes % 60} phút`}</span>
-        <span className="col-span-1 flex">
-          {isDeclared ? 'Đã khai báo' : 'Chưa khai báo'}
+  const isDeclared = isIntervalDeclared(interval); // Kiểm tra đã khai báo chưa
+  const reasonName = isDeclared ? getReasonName(interval) : 'Chưa có lý do';
+
+  const isSelected = selectedDiv.includes(index);
+
+  return (
+    <div
+      key={interval._id}
+      className={`transition-transform transform border-4 rounded-3xl grid grid-cols-2 py-8 mt-4 px-8 w-[90%] justify-center items-center ml-8 gap-10 text-4xl cursor-pointer ${
+        isDeclared ? 'bg-gray-300' : 'border-red-500'
+      } ${isSelected ? 'scale-105 bg-green-200 border-green-500' : ''}`}
+      onClick={() => handleTimeClick(interval, index)}
+      style={{ boxShadow: `inset 0px 10px 40px 10px rgba(255, 0, 0, 0.8)` }}
+    >
+      <span className="col-span-1 flex ml-2">Trong khoảng</span>
+      <span className="col-span-1 flex">{`${interval.startTime} - ${interval.endTime}`}</span>
+      <span className="col-span-1 flex ml-2">Thời lượng</span>
+      <span className="col-span-1 flex">{`${hours} giờ ${minutes} phút ${seconds} giây`}</span>
+      <span className="col-span-1 flex">
+        {isDeclared ? 'Đã khai báo' : 'Chưa khai báo'}
+      </span>
+      {isDeclared && (
+        <span className="col-span-1 flex text-blue-600 font-semibold">
+          {reasonName}
         </span>
-        {isDeclared && (
-          <span className="col-span-1 flex text-blue-600 font-semibold">
-            {reasonName}
-          </span>
-        )}
-      </div>
-    );
-  })}
+      )}
+    </div>
+  );
+})}
+
 </div>
 
-
-
-
-      <div className="fixed bottom-0 w-full p-4 bg-transperent flex flex-col items-center">
+      <div className="fixed bottom-0 w-[90%] ml-8 p-6 bg-transperent flex flex-col items-center">
         <button
           onClick={handleResponse}
           disabled={!isResponseEnabled}
-          className={`w-full py-4 mb-4 text-xl font-bold rounded-lg ${
+          className={`w-full py-6 mb-4 text-4xl font-bold rounded-lg ${
             isResponseEnabled ? 'bg-blue-600 text-white' : 'bg-gray-400'
           }`}
         >
@@ -298,7 +350,7 @@ const ResponeIssue = () => {
 
         <button
           onClick={handleOpenModal}
-          className="w-full py-4 text-xl font-bold rounded-lg bg-red-600 text-white"
+          className="w-full py-6 text-4xl font-bold rounded-lg bg-red-600 text-white"
         >
           Gọi trợ giúp
         </button>

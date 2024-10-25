@@ -8,6 +8,7 @@ import { toast } from 'react-toastify';
 
 const CustomUpdateModal = ({ open, onClose, onCancel, selectedDates, setSelectedMachines, setSelectedDates, selectedMachines }) => {
   const [taskData, setTaskData] = useState({}); // Dữ liệu nhiệm vụ sản xuất lưu theo ngày
+  const [tasks, setTasks] = useState([]); // Quản lý trạng thái tasks
   
 
   // Hàm xử lý khi lưu nhiệm vụ cùng ngày đã chọn

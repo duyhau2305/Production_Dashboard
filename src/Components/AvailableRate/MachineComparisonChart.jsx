@@ -9,55 +9,46 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  
 
-  // Format date for API
-  const formatDateForAPI = (date) => moment(date).format('YYYY-MM-DD');
-  
+  // Hàm đảm bảo `date` là đối tượng moment và format nó
+  const formatDateForAPI = (date) => {
+    const momentDate = moment.isMoment(date) ? date : moment(date);
+    return momentDate.isValid() ? momentDate.format('YYYY-MM-DD') : '';
+  };
+
   // Fetch machine data from API
   const fetchMachineData = async () => {
     setLoading(true);
     setError(null);
+
     try {
       const formattedStartDate = formatDateForAPI(selectedDate.start);
       const formattedEndDate = formatDateForAPI(selectedDate.end);
-      console.log(formattedStartDate)
-      console.log(formattedEndDate)
-      
+
+      if (!formattedStartDate || !formattedEndDate) {
+        throw new Error('Ngày bắt đầu hoặc ngày kết thúc không hợp lệ.');
+      }
+
       const fetchPromises = machineType.map(async (machine) => {
-        const deviceCode = machine.deviceCode;
-        console.log(deviceId)
-        const response = await axios.get(`${apiUrl}/telemetry?deviceId=${deviceId}&startDate=${formattedStartDate}&endDate=${formattedEndDate}`);
-        console.log("this is response")
-        console.log(response)
-        const fetchedData = response.data;
+        const { deviceId, deviceName } = machine;
 
-        let runningTime = 0;
-        if (fetchedData && fetchedData.length > 0) {
-          fetchedData[0].intervals.forEach(interval => {
-            if (interval.status === 'Chạy') {
-              const startTime = moment(interval.startTime, "HH:mm");
-              const endTime = moment(interval.endTime, "HH:mm");
-              runningTime += endTime.diff(startTime, 'minutes');
-            }
-          });
-        }
+        const response = await axios.get(
+          `${apiUrl}/totaltop?deviceId=${deviceId}&startDate=${formattedStartDate}&endDate=${formattedEndDate}`
+        );
 
-        const percentage = (runningTime / 1440) * 100; 
+        const runtimePercentage = parseFloat(response.data.runtime || '0'); // Gán 0 nếu không có dữ liệu
 
         return {
-          machine: machine.deviceName,
-          percentage: percentage > 0 ? percentage : null // Keep as null if no running time
+          machine: deviceName,
+          percentage: runtimePercentage > 0 ? runtimePercentage : 0,
         };
       });
 
       const results = await Promise.all(fetchPromises);
-      const filteredResults = results.filter(result => result.percentage !== null); // Filter out machines with no data
-
-      setData(filteredResults);
+      setData(results);
     } catch (error) {
-      console.error("Error fetching machine data:", error);
-      setError("Error fetching machine data.");
+      console.error('Error fetching machine data:', error);
+      setError('Có lỗi xảy ra khi lấy dữ liệu.');
       setData([]);
     } finally {
       setLoading(false);
@@ -65,52 +56,53 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
   };
 
   useEffect(() => {
-    fetchMachineData(); // Fetch data when component mounts or selectedDate/machineType changes
-  }, [selectedDate, machineType]); // Depend on selectedDate and machineType
+    fetchMachineData(); // Gọi API khi component mount hoặc khi selectedDate/machineType thay đổi
+  }, [selectedDate, machineType]);
 
   useEffect(() => {
     const svg = d3.select(svgRef.current);
-    svg.selectAll('*').remove(); // Clear previous chart
+    svg.selectAll('*').remove(); // Xóa biểu đồ cũ
 
     const width = svgRef.current.clientWidth || 500;
     const height = 300;
-    const margin = { top: 20, right: 20, bottom: 50, left: 40 };
+    const margin = { top: 20, right: 20, bottom: 50, left: 60 };
 
-    if (data.length === 0) return; // Don't draw if no data
+    if (data.length === 0) return; // Không vẽ nếu không có dữ liệu
 
     const xScale = d3
       .scaleBand()
-      .domain(data.map(d => d.machine))
+      .domain(data.map((d) => d.machine))
       .range([margin.left, width - margin.right])
-      .padding(0.1);
+      .padding(0.2);
 
     const yScale = d3
       .scaleLinear()
-      .domain([0, 100]) // Percentage range
+      .domain([0, 100])
       .range([height - margin.bottom, margin.top]);
 
-    // Draw X axis
+    // Vẽ trục X
     svg
       .append('g')
       .attr('transform', `translate(0,${height - margin.bottom})`)
       .call(d3.axisBottom(xScale));
 
-    // Draw Y axis with '%' symbol
-    svg.append('g')
+    // Vẽ trục Y với ký hiệu '%'
+    svg
+      .append('g')
       .attr('transform', `translate(${margin.left},0)`)
-      .call(d3.axisLeft(yScale).ticks(5).tickFormat(d => `${d}%`));
+      .call(d3.axisLeft(yScale).ticks(5).tickFormat((d) => `${d}%`));
 
-    // Draw bars for machines with data
+    // Vẽ các thanh biểu đồ
     svg
       .selectAll('.bar')
       .data(data)
       .enter()
       .append('rect')
       .attr('class', 'bar')
-      .attr('x', d => xScale(d.machine))
-      .attr('y', d => yScale(d.percentage))
+      .attr('x', (d) => xScale(d.machine))
+      .attr('y', (d) => yScale(d.percentage))
       .attr('width', xScale.bandwidth())
-      .attr('height', d => height - margin.bottom - yScale(d.percentage))
+      .attr('height', (d) => height - margin.bottom - yScale(d.percentage))
       .attr('fill', '#4aea4a')
       .on('mouseover', (event, d) => {
         d3.select('body')
@@ -122,14 +114,15 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
           .style('padding', '5px')
           .style('border-radius', '4px')
           .style('display', 'block')
-          .html(`Máy: <b>${d.machine}</b><br>Tỷ lệ: ${d.percentage.toFixed(2)}%`)
+          .html(
+            `Máy: <b>${d.machine}</b><br>Tỷ lệ: ${d.percentage.toFixed(2)}%`
+          )
           .style('left', `${event.pageX + 10}px`)
           .style('top', `${event.pageY - 20}px`);
       })
       .on('mouseout', () => {
         d3.select('body').select('div.tooltip').remove();
       });
-
   }, [data]);
 
   return (
@@ -138,7 +131,7 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
         <h3 className="text-lg font-bold">Tỷ lệ máy chạy</h3>
       </header>
 
-      {loading && <p>Loading data...</p>}
+      {loading && <p>Đang tải dữ liệu...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
       <svg ref={svgRef} width="100%" height="300"></svg>

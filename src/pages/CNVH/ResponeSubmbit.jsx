@@ -10,8 +10,10 @@ const ResponeSubmit = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  const { selectedIntervals, selectedMachine, selectedDate } = useSelector((state) => state.interval);
-  console.log(selectedIntervals)
+  const { selectedIntervals, selectedMachine, selectedDate } = useSelector(
+    (state) => state.interval
+  );
+
   const [filteredReasons, setFilteredReasons] = useState([]);
   const [selectedReason, setSelectedReason] = useState(null);
   const [isResponseEnabled, setIsResponseEnabled] = useState(false);
@@ -25,7 +27,7 @@ const ResponeSubmit = () => {
         );
         setFilteredReasons(reasons);
       })
-      .catch((error) => toast.error('Có lỗi xảy ra khi lấy dữ liệu.'));
+      .catch(() => toast.error('Có lỗi xảy ra khi lấy dữ liệu.'));
   }, [selectedMachine]);
 
   const handleReasonClick = (reason) => {
@@ -33,12 +35,24 @@ const ResponeSubmit = () => {
     setIsResponseEnabled(true);
   };
 
+  const handleCancel = () => {
+    if (!selectedReason) {
+      // Trở về trang trước nếu chưa chọn lý do
+      navigate(-1);
+    } else {
+      // Hủy bỏ lựa chọn lý do nếu đã chọn
+      setSelectedReason(null);
+      setIsResponseEnabled(false);
+      toast.info('Lý do đã được hủy.');
+    }
+  };
+
   const handleResponse = async () => {
     if (!selectedReason || !selectedIntervals || selectedIntervals.length === 0) {
       toast.error('Vui lòng chọn ít nhất một khoảng thời gian và một lý do.');
       return;
     }
-  
+
     try {
       const payloads = selectedIntervals.map((interval) => ({
         deviceId: selectedMachine.deviceId,
@@ -53,15 +67,15 @@ const ResponeSubmit = () => {
         },
         reasonName: selectedReason.reasonName,
       }));
-  
+
       console.log('Payloads:', payloads);
-  
+
       await Promise.all(
         payloads.map((payload) =>
           axios.post(`${import.meta.env.VITE_API_BASE_URL}/downtime`, payload)
         )
       );
-  
+
       selectedIntervals.forEach((interval) => {
         dispatch(
           declareInterval({
@@ -70,7 +84,7 @@ const ResponeSubmit = () => {
           })
         );
       });
-  
+
       toast.success('Phản hồi thành công!');
       setTimeout(() => navigate('/dashboard/mobile/issue'), 500);
     } catch (error) {
@@ -78,16 +92,36 @@ const ResponeSubmit = () => {
       toast.error('Có lỗi xảy ra khi gửi phản hồi.');
     }
   };
-  
 
   return (
-    <div>
+    <div className="">
+      <div className="flex justify-between items-center bg-gradient-to-r from-blue-600 to-sky-500">
+        <h1 className="text-5xl text-white font-bold py-8 flex-1 text-center">
+          Phản hồi ngừng máy
+        </h1>
+      </div>
+      <div className="flex justify-between items-center ">
+        <h1 className="text-4xl font-bold py-4 flex-1 text-center "
+       >
+          Trạng thái thiết bị
+        </h1>
+      </div>
+      <div className="flex justify-between items-center w-[93.5%]  ml-8">
+        <h1 className="text-4xl font-bold py-8 flex-1 text-center bg-white text-red-600 ">
+          Lỗi
+        </h1>
+      </div>
+     
       <div className="grid grid-cols-2 gap-4 p-8">
         {filteredReasons.map((reason, index) => (
           <button
             key={index}
             onClick={() => handleReasonClick(reason)}
-            className={`p-8 text-4xl font-bold ${selectedReason === reason ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+            className={`p-8 text-4xl font-bold ${
+              selectedReason === reason ? 'bg-red-400 text-white' : 'bg-gray-100'
+              
+            }` }
+            style={{ boxShadow: `inset 0px 5px 30px 5px rgba(255, 0, 0, 0.8)` }}
           >
             {reason.reasonName}
           </button>
@@ -97,9 +131,20 @@ const ResponeSubmit = () => {
       <button
         onClick={handleResponse}
         disabled={!isResponseEnabled}
-        className={`w-full p-4 text-xl font-bold ${isResponseEnabled ? 'bg-blue-600' : 'bg-gray-400 cursor-not-allowed'}`}
+        className={`w-[93.5%] p-6 text-4xl ml-8 font-bold rounded-lg ${
+          isResponseEnabled ? 'bg-blue-600' : 'bg-gray-300 cursor-not-allowed'
+        }`}
       >
         Phản hồi
+      </button>
+
+      <button
+        onClick={handleCancel}
+        className={`w-[93.5%] p-6 mt-2 text-4xl ml-8 rounded-lg font-bold ${
+          selectedReason ? 'bg-red-600 text-white' : 'bg-gray-300 text-black'
+        }`}
+      >
+        {selectedReason ? 'Hủy bỏ' : 'Trở về trang trước'}
       </button>
 
       <ToastContainer autoClose={1000} />
