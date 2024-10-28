@@ -11,6 +11,7 @@ import FormSample from '../../Components/Button/FormSample';
 import ImportButton from '../../Components/Button/ImportButton';
 import Breadcrumb from '../../Components/Breadcrumb/Breadcrumb';
 import sampleTemplate from '../../assets/form/Nguyên nhân dừng máy.xlsx'
+import * as XLSX from 'xlsx';
 const ErrorReportCatalog = () => {
   const [errorReports, setErrorReports] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -85,7 +86,102 @@ const ErrorReportCatalog = () => {
       toast.error('Lỗi khi xóa nguyên nhân');
     }
   };
-
+  const handleImport = (file) => {
+    const reader = new FileReader();
+  
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+  
+        // Hàm chuyển đổi giá trị thập phân từ Excel sang thời gian
+        const convertExcelTimeToHHmm = (excelTime) => {
+          const totalMinutes = Math.round(excelTime * 24 * 60); // Chuyển đổi thành phút
+          const hours = Math.floor(totalMinutes / 60); // Lấy giờ
+          const minutes = totalMinutes % 60; // Lấy phút
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`; // Định dạng HH:mm
+        };
+  
+        // Chuyển đổi dữ liệu từ Excel sang định dạng cần thiết
+        const formattedData = jsonData.map((item) => {
+          const breakTimeRanges = item['Thời Gian Nghỉ Ngơi']
+            ? item['Thời Gian Nghỉ Ngơi'].split(',').map((range) => {
+                const [start, end] = range.split('-').map((t) => t.trim());
+                return {
+                  startTime: moment(start, ['H:mm', 'HH:mm'], true).isValid()
+                    ? start
+                    : convertExcelTimeToHHmm(parseFloat(start)),
+                  endTime: moment(end, ['H:mm', 'HH:mm'], true).isValid()
+                    ? end
+                    : convertExcelTimeToHHmm(parseFloat(end)),
+                };
+              })
+            : [];
+  
+          return {
+            shiftCode: item['Mã Ca Làm Việc'] || '',
+            shiftName: item['Tên Ca Làm Việc'] || '',
+            startTime: moment(item['Thời Gian Vào Ca'], ['H:mm', 'HH:mm'], true).isValid()
+              ? moment(item['Thời Gian Vào Ca'], 'HH:mm').format('HH:mm')
+              : convertExcelTimeToHHmm(parseFloat(item['Thời Gian Vào Ca'])),
+            endTime: moment(item['Thời Gian Tan Ca'], ['H:mm', 'HH:mm'], true).isValid()
+              ? moment(item['Thời Gian Tan Ca'], 'HH:mm').format('HH:mm')
+              : convertExcelTimeToHHmm(parseFloat(item['Thời Gian Tan Ca'])),
+            breakTime: breakTimeRanges,
+          };
+        });
+  
+        console.log('Imported Data:', formattedData); // Kiểm tra dữ liệu đã nhập
+  
+        // Kiểm tra dữ liệu hợp lệ
+        const validData = formattedData.filter(
+          (shift) => shift.startTime !== null && shift.endTime !== null
+        );
+  
+        if (validData.length === 0) {
+          toast.error('Không có dữ liệu hợp lệ để thêm.');
+          return;
+        }
+  
+        // Gửi dữ liệu hợp lệ lên API
+        const promises = validData.map(async (shift) => {
+          try {
+            const response = await axios.post(`${apiUrl}/workShifts`, shift);
+            return response.data;
+          } catch (error) {
+            console.error('Error saving shift:', error);
+            toast.error(`Lỗi khi lưu ca làm việc: ${error.message}`);
+            return null;
+          }
+        });
+  
+        const results = await Promise.all(promises);
+        const addedShifts = results.filter((shift) => shift !== null);
+  
+        if (addedShifts.length) {
+          setWorkShifts((prevShifts) => [...prevShifts, ...addedShifts]);
+          toast.success('Thêm ca làm việc thành công!');
+        } else {
+          toast.info('Không có ca làm việc nào được thêm.');
+        }
+      } catch (error) {
+        console.error('Error reading file:', error);
+        toast.error('Lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng.');
+      }
+    };
+  
+    reader.onerror = (error) => {
+      console.error('File reading error:', error);
+      toast.error('Lỗi khi đọc file. Vui lòng thử lại.');
+    };
+  
+    reader.readAsArrayBuffer(file);
+  };
+  
+  
+ 
   // Hàm mở modal khi thêm/sửa
   const openModal = (report = null) => {
     setIsModalOpen(true);
@@ -115,7 +211,8 @@ const ErrorReportCatalog = () => {
         <div className="flex items-center gap-2 ml-auto">
           <AddButton onClick={() => openModal()} />
           <FormSample href={sampleTemplate} label='Tải Form Mẫu'/>
-          <ImportButton />
+          <ImportButton onImport={(file) => handleImport(file)} />
+
           <ExportExcelButton
             data={errorReports}
             parentComponentName="DanhSachNguyenNhan"

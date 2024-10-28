@@ -64,45 +64,47 @@ const EmployeeCatalog = () => {
     );
     setFilteredEmployees(filtered);
   };
-  const handleImport = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
-  
-      // Chuyển đổi dữ liệu thành định dạng phù hợp
-      const formattedData = jsonData.map((item) => ({
-        employeeCode: item["Mã nhân viên"],
-        employeeName:item["Tên nhân viên"],
-        areaName: item["Tên khu vực sản xuất"],
-      }));
-      console.log(formattedData)
-  
-      // Gửi từng khu vực lên API và cập nhật state
-      const promises = formattedData.map(async (employee) => {
-        try {
-          const response = await axios.post(`${apiUrl}/employees`, employee);
-          // Cập nhật state ngay sau khi thêm thành công
-          return response.data;
-        } catch (error) {
-          toast.error('Failed to save area');
-          return null;
-        }
-      });
-  
-      // Đợi tất cả các yêu cầu hoàn tất và cập nhật bảng
-      Promise.all(promises).then((results) => {
-        const addedEmployee = results.filter((employee) => employee !== null);
-        setAreas((Employee ) => [...Employee , ...addedEmployee]);
-        setFilteredAreas((prevFiltered) => [...prevFiltered, ...addedEmployee]);
-        toast.success('Thêm nhân viên thành công!');
-      });
-    };
-    reader.readAsArrayBuffer(file);
+ // Hàm handleImport để nhập dữ liệu từ file Excel
+
+ const handleImport = (file) => {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+    // Chuyển đổi dữ liệu thành định dạng phù hợp
+    const newEmployees = importedData.map((item) => ({
+      employeeCode: item['Mã Nhân Viên'],
+      employeeName: item['Tên Nhân Viên'],
+      areaName: item['Khu Vực'],
+    }));
+
+    // Gửi từng khu vực lên API và cập nhật state
+    const promises = formattedData.map(async (employee) => {
+      try {
+        const response = await axios.post(`${apiUrl}/employees`, employee);
+        // Cập nhật state ngay sau khi thêm thành công
+        return response.data;
+      } catch (error) {
+        toast.error('Failed to save area');
+        return null;
+      }
+    });
+
+    // Đợi tất cả các yêu cầu hoàn tất và cập nhật bảng
+    Promise.all(promises).then((results) => {
+      const addedEmployee = results.filter((employee) => employee !== null);
+      setEmployees((prevEmployee) => [...prevEmployee, ...addedEmployee ]);
+      setFilteredEmployees((prevFiltered) => [...prevFiltered, ...addedEmployee ]);
+      toast.success('Thêm khu vực thành công!');
+    });
   };
+  reader.readAsArrayBuffer(file);
+};
+
 
   // Handle saving new or edited employee
   const handleSave = async (values) => {
@@ -163,7 +165,16 @@ const EmployeeCatalog = () => {
         <AddButton onClick={() => openModal()} />
         <FormSample href={sampleTemplate}  label="Tải Form Mẫu" />
         <ImportButton onImport={handleImport}/>
-        <ExportExcelButton data={filteredEmployees} fileName="DanhSachNhanVien.xlsx" />
+        <ExportExcelButton
+            data={filteredEmployees}
+            parentComponentName="DanhSachNhanVien"
+            headers={[
+              { key: 'employeeCode', label: 'Mã nhân viên' },
+              { key: 'employeeName', label: 'Tên Ca Làm Việc' },
+              { key: 'areaName', label: 'Khu vực sản xuất' },
+              
+            ]}
+          />
       </div>
 
       {/* Bảng hiển thị danh sách nhân viên */}

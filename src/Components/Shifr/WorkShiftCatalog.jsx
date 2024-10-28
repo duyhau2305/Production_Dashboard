@@ -119,43 +119,100 @@ const WorkShiftCatalog = () => {
       shift.shiftName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleImportClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click(); // Kích hoạt sự kiện click trên thẻ input ẩn
-    }
-  };
-
 
   // Xử lý việc tải file Excel lên
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+  const handleImport = (file) => {
     const reader = new FileReader();
-
-    reader.onload = (event) => {
-      const data = new Uint8Array(event.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-      // Chuyển đổi dữ liệu từ file Excel sang dạng phù hợp với bảng
-      const importedShifts = jsonData.map((row, index) => ({
-        id: index + 1,
-        shiftCode: row['Mã Ca Làm Việc'],
-        shiftName: row['Tên Ca Làm Việc'],
-        startTime: row['Thời Gian Vào Ca'],
-        endTime: row['Thời Gian Tan Ca'],
-        breakTime: row['Thời Gian Nghỉ Ngơi']
-          ? [{ startTime: row['Thời Gian Nghỉ Ngơi'].split(' - ')[0], endTime: row['Thời Gian Nghỉ Ngơi'].split(' - ')[1] }]
-          : [],
-      }));
-
-      setWorkShifts(importedShifts);
-      toast.success('Nhập dữ liệu từ file Excel thành công!');
+  
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+  
+        // Hàm chuyển đổi số thập phân từ Excel sang thời gian HH:mm
+        const convertExcelTimeToHHmm = (excelTime) => {
+          if (isNaN(excelTime)) {
+            console.warn(`Invalid time format: "${excelTime}"`);
+            return null;
+          }
+          const totalMinutes = Math.round(parseFloat(excelTime) * 24 * 60); // Chuyển đổi thành phút
+          const hours = Math.floor(totalMinutes / 60); // Lấy giờ
+          const minutes = totalMinutes % 60; // Lấy phút
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`; // Định dạng HH:mm
+        };
+  
+        // Chuyển đổi dữ liệu từ Excel sang định dạng cần thiết
+        const formattedData = jsonData.map((item) => {
+          const breakTimeRanges = item['Thời Gian Nghỉ Ngơi']
+            ? item['Thời Gian Nghỉ Ngơi'].split(',').map((range) => {
+                const [start, end] = range.split('-').map((t) => t.trim());
+                return {
+                  startTime: convertExcelTimeToHHmm(start) || '00:00',
+                  endTime: convertExcelTimeToHHmm(end) || '00:30',
+                };
+              })
+            : [];
+  
+          return {
+            shiftCode: item['Mã Ca Làm Việc'] || '',
+            shiftName: item['Tên Ca Làm Việc'] || '',
+            startTime: convertExcelTimeToHHmm(item['Thời Gian Vào Ca']),
+            endTime: convertExcelTimeToHHmm(item['Thời Gian Tan Ca']),
+            breakTime: breakTimeRanges,
+          };
+        });
+  
+        console.log('Imported Data:', formattedData); // Kiểm tra dữ liệu đã nhập
+  
+        // Kiểm tra dữ liệu hợp lệ
+        const validData = formattedData.filter(
+          (shift) => shift.startTime !== null && shift.endTime !== null
+        );
+  
+        if (validData.length === 0) {
+          toast.error('Không có dữ liệu hợp lệ để thêm.');
+          return;
+        }
+  
+        // Gửi dữ liệu hợp lệ lên API
+        const promises = validData.map(async (shift) => {
+          try {
+            const response = await axios.post(`${apiUrl}/workShifts`, shift);
+            return response.data;
+          } catch (error) {
+            console.error('Error saving shift:', error);
+            toast.error(`Lỗi khi lưu ca làm việc: ${error.message}`);
+            return null;
+          }
+        });
+  
+        const results = await Promise.all(promises);
+        const addedShifts = results.filter((shift) => shift !== null);
+  
+        if (addedShifts.length) {
+          setWorkShifts((prevShifts) => [...prevShifts, ...addedShifts]);
+          toast.success('Thêm ca làm việc thành công!');
+        } else {
+          toast.info('Không có ca làm việc nào được thêm.');
+        }
+      } catch (error) {
+        console.error('Error reading file:', error);
+        toast.error('Lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng.');
+      }
     };
-
+  
+    reader.onerror = (error) => {
+      console.error('File reading error:', error);
+      toast.error('Lỗi khi đọc file. Vui lòng thử lại.');
+    };
+  
     reader.readAsArrayBuffer(file);
   };
+  
+  
+  
 
   const openModal = (shift = null) => {
     setSelectedShift(shift);
@@ -190,35 +247,29 @@ const WorkShiftCatalog = () => {
         <div className="flex items-center gap-2 ml-auto">
           <AddButton onClick={() => openModal()} />
           <FormSample href={sampleTemplate} label="Tải Form Mẫu" />
-          <ImportButton onClick={handleImportClick} />
-          <input
-            type="file"
-            ref={fileInputRef}
-            style={{ display: 'none' }}
-            accept=".xlsx, .xls"
-            onChange={handleFileUpload}
-          />
+          <ImportButton onImport={handleImport} />
+         
           <ExportExcelButton
-  data={workShifts}
-  parentComponentName="DanhSachCaLamViec"
-  headers={[
-    { key: 'shiftCode', label: 'Mã Ca Làm Việc' },
-    { key: 'shiftName', label: 'Tên Ca Làm Việc' },
-    { key: 'startTime', label: 'Thời Gian Vào Ca' },
-    { key: 'endTime', label: 'Thời Gian Tan Ca' },
-    {
-      key: 'breakTime',
-      label: 'Thời Gian Nghỉ Ngơi',
-      // Chuyển đổi breakTime thành chuỗi để hiển thị đúng trong Excel
-      transform: (breakTime) =>
-        breakTime && breakTime.length > 0
-          ? breakTime
-              .map((bt) => `${bt.startTime || 'N/A'} - ${bt.endTime || 'N/A'}`)
-              .join(', ')
-          : 'N/A',
-    },
-  ]}
-/>
+            data={workShifts}
+            parentComponentName="DanhSachCaLamViec"
+            headers={[
+              { key: 'shiftCode', label: 'Mã Ca Làm Việc' },
+              { key: 'shiftName', label: 'Tên Ca Làm Việc' },
+              { key: 'startTime', label: 'Thời Gian Vào Ca' },
+              { key: 'endTime', label: 'Thời Gian Tan Ca' },
+              {
+                key: 'breakTime',
+                label: 'Thời Gian Nghỉ Ngơi',
+                // Chuyển đổi breakTime thành chuỗi để hiển thị đúng trong Excel
+                transform: (breakTime) =>
+                  breakTime && breakTime.length > 0
+                    ? breakTime
+                        .map((bt) => `${bt.startTime || 'N/A'} - ${bt.endTime || 'N/A'}`)
+                        .join(', ')
+                    : 'N/A',
+              },
+            ]}
+          />
 
         </div>
       </div>

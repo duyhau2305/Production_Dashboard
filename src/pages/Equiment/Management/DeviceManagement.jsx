@@ -246,18 +246,18 @@ const handleSearch = (query) => {
           <FormSample href={sampleTemplate} label="Tải Form Mẫu" />
           <ImportButton onImport={handleImport}/>
           <ExportExcelButton
-            data={errorReports}
-            parentComponentName="DanhSachNguyenNhan"
+            data={devices}
+            parentComponentName="DanhSachThietBi"
             headers={[
-              { key: 'reasonCode', label: 'Mã nguyên nhân' },
-              { key: 'reasonName', label: 'Tên nguyên nhân' },
-              { key: 'deviceStatus', label: 'Trạng thái thiết bị' },
-              {
-                key: 'deviceNames',
-                label: 'Tên thiết bị',
-                // Chuyển đổi mảng thành chuỗi
-                transform: (deviceNames) => deviceNames.join(', '),
-              },
+              { key: 'deviceId', label: 'Mã thiết bị' },
+              { key: 'deviceName', label: 'Tên thiết bị' },
+              { key: 'areaName', label: 'Khu vực' },
+              { key: 'model',label: 'Model' },
+              { key: 'technicalSpecifications',label: 'Thông số kỹ thuật' },
+              { key: 'purchaseDate',label: 'Ngày mua',
+                transform: (purchaseDate) => 
+                  purchaseDate ? moment(purchaseDate).format('DD-MM-YYYY') : 'N/A',
+               },
             ]}
           />
         </div>
@@ -267,13 +267,13 @@ const handleSearch = (query) => {
         <thead>
           <tr className="bg-gray-100">
             <th className="border px-4 py-2 text-xs">STT</th>
-            <th className="border px-4 py-2 text-xs">Mã Thiết Bị</th>
-            <th className="border px-4 py-2 text-xs">Tên Thiết Bị</th>
-            <th className="border px-4 py-2 text-xs">Khu Vực</th>
-            <th className="border px-4 py-2 text-xs">Model</th>
-            <th className="border px-4 py-2 text-xs">Thông Số Kỹ Thuật</th>
+            <th className="border px-4 py-2 text-xs">Mã thiết bị</th>
+            <th className="border px-4 py-2 text-xs">Tên tên thiết bị</th>
+            <th className="border px-4 py-2 text-xs">Khu vực sản xuất</th>
+            <th className="border px-4 py-2 text-xs">Model thiết bị</th>
+            <th className="border px-4 py-2 text-xs">Thông số kĩ thuật</th>
             <th className="border px-4 py-2 text-xs">
-                Ngày Mua
+                Ngày mua
                 <button onClick={sortDevicesByDate} className="ml-2">
                   {sortOrderDate === 'asc' ? '▼' : '▲'} {/* Biểu tượng sắp xếp */}
                 </button>
