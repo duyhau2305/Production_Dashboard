@@ -22,13 +22,18 @@ const ResponeSubmit = () => {
     axios
       .get(`${import.meta.env.VITE_API_BASE_URL}/issue`)
       .then((response) => {
-        const reasons = response.data.filter((reason) =>
-          reason.deviceNames.includes(selectedMachine.deviceName)
+        // Lọc ra các lý do có deviceStatus là "DỪNG" và phù hợp với thiết bị đã chọn
+        const reasons = response.data.filter(
+          (reason) =>
+            reason.deviceNames.includes(selectedMachine.deviceName) &&
+            reason.deviceStatus === 'DỪNG'
         );
         setFilteredReasons(reasons);
       })
       .catch(() => toast.error('Có lỗi xảy ra khi lấy dữ liệu.'));
   }, [selectedMachine]);
+  
+
 
   const handleReasonClick = (reason) => {
     setSelectedReason(reason);
@@ -108,7 +113,7 @@ const ResponeSubmit = () => {
       </div>
       <div className="flex justify-between items-center w-[93.5%]  ml-8">
         <h1 className="text-4xl font-bold py-8 flex-1 text-center bg-white text-red-600 ">
-          Lỗi
+          DỪNG
         </h1>
       </div>
      
@@ -144,7 +149,7 @@ const ResponeSubmit = () => {
           selectedReason ? 'bg-red-600 text-white' : 'bg-gray-300 text-black'
         }`}
       >
-        {selectedReason ? 'Hủy bỏ' : 'Trở về trang trước'}
+        {selectedReason ? 'Hủy bỏ' : 'Quay lại'}
       </button>
 
       <ToastContainer autoClose={1000} />

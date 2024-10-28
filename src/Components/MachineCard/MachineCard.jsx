@@ -26,6 +26,8 @@ const getSignalLightColors = (status) => {
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.status);
   const signalLightColors = getSignalLightColors(machine.status); // Get signal light colors
+  console.log(machine)
+  console.log(machine.elapsedTime)
 
   // Apply the blink class if status is "Lỗi"
   const blinkClass = machine.status === 'Lỗi' ? 'animate-blinkError' : '';
@@ -84,7 +86,7 @@ const MachineCard = ({ machine }) => {
             <span className=" text-sm text-wrap font-bold">{changeIcon} {Math.abs(changePercent).toFixed(2)}% hôm qua</span>
           </div>
           <div className="  absolute mt-2 font-bold text-xl -translate-x-1/4 ml-3 ">
-            {machine.employeeName}
+            {machine.employee}
       </div>
         </div>
         

@@ -13,7 +13,7 @@ const Dashboard1 = () => {
   const cardsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const fixedDate = '2024-10-24'; // Ngày cố định
+  const fixedDate = moment().format('YYYY-MM-DD'); // Ngày hiện tại
 
   const fetchData = async () => {
     setLoading(true);
@@ -36,12 +36,13 @@ const Dashboard1 = () => {
               axios.get(`${apiUrl}/productiontask?deviceId=${deviceId}&startDate=${fixedDate}&endDate=${fixedDate}`),
               axios.get(`${apiUrl}/workShifts`),
             ]);
-
+           
             const telemetryData = telemetryResponse.data[0] || {};
             const { status, elapsedTime } = getRealTimeStatusAndElapsed(telemetryData.intervals);
 
             const runtimeData = totaltopResponse.data || {};
-            const runtimePercentage = parseFloat(runtimeData.run) || 0;
+            console.log('runtimeData',runtimeData)
+            const runtimePercentage = runtimeData.run || 0;
             const totalTimeToday = runtimeData.totalRunTime || '0 giờ';
             const totalTimeYesterday = runtimeData.totalStopTime || '0 giờ';
 
@@ -52,7 +53,7 @@ const Dashboard1 = () => {
             const workShift = workShiftsResponse.data.find((shift) => shift.shiftName === shiftName);
             const startTime = workShift?.startTime || 'Chưa xác định';
             const endTime = workShift?.endTime || 'Chưa xác định';
-
+            
             return {
               id: deviceId,
               deviceName: device.deviceName,
@@ -105,6 +106,7 @@ const Dashboard1 = () => {
     const now = moment();
     const latestInterval = intervals[intervals.length - 1]; // Interval gần nhất
     const intervalEnd = moment(latestInterval.endTime, 'HH:mm'); // Thời điểm kết thúc của interval
+    console.log('last interval' , latestInterval)
 
     const status = latestInterval.status || 'Không xác định';
     const elapsedMinutes = now.diff(intervalEnd, 'minutes'); // Số phút đã trôi qua từ khi thay đổi trạng thái

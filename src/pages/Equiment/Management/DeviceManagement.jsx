@@ -25,6 +25,8 @@ const DeviceManagement = () => {
   const [form] = Form.useForm();
   const [sortOrderDate, setSortOrderDate] = useState('asc'); // 'asc' cho tăng dần, 'desc' cho giảm dần
   const apiUrl =import.meta.env.VITE_API_BASE_URL;
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
+  const [deviceToDelete, setDeviceToDelete] = useState(null);
   const sortDevicesByDate = () => {
     const sortedDevices = [...filteredDevices].sort((a, b) => {
       if (sortOrderDate === 'asc') {
@@ -133,14 +135,14 @@ const handleSearch = (query) => {
   };
   
 
- 
-
   // Delete device by ID
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
     try {
-      await axios.delete(`${apiUrl}/device/${id}`);
+      await axios.delete(`${apiUrl}/device/${deviceToDelete._id}`);
       toast.success('Xóa thiết bị thành công!');
-      fetchDevicesAndAreas(); // Refresh device list after delete
+      fetchDevicesAndAreas();
+      setIsDeleteModalOpen(false);
+      
     } catch (error) {
       toast.error('Failed to delete device');
     }
@@ -149,6 +151,11 @@ const handleSearch = (query) => {
     // Excel's serial date format offset
     const date = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
     return moment(date).format("MM-DD-YYYY");
+  };
+
+  const openDeleteModal = (device) => {
+    setDeviceToDelete(device); 
+    setIsDeleteModalOpen(true); 
   };
   const handleImport = (file) => {
     const reader = new FileReader();
@@ -238,7 +245,21 @@ const handleSearch = (query) => {
           <AddButton onClick={() => openModal()} /> {/* Open modal for new device */}
           <FormSample href={sampleTemplate} label="Tải Form Mẫu" />
           <ImportButton onImport={handleImport}/>
-          <ExportExcelButton data={devices} fileName="DanhSachThietBi.xlsx" />
+          <ExportExcelButton
+            data={errorReports}
+            parentComponentName="DanhSachNguyenNhan"
+            headers={[
+              { key: 'reasonCode', label: 'Mã nguyên nhân' },
+              { key: 'reasonName', label: 'Tên nguyên nhân' },
+              { key: 'deviceStatus', label: 'Trạng thái thiết bị' },
+              {
+                key: 'deviceNames',
+                label: 'Tên thiết bị',
+                // Chuyển đổi mảng thành chuỗi
+                transform: (deviceNames) => deviceNames.join(', '),
+              },
+            ]}
+          />
         </div>
       </div>
 
@@ -282,7 +303,7 @@ const handleSearch = (query) => {
                 </button>
                 <button
                   className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDelete(device._id)}
+                  onClick={() => openDeleteModal(device)}
                 >
                   <FaTrash />
                 </button>
@@ -351,7 +372,7 @@ const handleSearch = (query) => {
                   <Form.Item
                     label="Thông Số Kỹ Thuật"
                     name="technicalSpecifications"
-                    rules={[{ required: true, message: 'Thông Số Kỹ Thuật là bắt buộc' }]}
+                   
                   >
                     <Input />
                   </Form.Item>
@@ -359,15 +380,20 @@ const handleSearch = (query) => {
                   <Form.Item
                     label="Ngày Mua"
                     name="purchaseDate"
-                    rules={[{ required: true, message: 'Ngày Mua là bắt buộc' }]}
-                  >
+                    >
                     <Input type="date" />
                   </Form.Item>
                 </Form>
               </Modal>
-
-
-      
+              <Modal
+              title="Xác nhận xóa"
+              open={isDeleteModalOpen}
+              onCancel={() => setIsDeleteModalOpen(false)}
+              onOk={handleDelete}
+            >
+              <p>Bạn có chắc chắn muốn xóa thiết bị này không?</p>
+            </Modal>
+            
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { Pie } from 'react-chartjs-2';
 import 'chartjs-plugin-datalabels';
 
 const DowntimePieChart = ({ data }) => {
+  console.log('downtimepiechart' ,data)
   const chartData = {
     labels: data.labels,
     datasets: [

@@ -247,7 +247,7 @@ const ResponeIssue = () => {
   return (
     <div className="h-screen ">
       <div className="flex justify-between items-center bg-gradient-to-r from-blue-600 to-sky-500">
-        <h1 className="text-5xl text-white font-bold py-8 flex-1 text-center">
+        <h1 className="text-5xl text-white font-bold py-6 flex-1 text-center">
           <span className="cursor-pointer" onClick={handleBackClick}>
             <FiChevronLeft />
           </span>

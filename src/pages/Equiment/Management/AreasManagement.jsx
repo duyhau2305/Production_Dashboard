@@ -22,6 +22,8 @@ const AreasManagement = () => {
   const [selectedArea, setSelectedArea] = useState(null); // Area for editing
   const [form] = Form.useForm(); // Ant Design form instance
   const apiUrl = import.meta.env.VITE_API_BASE_URL
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
+  const [areaToDelete, setAreaToDelete] = useState(null);
 
   // Fetch areas from the back-end API
   const fetchAreas = async () => {
@@ -72,11 +74,12 @@ const AreasManagement = () => {
   };
 
   // Delete area by ID
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
     try {
-      await axios.delete(`${apiUrl}/areas/${id}`);
+      await axios.delete(`${apiUrl}/areas/${areaToDelete._id}`);
       toast.success('Xóa khu vực thành công!');
-      fetchAreas(); // Refresh area list after delete
+      fetchAreas();
+      setIsDeleteModalOpen(false); // Đóng modal sau khi xóa
     } catch (error) {
       toast.error('Failed to delete area');
     }
@@ -119,7 +122,10 @@ const AreasManagement = () => {
     reader.readAsArrayBuffer(file);
   };
   
-  
+  const openDeleteModal = (area) => {
+    setAreaToDelete(area); // Gán khu vực cần xóa
+    setIsDeleteModalOpen(true); // Mở modal xác nhận xóa
+  };
 
   // Open modal to add or edit area
   const openModal = (area = null) => {
@@ -147,7 +153,14 @@ const AreasManagement = () => {
           <AddButton onClick={() => openModal()} /> {/* Open modal for new area */}
           <FormSample href={sampleTemplate} label="Tải Form Mẫu" />
           <ImportButton onImport={handleImport} />
-          <ExportExcelButton data={areas} fileName="DanhSachKhuVuc.xlsx" />
+          <ExportExcelButton
+            data={areas}
+            parentComponentName="DanhSachKhuVuc"
+            headers={[
+              { key: 'areaCode', label: 'Mã khu vực' },
+              { key: 'areaName', label: 'Tên khu vực' },
+              ]}
+          />
         </div>
       </div>
 
@@ -175,7 +188,7 @@ const AreasManagement = () => {
                 </button>
                 <button
                   className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDelete(area._id)}
+                  onClick={() => openDeleteModal(area)}
                 >
                   <FaTrash />
                 </button>
@@ -209,6 +222,14 @@ const AreasManagement = () => {
             <Input />
           </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+        title="Xác nhận xóa"
+        open={isDeleteModalOpen}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onOk={handleDelete}
+      >
+        <p>Bạn có chắc chắn muốn xóa khu vực này không?</p>
       </Modal>
 
       

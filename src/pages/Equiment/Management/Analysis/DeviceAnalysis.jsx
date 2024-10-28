@@ -191,7 +191,7 @@ const handleDeviceSelect = (deviceId) => {
         `${apiUrl}/downtime?deviceId=${deviceId}&startDate=${formattedStartDate}&endDate=${formattedEndDate}`
       );
       setDowntimeData(response.data);
-    } catch (error) {
+          } catch (error) {
       console.error('Error fetching downtime data:', error);
     }
   };

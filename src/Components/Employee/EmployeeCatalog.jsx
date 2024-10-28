@@ -23,6 +23,8 @@ const EmployeeCatalog = () => {
   const [areas, setAreas] = useState([]); // State cho danh sách khu vực
   const [form] = Form.useForm(); // Ant Design Form
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const apiUrl =import.meta.env.VITE_API_BASE_URL
 
   // Fetch employees from API on component mount
@@ -45,12 +47,14 @@ const EmployeeCatalog = () => {
       toast.error('Lỗi khi tải danh sách khu vực');
     }
   };
-
+  const openDeleteModal = (employee) => {
+    setEmployeeToDelete(employee); 
+    setIsDeleteModalOpen(true); 
+  };
   useEffect(() => {
     fetchEmployees(); // Gọi API khi component được mount
     fetchAreas(); // Gọi API để lấy khu vực khi component được mount
   }, []);
-
   // Handle search input change
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -125,9 +129,10 @@ const EmployeeCatalog = () => {
   // Handle delete employee by ID
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${apiUrl}/employees/${id}`);
+      await axios.delete(`${apiUrl}/employees/${employeeToDelete._id}`);
       toast.success('Xóa nhân viên thành công!');
       fetchEmployees(); // Refresh employee list after delete
+      setIsDeleteModalOpen(false);
     } catch (error) {
       toast.error('Lỗi khi xóa nhân viên');
     }
@@ -188,7 +193,7 @@ const EmployeeCatalog = () => {
                 </button>
                 <button
                   className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDelete(employee._id)}
+                  onClick={() => openDeleteModal(employee)}
                 >
                   <FaTrash />
                 </button>
@@ -240,6 +245,14 @@ const EmployeeCatalog = () => {
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+              title="Xác nhận xóa"
+              open={isDeleteModalOpen}
+              onCancel={() => setIsDeleteModalOpen(false)}
+              onOk={handleDelete}
+            >
+              <p>Bạn có chắc chắn muốn xóa ca nhân viên này không?</p>
       </Modal>
 
       <ToastContainer />

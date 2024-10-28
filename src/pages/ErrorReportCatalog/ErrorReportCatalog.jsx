@@ -17,6 +17,8 @@ const ErrorReportCatalog = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
   const [deviceSuggestions, setDeviceSuggestions] = useState([]);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
+  const [errorToDelete, setErrorToDelete] = useState(null);
   const [form] = Form.useForm(); // Tạo form instance từ Ant Design
   const apiUrl = import.meta.env.VITE_API_BASE_URL
 
@@ -26,7 +28,7 @@ const ErrorReportCatalog = () => {
       const response = await axios.get(`${apiUrl}/issue`);
       setErrorReports(response.data);
     } catch (error) {
-      toast.error('Lỗi khi tải báo cáo lỗi');
+      toast.error('Lỗi khi tải nguyên nhân');
     }
   };
 
@@ -53,11 +55,11 @@ const ErrorReportCatalog = () => {
       if (selectedReport) {
         // Cập nhật issue
         await axios.put(`${apiUrl}/issue/${selectedReport._id}`, values);
-        toast.success('Cập nhật nguyên nhân lỗi thành công!');
+        toast.success('Cập nhật nguyên nhân  thành công!');
       } else {
         // Thêm mới issue
         await axios.post(`${apiUrl}/issue`, values);
-        toast.success('Thêm nguyên nhân lỗi thành công!');
+        toast.success('Thêm mới nguyên nhân  thành công!');
       }
       fetchErrorReports();  // Tải lại dữ liệu sau khi thêm/cập nhật
       setIsModalOpen(false);
@@ -67,15 +69,20 @@ const ErrorReportCatalog = () => {
       toast.error('Lỗi khi lưu nguyên nhân');
     }
   };
+  const openDeleteModal = (error) => {
+    setErrorToDelete(error); 
+    setIsDeleteModalOpen(true); 
+  };
 
   // Hàm xóa issue
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${apiUrl}/issue/${id}`);
-      toast.success('Xóa báo cáo lỗi thành công!');
+      await axios.delete(`${apiUrl}/issue/${errorToDelete._id}`);
+      toast.success('Xóa nguyên nhân thành công!');
       fetchErrorReports();  // Tải lại dữ liệu sau khi xóa
+      setIsDeleteModalOpen(false);
     } catch (error) {
-      toast.error('Lỗi khi xóa báo cáo lỗi');
+      toast.error('Lỗi khi xóa nguyên nhân');
     }
   };
 
@@ -109,7 +116,22 @@ const ErrorReportCatalog = () => {
           <AddButton onClick={() => openModal()} />
           <FormSample href={sampleTemplate} label='Tải Form Mẫu'/>
           <ImportButton />
-          <ExportExcelButton data={filteredReports} fileName="Báo cáo lỗi.xlsx" />
+          <ExportExcelButton
+            data={errorReports}
+            parentComponentName="DanhSachNguyenNhan"
+            headers={[
+              { key: 'reasonCode', label: 'Mã nguyên nhân' },
+              { key: 'reasonName', label: 'Tên nguyên nhân' },
+              { key: 'deviceStatus', label: 'Trạng thái thiết bị' },
+              {
+                key: 'deviceNames',
+                label: 'Tên thiết bị',
+                // Chuyển đổi mảng thành chuỗi
+                transform: (deviceNames) => deviceNames.join(', '),
+              },
+            ]}
+          />
+
         </div>
       </div>
 
@@ -118,11 +140,11 @@ const ErrorReportCatalog = () => {
         <thead>
           <tr className="bg-gray-100">
             <th className="border px-4 py-2 text-xs">STT</th>
-            <th className="border px-4 py-2 text-xs">Mã Nguyên Nhân</th>
-            <th className="border px-4 py-2 text-xs">Tên Nguyên Nhân</th>
+            <th className="border px-4 py-2 text-xs">Mã nguyên nhân</th>
+            <th className="border px-4 py-2 text-xs">Tên nguyên nhân</th>
             <th className="border px-4 py-2 text-xs">Trạng thái thiết bị</th>
-            <th className="border px-4 py-2 text-xs">Tên Thiết Bị</th>
-            <th className="border px-4 py-2 text-xs">Thao Tác</th>
+            <th className="border px-4 py-2 text-xs">Tên thiết bị</th>
+            <th className="border px-4 py-2 text-xs">Thao tác</th>
           </tr>
         </thead>
         <tbody>
@@ -144,7 +166,7 @@ const ErrorReportCatalog = () => {
                 </button>
                 <button
                   className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDelete(report._id)}
+                  onClick={() => openDeleteModal(report)}
                 >
                   <FaTrash />
                 </button>
@@ -164,8 +186,8 @@ const ErrorReportCatalog = () => {
           form.resetFields(); // Reset form khi đóng modal
         }}
         onOk={handleSave}
-        okText={selectedReport ? 'Cập nhật' : 'OK'}
-        cancelText="Hủy"
+        okText={selectedReport ? 'OK' : 'OK'}
+        cancelText="Cancel"
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -216,6 +238,14 @@ const ErrorReportCatalog = () => {
             </Form.Item>
 
         </Form>
+      </Modal>
+      <Modal
+              title="Xác nhận xóa"
+              open={isDeleteModalOpen}
+              onCancel={() => setIsDeleteModalOpen(false)}
+              onOk={handleDelete}
+            >
+              <p>Bạn có chắc chắn muốn xóa nguyên nhân này không?</p>
       </Modal>
 
       <ToastContainer />

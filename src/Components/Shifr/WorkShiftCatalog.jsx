@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FaEdit, FaTrash } from 'react-icons/fa';
-import { Button, Form } from 'antd';
+import { Button, Form,Modal } from 'antd';
 import AddButton from '../Button/AddButton';
 import ExportExcelButton from '../Button/ExportExcelButton';
 import DynamicModal from './DynamicModal';
 import SearchButton from '../Button/SearchButton';
 import FormSample from '../Button/FormSample';
 import ImportButton from '../Button/ImportButton';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx/xlsx.mjs';
+
 import moment from 'moment';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -25,6 +26,8 @@ const WorkShiftCatalog = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [form] = Form.useForm();
   const fileInputRef = useRef(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
+  const [shiftToDelete, setShiftToDelete] = useState(null);
   const apiUrl =import.meta.env.VITE_API_BASE_URL;
 
   // Fetch work shifts from backend
@@ -89,14 +92,17 @@ const WorkShiftCatalog = () => {
       toast.error('Lỗi khi lưu ca làm việc');
     }
   };
-  
-
+  const openDeleteModal = (shift) => {
+    setShiftToDelete(shift); 
+    setIsDeleteModalOpen(true); 
+  };
   // Handle delete work shift
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${apiUrl}/workShifts/${id}`);
+      await axios.delete(`${apiUrl}/workShifts/${shiftToDelete._id}`);
       toast.success('Xóa ca làm việc thành công!');
       fetchWorkShifts();
+      setIsDeleteModalOpen(false);
     } catch (error) {
       toast.error('Lỗi khi xóa ca làm việc');
     }
@@ -118,6 +124,7 @@ const WorkShiftCatalog = () => {
       fileInputRef.current.click(); // Kích hoạt sự kiện click trên thẻ input ẩn
     }
   };
+
 
   // Xử lý việc tải file Excel lên
   const handleFileUpload = (e) => {
@@ -170,7 +177,6 @@ const WorkShiftCatalog = () => {
       // Reset lại form khi thêm mới
       form.resetFields();
     }
-  
     setIsModalOpen(true);
   };
   
@@ -192,7 +198,28 @@ const WorkShiftCatalog = () => {
             accept=".xlsx, .xls"
             onChange={handleFileUpload}
           />
-          <ExportExcelButton data={workShifts} fileName="CaLamViec.xlsx" />
+          <ExportExcelButton
+  data={workShifts}
+  parentComponentName="DanhSachCaLamViec"
+  headers={[
+    { key: 'shiftCode', label: 'Mã Ca Làm Việc' },
+    { key: 'shiftName', label: 'Tên Ca Làm Việc' },
+    { key: 'startTime', label: 'Thời Gian Vào Ca' },
+    { key: 'endTime', label: 'Thời Gian Tan Ca' },
+    {
+      key: 'breakTime',
+      label: 'Thời Gian Nghỉ Ngơi',
+      // Chuyển đổi breakTime thành chuỗi để hiển thị đúng trong Excel
+      transform: (breakTime) =>
+        breakTime && breakTime.length > 0
+          ? breakTime
+              .map((bt) => `${bt.startTime || 'N/A'} - ${bt.endTime || 'N/A'}`)
+              .join(', ')
+          : 'N/A',
+    },
+  ]}
+/>
+
         </div>
       </div>
 
@@ -235,7 +262,7 @@ const WorkShiftCatalog = () => {
                 </button>
                 <button
                   className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDelete(shift._id)}
+                  onClick={() => openDeleteModal(shift) }
                 >
                   <FaTrash />
                 </button>
@@ -288,6 +315,14 @@ const WorkShiftCatalog = () => {
           },
         ]}
       />
+       <Modal
+              title="Xác nhận xóa"
+              open={isDeleteModalOpen}
+              onCancel={() => setIsDeleteModalOpen(false)}
+              onOk={handleDelete}
+            >
+              <p>Bạn có chắc chắn muốn xóa ca làm việc này không?</p>
+      </Modal>
       <ToastContainer />
     </div>
   );
