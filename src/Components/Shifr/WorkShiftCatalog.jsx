@@ -242,7 +242,8 @@ const WorkShiftCatalog = () => {
   return (
     <div className="p-4 bg-white shadow-md rounded-md">
        <Breadcrumb />
-      <div className="flex items-center gap-2 mb-4">
+       <hr />
+      <div className="flex items-center gap-2 mb-4 mt-2">
         <SearchButton placeholder="Tìm kiếm mã ca, tên ca..." onSearch={(q) => handleSearch(q)} />
         <div className="flex items-center gap-2 ml-auto">
           <AddButton onClick={() => openModal()} />

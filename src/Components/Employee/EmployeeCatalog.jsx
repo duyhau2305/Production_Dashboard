@@ -155,8 +155,9 @@ const EmployeeCatalog = () => {
   return (
     <div className="p-4 bg-white shadow-md rounded-md">
       <Breadcrumb/>
+      <hr />
       {/* Các nút tìm kiếm, thêm mới và xuất Excel */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 mt-2">
         <SearchButton
           placeholder="Tìm kiếm mã nhân viên, tên nhân viên..."
           onSearch={(q) => handleSearch(q)}

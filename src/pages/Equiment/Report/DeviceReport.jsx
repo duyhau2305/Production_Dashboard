@@ -106,8 +106,13 @@ function DeviceReport() {
   
   return (
     <>
-      <div className="flex justify-end items-center mb-4">
+    <div className="p-2 bg-white shadow-md rounded-md">
+      <Breadcrumb />
+      <hr />
+      <div className="flex justify-end items-center mb-4 mt-2">
+      
         <div className="flex items-center space-x-4">
+      
           <Select
             mode="multiple" 
             value={selectedMachines}
@@ -126,21 +131,21 @@ function DeviceReport() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-2 p-1">
+      <div className="grid grid-cols-12 gap-1 p-1 sm:grid sm:grid-cols-4">
         {/* Charts */}
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-2 ">
+        <div className="bg-white rounded-lg p-3 shadow-md col-span-2 sm:col-span-1 ">
           <TitleChart
             title="Tỷ lệ máy chạy"
             timeWindow="Last 24 hours"
             onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
             onPrint={handlePrint}
           />
-          <div className="h-28">
+          <div className=" ">
             <DowntimePieChart data={runtimeChartData} />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-2 ">
+        <div className="bg-white rounded-lg p-3 shadow-md col-span-2 sm:col-span-1  ">
           <TitleChart
             title="Phân bố nhiệm vụ"
             timeWindow="Last 24 hours"
@@ -152,26 +157,26 @@ function DeviceReport() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-4 " ref={runtimeTrendChartRef}>
+        <div className="bg-white rounded-lg p-3 shadow-md col-span-4 sm:col-span-1 " ref={runtimeTrendChartRef}>
           <TitleChart
             title="Xu hướng máy chạy"
             timeWindow="Last 24 hours"
             onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
             onPrint={handlePrint}
           />
-          <div className="w-full h-full mt-1 ml-2 p-2">
+          <div className="w-full  h-full ">
             <RuntimeTrendChart data={runtimeTrendData} />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-2 shadow-md col-span-4">
+        <div className="bg-white rounded-lg p-3 shadow-md col-span-4 sm:col-span-1 ">
           <TitleChart
             title="Thời gian dừng sửa chữa"
             timeWindow="Last 24 hours"
             onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
             onPrint={handlePrint}
           />
-          <div className="w-full h-full mt-12 ml-2 px-3">
+          <div className="w-full h-full ">
             <RepairBarChart data={repairDowntimeBarData} />
           </div>
         </div>
@@ -197,6 +202,9 @@ function DeviceReport() {
           <StackedBarChart selectedDate={selectedDate} onDateChange={newDateChane}/>
         </div>
       </div>
+
+    </div>
+     
     </>
   );
 }

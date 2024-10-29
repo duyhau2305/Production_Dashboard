@@ -37,7 +37,7 @@ const RepairBarChart = ({ data }) => {
   };
 
   return (
-    <div style={{ width: '100%', height: '200px' }}> {/* Đặt chiều cao tùy chỉnh */}
+    <div style={{ width: '100%', height: '250px' }}> {/* Đặt chiều cao tùy chỉnh */}
       <Bar data={data} options={barChartOptions} />
     </div>
   );

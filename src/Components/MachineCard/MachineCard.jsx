@@ -25,12 +25,13 @@ const getSignalLightColors = (status) => {
 // Individual Machine Card Component
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.status);
-  const signalLightColors = getSignalLightColors(machine.status); // Get signal light colors
-  console.log(machine)
+  const signalLightColors = getSignalLightColors(machine.
+    signalLight); // Get signal light colors
+  console.log('du lieu nhan duoc ', machine)
   console.log(machine.elapsedTime)
 
   // Apply the blink class if status is "Lỗi"
-  const blinkClass = machine.status === 'Lỗi' ? 'animate-blinkError' : '';
+  const blinkClass = machine.status === 'Dừng' ? 'animate-blinkError' : '';
 
   // Calculate change compared to yesterday (positive/negative)
   const changePercent = machine.oee - machine.oeeYesterday; // So sánh với ngày hôm qua

@@ -205,6 +205,7 @@ const ErrorReportCatalog = () => {
   return (
     <div className="p-4 bg-white shadow-md rounded-md">
       <Breadcrumb />
+      <hr />
       {/* Các nút tìm kiếm, thêm mới và xuất Excel */}
       <div className="flex items-center gap-2 mb-4 mt-3">
         <SearchButton placeholder="Tìm kiếm mã lỗi, mã thiết bị..." onSearch={(q) => setSearchQuery(q)} />

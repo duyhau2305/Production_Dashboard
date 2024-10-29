@@ -22,51 +22,59 @@ const Dashboard1 = () => {
         axios.get(`${apiUrl}/device`),
         axios.get(`${apiUrl}/areas`),
       ]);
-
+  
       setAreas(areasResponse.data);
-
+  
       const machinesWithDetails = await Promise.all(
         devicesResponse.data.map(async (device) => {
           const deviceId = device.deviceId;
-
+  
           try {
-            const [telemetryResponse, totaltopResponse, productionTaskResponse, workShiftsResponse] = await Promise.all([
-              axios.get(`${apiUrl}/telemetry?deviceId=${deviceId}&startDate=${fixedDate}&endDate=${fixedDate}`),
-              axios.get(`${apiUrl}/totaltop?deviceId=${deviceId}&startDate=${fixedDate}&endDate=${fixedDate}`),
-              axios.get(`${apiUrl}/productiontask?deviceId=${deviceId}&startDate=${fixedDate}&endDate=${fixedDate}`),
-              axios.get(`${apiUrl}/workShifts`),
+            const [
+              telemetryResponse,
+              productionTaskResponse,
+              workShiftsResponse,
+            ] = await Promise.all([
+              axios.get(
+                `${apiUrl}/telemetry?deviceId=${deviceId}&startDate=${fixedDate}&endDate=${fixedDate}`
+              ).catch(() => ({ data: [] })),
+              axios.get(
+                `${apiUrl}/productiontask?deviceId=${deviceId}&startDate=${fixedDate}&endDate=${fixedDate}`
+              ).catch(() => ({ data: [] })),
+              axios.get(`${apiUrl}/workShifts`).catch(() => ({ data: [] })),
             ]);
-           
+  
             const telemetryData = telemetryResponse.data[0] || {};
-            const { status, elapsedTime } = getRealTimeStatusAndElapsed(telemetryData.intervals);
-
-            const runtimeData = totaltopResponse.data || {};
-            console.log('runtimeData',runtimeData)
-            const runtimePercentage = runtimeData.run || 0;
-            const totalTimeToday = runtimeData.totalRunTime || '0 giờ';
-            const totalTimeYesterday = runtimeData.totalStopTime || '0 giờ';
-
+            const { status, elapsedTime } = getRealTimeStatusAndElapsed(
+              telemetryData.intervals
+            );
+  
+            // Lấy thông tin ca đầu tiên từ productionTask
             const productionTaskData = productionTaskResponse.data[0] || {};
-            const employee = productionTaskData.shifts?.[0]?.employeeName?.[0] || 'Không có dữ liệu';
-            const shiftName = productionTaskData.shifts?.[0]?.shiftName || 'Không xác định';
-
-            const workShift = workShiftsResponse.data.find((shift) => shift.shiftName === shiftName);
+            const shift = productionTaskData.shifts?.[0] || {};
+            const shiftName = shift.shiftName || 'Không xác định';
+            const employee = shift.employeeName?.[0] || 'Không có dữ liệu';
+            const signalLight = shift.status || 'Không xác định'; // Sử dụng trực tiếp status làm signalLight
+  
+            // Tìm thông tin ca từ workShifts dựa vào shiftName
+            const workShift = workShiftsResponse.data.find(
+              (shift) => shift.shiftName === shiftName
+            );
+  
             const startTime = workShift?.startTime || 'Chưa xác định';
             const endTime = workShift?.endTime || 'Chưa xác định';
-            
+  
             return {
               id: deviceId,
               deviceName: device.deviceName,
               areaName: device.areaName || 'Không xác định',
               status,
-              elapsedTime, // Thời gian trạng thái hiện tại đã duy trì
-              runtimePercentage,
+              elapsedTime,
               employee,
               shiftName,
               startTime,
               endTime,
-              totalTimeToday,
-              totalTimeYesterday,
+              signalLight, // Trực tiếp từ status
             };
           } catch (error) {
             console.error(`Lỗi khi lấy dữ liệu cho ${device.deviceName}:`, error);
@@ -76,18 +84,16 @@ const Dashboard1 = () => {
               areaName: device.areaName || 'Không xác định',
               status: 'Không xác định',
               elapsedTime: '0 phút',
-              runtimePercentage: 0,
               employee: 'Không có dữ liệu',
               shiftName: 'Không xác định',
               startTime: 'Chưa xác định',
               endTime: 'Chưa xác định',
-              totalTimeToday: '0 giờ',
-              totalTimeYesterday: '0 giờ',
+              signalLight: 'Không xác định',
             };
           }
         })
       );
-
+  
       setMachines(machinesWithDetails);
     } catch (error) {
       console.error('Lỗi khi lấy dữ liệu:', error);
@@ -95,23 +101,25 @@ const Dashboard1 = () => {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchData();
   }, []);
 
   const getRealTimeStatusAndElapsed = (intervals) => {
-    if (!intervals || intervals.length === 0) return { status: 'Không xác định', elapsedTime: '0 phút' };
+    if (!intervals || intervals.length === 0)
+      return { status: 'Không xác định', elapsedTime: '0 phút' };
 
     const now = moment();
     const latestInterval = intervals[intervals.length - 1]; // Interval gần nhất
-    const intervalEnd = moment(latestInterval.endTime, 'HH:mm'); // Thời điểm kết thúc của interval
-    console.log('last interval' , latestInterval)
+    const intervalEnd = moment(latestInterval.endTime, 'HH:mm');
 
     const status = latestInterval.status || 'Không xác định';
-    const elapsedMinutes = now.diff(intervalEnd, 'minutes'); // Số phút đã trôi qua từ khi thay đổi trạng thái
+    const elapsedMinutes = now.diff(intervalEnd, 'minutes');
 
-    const elapsedTime = `${Math.floor(elapsedMinutes / 60)} giờ ${elapsedMinutes % 60} phút`;
+    const elapsedTime = `${Math.floor(elapsedMinutes / 60)} giờ ${
+      elapsedMinutes % 60
+    } phút`;
 
     return { status, elapsedTime };
   };
@@ -119,29 +127,18 @@ const Dashboard1 = () => {
   const handleAreaChange = (e) => setSelectedArea(e.target.value);
 
   const filteredMachines = machines.filter(
-    (machine) => selectedArea === 'All Areas' || machine.areaName === selectedArea
+    (machine) =>
+      selectedArea === 'All Areas' || machine.areaName === selectedArea
   );
 
   const toggleFullscreen = () => {
     if (!isFullscreen) {
       if (cardsRef.current.requestFullscreen) {
         cardsRef.current.requestFullscreen();
-      } else if (cardsRef.current.webkitRequestFullscreen) {
-        cardsRef.current.webkitRequestFullscreen();
-      } else if (cardsRef.current.mozRequestFullScreen) {
-        cardsRef.current.mozRequestFullScreen();
-      } else if (cardsRef.current.msRequestFullscreen) {
-        cardsRef.current.msRequestFullscreen();
       }
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen();
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
       }
     }
     setIsFullscreen(!isFullscreen);
@@ -171,7 +168,9 @@ const Dashboard1 = () => {
 
       <div ref={cardsRef} className="overflow-auto h-[calc(100vh)]">
         {loading ? (
-          <div className="flex justify-center text-2xl items-center h-64">Loading...</div>
+          <div className="flex justify-center text-2xl items-center h-64">
+            Loading...
+          </div>
         ) : (
           <DashboardGrid machines={filteredMachines} />
         )}
@@ -181,7 +180,11 @@ const Dashboard1 = () => {
         className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
         onClick={toggleFullscreen}
       >
-        {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
+        {isFullscreen ? (
+          <AiOutlineFullscreenExit size={30} />
+        ) : (
+          <AiOutlineFullscreen size={30} />
+        )}
       </button>
     </div>
   );

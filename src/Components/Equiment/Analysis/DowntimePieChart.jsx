@@ -27,11 +27,11 @@ const DowntimePieChart = ({ data }) => {
             size: 10,
           },
           // Đảm bảo legend hiển thị nhiều dòng
-          boxWidth: 25, // Kích thước ô màu nhỏ gọn hơn
-          padding: 12, // Khoảng cách giữa các mục trong legend
+          boxWidth: 20, // Kích thước ô màu nhỏ gọn hơn
+          padding: 10, // Khoảng cách giữa các mục trong legend
         },
         align: 'center', // Căn giữa các mục trong legend
-        maxHeight: 60, // Giới hạn chiều cao legend để buộc xuống dòng
+        maxHeight: 40, // Giới hạn chiều cao legend để buộc xuống dòng
       },
       datalabels: {
         display: false, // Disable datalabels
@@ -46,7 +46,7 @@ const DowntimePieChart = ({ data }) => {
   };
 
   return (
-    <div>
+    <div style={{ width: '100%', height: '280px' }} className="flex justify-center">
       <Pie data={chartData} options={chartOptions} />
     </div>
   );

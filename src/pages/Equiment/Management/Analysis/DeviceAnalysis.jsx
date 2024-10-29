@@ -293,12 +293,14 @@ const handleDeviceSelect = (deviceId) => {
  console.log('employData ',employeeData)
   return (
     <div>
-      <div className="flex justify-end items-center mb-4">
+      <Breadcrumb />
+      <hr />
+      <div className="flex justify-end items-center mb-4 mt-2">
         <Select
           value={selectedArea}
           onChange={handleAreaSelect}
           placeholder="Chọn khu vực"
-          style={{ width: 200 }}
+          style={{ width: 150,marginRight: 5 }}
         >
           {areas.map((area) => (
             <Option key={area._id} value={area._id}>
@@ -311,7 +313,7 @@ const handleDeviceSelect = (deviceId) => {
             value={selectedDevice} // deviceId được lưu trong state
             onChange={handleDeviceSelect} // Gọi khi người dùng chọn thiết bị
             placeholder="Chọn thiết bị"
-            style={{ width: 200 }}
+            style={{ width: 150, marginRight: 5}}
             disabled={!selectedArea}
           >
             {devices.map((device) => (
@@ -323,7 +325,7 @@ const handleDeviceSelect = (deviceId) => {
 
 
 
-        <Space direction="vertical" size={12}>
+        <Space direction="vertical" size={12} style={{ width: 200 }}>
           <RangePicker onChange={(dates) => {
         console.log('Raw Dates from RangePicker:', dates); // Kiểm tra giá trị
         handleDateChange(dates);
