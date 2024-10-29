@@ -68,42 +68,64 @@ const EmployeeCatalog = () => {
 
  const handleImport = (file) => {
   const reader = new FileReader();
-  reader.onload = (e) => {
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-    // Chuyển đổi dữ liệu thành định dạng phù hợp
-    const newEmployees = importedData.map((item) => ({
-      employeeCode: item['Mã Nhân Viên'],
-      employeeName: item['Tên Nhân Viên'],
-      areaName: item['Khu Vực'],
-    }));
+      // Kiểm tra dữ liệu đọc từ file Excel
+      console.log('Dữ liệu từ Excel:', jsonData);
 
-    // Gửi từng khu vực lên API và cập nhật state
-    const promises = formattedData.map(async (employee) => {
-      try {
-        const response = await axios.post(`${apiUrl}/employees`, employee);
-        // Cập nhật state ngay sau khi thêm thành công
-        return response.data;
-      } catch (error) {
-        toast.error('Failed to save area');
-        return null;
+      if (jsonData.length === 0) {
+        toast.error('Không tìm thấy dữ liệu trong file Excel');
+        return;
       }
-    });
 
-    // Đợi tất cả các yêu cầu hoàn tất và cập nhật bảng
-    Promise.all(promises).then((results) => {
-      const addedEmployee = results.filter((employee) => employee !== null);
-      setEmployees((prevEmployee) => [...prevEmployee, ...addedEmployee ]);
-      setFilteredEmployees((prevFiltered) => [...prevFiltered, ...addedEmployee ]);
-      toast.success('Thêm khu vực thành công!');
-    });
+      // Format lại dữ liệu từ Excel
+      const formattedData = jsonData.map((item) => ({
+        employeeCode: item['Mã nhân viên'] || 'Không rõ',
+        employeeName: item['Tên nhân viên'] || 'Không rõ',
+        areaName: item['Khu vực'] || 'Không rõ',
+      }));
+
+      console.log('Dữ liệu sau khi format:', formattedData);
+
+      if (formattedData.length === 0) {
+        toast.error('Dữ liệu không hợp lệ hoặc không có khu vực.');
+        return;
+      }
+
+      // Gọi API để thêm dữ liệu
+      const results = await Promise.all(
+        formattedData.map(async (employee) => {
+          try {
+            const response = await axios.post(`${apiUrl}/employees`, employee);
+            return response.data;
+          } catch (error) {
+            console.error('Lỗi khi thêm nhân viên:', employee, error);
+            toast.error(`Lỗi khi thêm: ${employee.employeeName}`);
+            return null;
+          }
+        })
+      );
+
+      const addedEmployees = results.filter((emp) => emp !== null);
+      setEmployees((prev) => [...prev, ...addedEmployees]);
+      setFilteredEmployees((prev) => [...prev, ...addedEmployees]);
+
+      toast.success('Nhập dữ liệu thành công!');
+    } catch (error) {
+      toast.error('Lỗi khi đọc file Excel');
+      console.error('Lỗi:', error);
+    }
   };
   reader.readAsArrayBuffer(file);
 };
+
+
 
 
   // Handle saving new or edited employee
