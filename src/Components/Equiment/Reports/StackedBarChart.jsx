@@ -118,7 +118,7 @@ const StackedBarChart = ({ selectedDate, onDateChange }) => {
 
     try {
       const response = await axios.get(
-        `http://192.168.1.15:5000/api/telemetry?deviceId=${deviceId}&startDate=${formatDateForAPI(startDate)}&endDate=${formatDateForAPI(endDate)}`
+        `${apiUrl}/telemetry?deviceId=${deviceId}&startDate=${formatDateForAPI(startDate)}&endDate=${formatDateForAPI(endDate)}`
       );
       let totalOfflinePercentArray = [];
       let totalRun = []
