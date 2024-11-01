@@ -21,13 +21,12 @@ const DashboardGrid = ({ machines, isFullscreen }) => {
 
   return (
     <div
-  className={`grid ${
-    isFullscreen
-      ? 'overflow-hidden grid-cols-[repeat(auto-fit,minmax(250px,1fr))] h-screen p-4'
-      : 'lg:grid-cols-4 2xl:grid-cols-6 md:grid-cols-3 sm:grid-cols-2 p-2'
-  } gap-1`}
->
-
+      className={`grid ${
+        isFullscreen
+          ? 'grid-cols-[repeat(auto-fit,minmax(200px,1fr))] h-screen' // Điều chỉnh chiều cao toàn màn hình
+          : 'lg:grid-cols-4 2xl:grid-cols-6 md:grid-cols-3 sm:grid-cols-2'
+      } gap-1 overflow-hidden`} // Thêm overflow-hidden để tránh scroll
+    >
       {sortedMachines.map((machine) => (
         <div
           key={machine.id}
