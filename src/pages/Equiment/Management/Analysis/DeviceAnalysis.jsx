@@ -89,28 +89,35 @@ useEffect(() => {
 // Fetch devices when an area is selected
 const handleAreaSelect = async (areaId) => {
   setSelectedArea(areaId);
-  console.log('Selected Area ID:', areaId); // Debug
+  console.log('Selected Area ID:', areaId);
 
   try {
-    const response = await axios.get(`${apiUrl}/device?areaId=${areaId}`);
-    console.log('API URL:', `${apiUrl}/device?areaId=${areaId}`); // Debug
-    console.log('Fetched Devices:', response.data); // Debug
+    // Gọi API để lấy toàn bộ danh sách thiết bị
+    const response = await axios.get(`${apiUrl}/device`);
+    console.log('Fetched Devices (Unfiltered):', response.data);
 
-    if (response.data && response.data.length > 0) {
-      const formattedDevices = response.data.map((device) => ({
-        id: device.deviceId, // Lưu deviceId thay vì _id
-        name: device.deviceName,
-      }));
-      setDevices(formattedDevices);
+    // Lọc danh sách thiết bị theo `areaId` đã chọn
+    const filteredDevices = response.data.filter(device => {
+      console.log(`Device Area ID: ${device.areaId}, Selected Area ID: ${areaId}`);
+      return device.areaId === areaId;
+    });
+
+    if (filteredDevices.length > 0) {
+      // Cập nhật danh sách thiết bị đã lọc
+      setDevices(filteredDevices);
     } else {
       console.warn('No devices found for this area.');
-      setDevices([]); // Đảm bảo xóa dữ liệu cũ nếu không tìm thấy thiết bị
+      setDevices([]); // Xóa dữ liệu nếu không có thiết bị phù hợp
     }
   } catch (error) {
     console.error('Error fetching devices:', error);
-    setDevices([]); // Xóa dữ liệu cũ trong trường hợp lỗi
+    setDevices([]); // Đảm bảo không hiển thị dữ liệu cũ nếu gặp lỗi
   }
 };
+
+
+
+
 
 
 const handleDeviceSelect = (deviceId) => {
