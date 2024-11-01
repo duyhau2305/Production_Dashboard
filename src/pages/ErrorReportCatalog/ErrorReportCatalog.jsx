@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrash } from 'react-icons/fa';
-import { Modal, Form, Input, Button ,Select} from 'antd';  // Import các thành phần cần thiết từ Ant Design
+import { Modal, Form, Input, Button ,Select,Checkbox,Divider} from 'antd';  // Import các thành phần cần thiết từ Ant Design
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SearchButton from '../../Components/Button/SearchButton';
@@ -33,15 +33,6 @@ const ErrorReportCatalog = () => {
     }
   };
 
-  // Gọi API để lấy danh sách deviceName từ model Device
-  const fetchDeviceSuggestions = async () => {
-    try {
-      const response = await axios.get(`${apiUrl}/device`);
-      setDeviceSuggestions(response.data); // Giả định rằng response trả về danh sách thiết bị
-    } catch (error) {
-      toast.error('Lỗi khi tải danh sách thiết bị');
-    }
-  };
 
   // Gọi API khi component mount
   useEffect(() => {
@@ -201,6 +192,42 @@ const ErrorReportCatalog = () => {
       report.reasonName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (report.deviceNames && report.deviceNames.join(', ').toLowerCase().includes(searchQuery.toLowerCase()))
   );
+  
+  const [selectedDevices, setSelectedDevices] = useState([]);
+
+  useEffect(() => {
+    fetchDeviceSuggestions();
+  }, []);
+
+  // Hàm lấy danh sách thiết bị từ API
+  const fetchDeviceSuggestions = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/device`);
+      setDeviceSuggestions(response.data);
+    } catch (error) {
+      toast.error('Lỗi khi tải danh sách thiết bị');
+    }
+  };
+
+  // Hàm xử lý khi chọn toàn bộ thiết bị
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const allDeviceNames = deviceSuggestions.map((device) => device.deviceName);
+      setSelectedDevices(allDeviceNames);
+    } else {
+      setSelectedDevices([]);
+    }
+  };
+
+  // Hàm xử lý khi chọn theo khu vực
+  const handleSelectByArea = (area) => {
+    const areaDevices = deviceSuggestions
+      .filter((device) => device.area === area)
+      .map((device) => device.deviceName);
+    setSelectedDevices((prevDevices) => [...new Set([...prevDevices, ...areaDevices])]);
+  };
+
+  
 
   return (
     <div className="p-4 bg-white shadow-md rounded-md">
@@ -309,17 +336,39 @@ const ErrorReportCatalog = () => {
             name="deviceNames"
             rules={[{ required: true, message: 'Thiết Bị là bắt buộc' }]}
           >
-            <Select
-              mode="multiple"
-              placeholder="Chọn thiết bị"
-              allowClear
-            >
-              {deviceSuggestions.map((device) => (
-                <Option key={device.deviceName} value={device.deviceName}>
-                  {device.deviceName}
-                </Option>
-              ))}
-            </Select>
+             <Select
+        mode="multiple"
+        placeholder="Chọn thiết bị"
+        allowClear
+        value={selectedDevices}
+        onChange={(values) => setSelectedDevices(values)}
+        dropdownRender={(menu) => (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px' }}>
+              <Checkbox onChange={(e) => handleSelectAll(e.target.checked)}>Chọn toàn bộ</Checkbox>
+              <Select
+                style={{ width: '50%' }}
+                placeholder="Chọn khu vực"
+                onSelect={(value) => handleSelectByArea(value)}
+              >
+                {[...new Set(deviceSuggestions.map((device) => device.area))].map((area) => (
+                  <Option key={area} value={area}>
+                    {area}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+            <Divider style={{ margin: '8px 0' }} />
+            {menu}
+          </>
+        )}
+      >
+        {deviceSuggestions.map((device) => (
+          <Option key={device.deviceName} value={device.deviceName}>
+            {device.deviceName}
+          </Option>
+        ))}
+      </Select>
           </Form.Item>
           {/* Trường nhập deviceStatus */}
           <Form.Item

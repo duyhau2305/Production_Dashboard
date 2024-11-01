@@ -22,7 +22,7 @@ const ResponeSubmit = () => {
     axios
       .get(`${import.meta.env.VITE_API_BASE_URL}/issue`)
       .then((response) => {
-        // Lọc ra các lý do có deviceStatus là "DỪNG" và phù hợp với thiết bị đã chọn
+        
         const reasons = response.data.filter(
           (reason) =>
             reason.deviceNames.includes(selectedMachine.deviceName) &&
@@ -42,10 +42,10 @@ const ResponeSubmit = () => {
 
   const handleCancel = () => {
     if (!selectedReason) {
-      // Trở về trang trước nếu chưa chọn lý do
+      
       navigate(-1);
     } else {
-      // Hủy bỏ lựa chọn lý do nếu đã chọn
+      
       setSelectedReason(null);
       setIsResponseEnabled(false);
       toast.info('Lý do đã được hủy.');

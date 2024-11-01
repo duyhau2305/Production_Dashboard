@@ -69,36 +69,38 @@ const ResponeIssue = () => {
     if (selectedMachine) {
       const fetchTelemetryData = async () => {
         try {
+          const formattedStartDate = `${selectedDate}T00:00:00Z`; // Định dạng thời gian bắt đầu
+          const formattedEndDate = `${selectedDate}T23:59:59Z`; // Định dạng thời gian kết thúc
+
           const response = await axios.get(
-            `${apiUrl}/telemetry?deviceId=${selectedMachine.deviceId}&startDate=${selectedDate}&endDate=${selectedDate}`
+            `${apiUrl}/machine-operations/${selectedMachine._id}/timeline`,
+            {
+              params: {
+                startTime: formattedStartDate,
+                endTime: formattedEndDate,
+              },
+            }
           );
-  
-          if (response.data && response.data.length > 0) {
-            // Lọc dữ liệu ngay sau khi nhận được từ API
-            const filteredIntervals = response.data[0].intervals.filter((interval) => {
-              const [startHour, startMinute] = interval.startTime.split(':').map(Number);
-              const [endHour, endMinute] = interval.endTime.split(':').map(Number);
-  
-              // Tính tổng số phút từ giờ và phút
-              const startTotalMinutes = startHour * 60 + startMinute;
-              const endTotalMinutes = endHour * 60 + endMinute;
-  
-              // Tính thời lượng giữa hai thời điểm (xử lý qua ngày)
-              let totalMinutes = endTotalMinutes - startTotalMinutes;
-              if (totalMinutes < 0) totalMinutes += 24 * 60; // Nếu qua ngày, cộng thêm 24 giờ
-  
-              // Lọc các interval có status "Dừng" và thời lượng > 5 phút
-              return interval.status === 'Dừng' && totalMinutes > 5;
-            });
-            console.log(filteredIntervals)
-            // Cập nhật state với dữ liệu đã lọc
+
+          if (response.data && response.data.data.length > 0) {
+            const filteredIntervals = response.data.data.flatMap(dayData => 
+              dayData.intervals.filter(interval => {
+                const startTime = new Date(interval.startTime);
+                const endTime = new Date(interval.endTime);
+                const totalSeconds = (endTime - startTime) / 1000;
+
+                
+                return interval.status === 'Stop' && totalSeconds > 300;
+              })
+            );
+            
             setTelemetryData(filteredIntervals);
           }
         } catch (error) {
           console.error('Error fetching telemetry data:', error);
         }
       };
-  
+
       fetchTelemetryData();
     }
   }, [selectedMachine, selectedDate]);
@@ -290,48 +292,71 @@ const ResponeIssue = () => {
       <div className="p-4">
       <h2 className="text-3xl font-bold text-center mb-4">Danh sách các khoảng thời gian ngừng máy:</h2>
       {telemetryData.map((interval, index) => {
-  const [startHour, startMinute, startSecond = 0] = interval.startTime.split(':').map(Number);
-  const [endHour, endMinute, endSecond = 0] = interval.endTime.split(':').map(Number);
+            const startDate = new Date(interval.startTime);
+            const endDate = new Date(interval.endTime);
 
-  let startTotalSeconds = startHour * 3600 + startMinute * 60 + startSecond;
-  let endTotalSeconds = endHour * 3600 + endMinute * 60 + endSecond;
+            const [startHour, startMinute, startSecond] = [
+              startDate.getUTCHours(),
+              startDate.getUTCMinutes(),
+              startDate.getUTCSeconds()
+            ];
+            const [endHour, endMinute, endSecond] = [
+              endDate.getUTCHours(),
+              endDate.getUTCMinutes(),
+              endDate.getUTCSeconds()
+            ];
 
-  // Tính tổng giây và xử lý qua ngày nếu cần
-  let totalSeconds = endTotalSeconds - startTotalSeconds;
-  if (totalSeconds < 0) totalSeconds += 24 * 3600; // Qua ngày cộng thêm 24 giờ
+            let startTotalSeconds = startHour * 3600 + startMinute * 60 + startSecond;
+            let endTotalSeconds = endHour * 3600 + endMinute * 60 + endSecond;
 
-  // Chuyển đổi tổng giây thành giờ, phút và giây
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
+            let totalSeconds = endTotalSeconds - startTotalSeconds;
+            if (totalSeconds < 0) totalSeconds += 24 * 3600;
 
-  const isDeclared = isIntervalDeclared(interval); // Kiểm tra đã khai báo chưa
-  const reasonName = isDeclared ? getReasonName(interval) : 'Chưa có lý do';
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
 
-  const isSelected = selectedDiv.includes(index);
+            const isDeclared = isIntervalDeclared(interval);
+            const reasonName = isDeclared ? getReasonName(interval) : 'Chưa có lý do';
+            const isSelected = selectedDiv.includes(index);
+
+            // Xác định boxShadow dựa trên trạng thái
+            const boxShadow =
+              interval.status === 'Stop'
+                ? 'inset 0px 10px 40px 10px rgba(255, 0, 0, 0.8)' // Màu đỏ cho Stop
+                : interval.status === 'Idle'
+                ? 'inset 0px 10px 40px 10px rgba(255, 255, 0, 0.8)' // Màu vàng cho Idle
+                : '';
+
+            const borderColor =
+                interval.status === 'Stop'
+                  ? 'border-red-500' // Màu đỏ cho Stop
+                  : interval.status === 'Idle'
+                  ? 'border-yellow-500' // Màu vàng cho Idle
+                  : '';
 
   return (
     <div
-      key={interval._id}
-      className={`transition-transform transform border-4 rounded-3xl grid grid-cols-2 py-8 mt-4 px-8 w-[90%] justify-center items-center ml-8 gap-10 text-4xl cursor-pointer ${
-        isDeclared ? 'bg-gray-300' : 'border-red-500'
-      } ${isSelected ? 'scale-105 bg-green-200 border-green-500' : ''}`}
-      onClick={() => handleTimeClick(interval, index)}
-      style={{ boxShadow: `inset 0px 10px 40px 10px rgba(255, 0, 0, 0.8)` }}
-    >
-      <span className="col-span-1 flex ml-2">Trong khoảng</span>
-      <span className="col-span-1 flex">{`${interval.startTime} - ${interval.endTime}`}</span>
-      <span className="col-span-1 flex ml-2">Thời lượng</span>
-      <span className="col-span-1 flex">{`${hours} giờ ${minutes} phút ${seconds} giây`}</span>
-      <span className="col-span-1 flex">
-        {isDeclared ? 'Đã khai báo' : 'Chưa khai báo'}
+    key={`${interval.startTime}-${interval.endTime}-${index}`}
+    className={`transition-transform transform border-4 rounded-3xl grid grid-cols-2 py-8 mt-4 px-8 w-[90%] justify-center items-center ml-8 gap-10 text-4xl cursor-pointer ${
+      isDeclared ? 'bg-gray-300' : 'border-red-500'
+    } ${isSelected ? 'scale-105 bg-green-200 border-green-500' : ''}`}
+    onClick={() => handleTimeClick(interval, index)}
+    style={{ boxShadow:`inset 0px 10px 40px 10px rgba(255, 0, 0, 0.8)` }}
+  >
+    <span className="col-span-1 flex ml-2">Trong khoảng</span>
+    <span className="col-span-1 flex">{`${startDate.toLocaleTimeString()} - ${endDate.toLocaleTimeString()}`}</span>
+    <span className="col-span-1 flex ml-2">Thời lượng</span>
+    <span className="col-span-1 flex">{`${hours} giờ ${minutes} phút ${seconds} giây`}</span>
+    <span className="col-span-1 flex">
+      {isDeclared ? 'Đã khai báo' : 'Chưa khai báo'}
+    </span>
+    {isDeclared && (
+      <span className="col-span-1 flex text-blue-600 font-semibold">
+        {reasonName}
       </span>
-      {isDeclared && (
-        <span className="col-span-1 flex text-blue-600 font-semibold">
-          {reasonName}
-        </span>
-      )}
-    </div>
+    )}
+  </div>
   );
 })}
 

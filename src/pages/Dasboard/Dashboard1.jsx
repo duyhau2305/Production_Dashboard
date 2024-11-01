@@ -15,92 +15,86 @@ const Dashboard1 = () => {
 
   const fixedDate = moment().format('YYYY-MM-DD'); // Ngày hiện tại
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [devicesResponse, areasResponse] = await Promise.all([
-        axios.get(`${apiUrl}/device`),
-        axios.get(`${apiUrl}/areas`),
-      ]);
-  
-      setAreas(areasResponse.data);
-  
-      const machinesWithDetails = await Promise.all(
-        devicesResponse.data.map(async (device) => {
-          const deviceId = device.deviceId;
-  
-          try {
-            const [
-              telemetryResponse,
-              productionTaskResponse,
-              workShiftsResponse,
-            ] = await Promise.all([
-              axios.get(
-                `${apiUrl}/telemetry?deviceId=${deviceId}&startDate=${fixedDate}&endDate=${fixedDate}`
-              ).catch(() => ({ data: [] })),
-              axios.get(
-                `${apiUrl}/productiontask?deviceId=${deviceId}&startDate=${fixedDate}&endDate=${fixedDate}`
-              ).catch(() => ({ data: [] })),
-              axios.get(`${apiUrl}/workShifts`).catch(() => ({ data: [] })),
-            ]);
-  
-            const telemetryData = telemetryResponse.data[0] || {};
-            const { status, elapsedTime } = getRealTimeStatusAndElapsed(
-              telemetryData.intervals
-            );
-  
-            // Lấy thông tin ca đầu tiên từ productionTask
-            const productionTaskData = productionTaskResponse.data[0] || {};
-            const shift = productionTaskData.shifts?.[0] || {};
-            const shiftName = shift.shiftName || 'Không xác định';
-            const employee = shift.employeeName?.[0] || 'Không có dữ liệu';
-            const signalLight = shift.status || 'Không xác định'; // Sử dụng trực tiếp status làm signalLight
-  
-            // Tìm thông tin ca từ workShifts dựa vào shiftName
-            const workShift = workShiftsResponse.data.find(
-              (shift) => shift.shiftName === shiftName
-            );
-  
-            const startTime = workShift?.startTime || 'Chưa xác định';
-            const endTime = workShift?.endTime || 'Chưa xác định';
-  
-            return {
-              id: deviceId,
-              deviceName: device.deviceName,
-              areaName: device.areaName || 'Không xác định',
-              status,
-              elapsedTime,
-              employee,
-              shiftName,
-              startTime,
-              endTime,
-              signalLight, // Trực tiếp từ status
-            };
-          } catch (error) {
-            console.error(`Lỗi khi lấy dữ liệu cho ${device.deviceName}:`, error);
-            return {
-              id: deviceId,
-              deviceName: device.deviceName,
-              areaName: device.areaName || 'Không xác định',
-              status: 'Không xác định',
-              elapsedTime: '0 phút',
-              employee: 'Không có dữ liệu',
-              shiftName: 'Không xác định',
-              startTime: 'Chưa xác định',
-              endTime: 'Chưa xác định',
-              signalLight: 'Không xác định',
-            };
-          }
-        })
-      );
-  
-      setMachines(machinesWithDetails);
-    } catch (error) {
-      console.error('Lỗi khi lấy dữ liệu:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Hàm lấy danh sách thiết bị và khu vực
+const fetchDevicesAndAreas = async () => {
+  try {
+    const [devicesResponse, areasResponse] = await Promise.all([
+      axios.get(`${apiUrl}/device`),
+      axios.get(`${apiUrl}/areas`),
+    ]);
+    return { devices: devicesResponse.data, areas: areasResponse.data };
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách thiết bị và khu vực:', error);
+    return { devices: [], areas: [] };
+  }
+};
+
+// Hàm lấy chi tiết cho từng máy
+const fetchMachineDetails = async (device) => {
+  const deviceId = device.deviceId; // Chỉ cần deviceId cho API
+  try {
+    // Gọi API machineDetails với deviceId
+    const response = await axios.get(
+      `${apiUrl}/machineDetails?deviceId=${deviceId}`
+    );
+
+    // Kiểm tra dữ liệu trả về từ API
+    const data = response.data || {};
+
+    // Trích xuất dữ liệu chi tiết từ kết quả trả về
+    return {
+      id: deviceId,
+      deviceName: data.deviceName || 'Không xác định',
+      areaName: data.areaName || 'Không xác định',
+      status: data.status || 'Không xác định',
+      elapsedTime: data.elapsedTime || '0 phút',
+      employee: data.employee || 'Không có dữ liệu',
+      shiftName: data.shiftName || 'Không xác định',
+      startTime: data.startTime || 'Chưa xác định',
+      endTime: data.endTime || 'Chưa xác định',
+      signalLight: data.signalLight || 'Không xác định',
+    };
+  } catch (error) {
+    console.error(`Lỗi khi lấy dữ liệu cho deviceId: ${deviceId}`, error);
+    return {
+      id: deviceId,
+      deviceName: device.deviceName || 'Không xác định',
+      areaName: device.areaName || 'Không xác định',
+      status: 'Không xác định',
+      elapsedTime: '0 phút',
+      employee: 'Không có dữ liệu',
+      shiftName: 'Không xác định',
+      startTime: 'Chưa xác định',
+      endTime: 'Chưa xác định',
+      signalLight: 'Không xác định',
+    };
+  }
+};
+
+
+
+
+// Hàm chính để điều khiển luồng và kết hợp các hàm trên
+const fetchData = async () => {
+  setLoading(true);
+  try {
+    const { devices, areas } = await fetchDevicesAndAreas();
+    setAreas(areas);
+
+    const machinesWithDetails = await Promise.all(
+      devices.map((device) => fetchMachineDetails(device))
+    );
+
+    console.log('Dữ liệu cho từng máy:', machinesWithDetails); // Kiểm tra dữ liệu của từng máy
+    setMachines(machinesWithDetails);
+  } catch (error) {
+    console.error('Lỗi khi lấy dữ liệu:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   
   useEffect(() => {
     fetchData();

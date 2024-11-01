@@ -141,9 +141,6 @@ const handleCancelDates = () => {
   setIsSelecting(!allSelected);
 };
 
-
-
-
   // Handle machine click
   const handleMachineClick = (machine) => {
     // Kiểm tra xem thiết bị đã được chọn chưa
@@ -279,12 +276,11 @@ const handleCancelUpdate = () => {
          defaultValue={dayjs()} // Đặt giá trị mặc định là hôm nay nếu chưa có gì được chọn
        />
  
-           {/* Conditionally render "Cập nhật nhiệm vụ sản xuất" */}
-           {selectedMachines.length > 0 && (
+          
              <Button type="primary" className="ml-2" onClick={handleUpdateClick}>
                Cập nhật nhiệm vụ sản xuất
              </Button>
-           )}
+          
  
            {/* Button to toggle CustomCalendar */}
            

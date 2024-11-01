@@ -27,68 +27,68 @@ const CustomUpdateModal = ({ open, onClose, onCancel, selectedDates, setSelected
       console.error('Error fetching data:', error);
     }
 };
-  const handleSave = async () => {
+const handleSave = async () => {
+  const updatedTaskData = { ...taskData };
 
-    // getDataWithSessionID()
-    
-    const updatedTaskData = { ...taskData };
+  let isTaskAdded = false;
+  const productionTasks = [];
 
-    // Kiểm tra xem có nhiệm vụ nào được thêm hay không
-    let isTaskAdded = false;
-    const productionTasks = [];
+  if (Array.isArray(selectedDates) && selectedDates.length > 0) {
+    selectedDates.forEach(date => {
+      if (updatedTaskData[date] && Array.isArray(updatedTaskData[date].tasks) && updatedTaskData[date].tasks.length > 0) {
+        selectedMachines.forEach(machine => {
+          const tasksForDate = updatedTaskData[date].tasks || []; // đảm bảo tasksForDate là một mảng
+          
+          const shifts = tasksForDate.map(task => ({
+            shiftName: task.selectedShift,
+            status: task.status,
+            employeeName: task.selectedEmployees,
+          }));
 
-    if (Array.isArray(selectedDates) && selectedDates.length > 0) {
-        selectedDates.forEach(date => {
-            if (updatedTaskData[date] && Array.isArray(updatedTaskData[date].tasks) && updatedTaskData[date].tasks.length > 0) {
-                selectedMachines.forEach(machine => {
-                    const shifts = updatedTaskData[date].tasks.map(task => ({
-                        shiftName: task.selectedShift,
-                        status: task.status,
-                        employeeName: task.selectedEmployees,
-                    }));
+          const formattedTask = {
+            id: tasksForDate[0]?.id || null, // Sử dụng ID từ task đầu tiên nếu có
+            date: new Date(date).toISOString().split('T')[0],
+            deviceId: machine.deviceId, // Thêm deviceId vào đây
+            deviceName: machine.deviceName,
+            shifts: shifts,
+          };
 
-                    const formattedTask = {
-                        date: new Date(date).toISOString().split('T')[0], // Định dạng ngày
-                        deviceName: machine.deviceName, // Thiết bị cụ thể từ `selectedMachines`
-                        shifts: shifts,
-                    };
-
-                    productionTasks.push(formattedTask);
-                    isTaskAdded = true;
-                });
-            }
+          productionTasks.push(formattedTask);
+          isTaskAdded = true;
         });
+      }
+    });
 
-        if (!isTaskAdded) {
-            message.error('Vui lòng thêm ít nhất một nhiệm vụ trước khi lưu.');
-            return;
-        }
-
-        // Gửi từng nhiệm vụ riêng lẻ lên API
-        try {
-            for (const task of productionTasks) {
-                await axios.post(`${apiUrl}/productiontask`, task);
-            }
-            message.success('Kế hoạch đã được lưu thành công!');
-
-            // Cập nhật `taskData` trực tiếp với các nhiệm vụ mới để UI hiển thị ngay lập tức
-            const refreshedTaskData = await fetchTaskData(); // Hàm này cần gọi API để lấy dữ liệu mới nhất
-            setTaskData(refreshedTaskData);
-
-            // Xóa các thiết bị đã chọn và các ngày đã chọn sau khi lưu
-            setSelectedDates([]);
-            setSelectedMachines([]);
-
-            // Đóng modal sau khi lưu thành công
-            onClose();
-            window.location.reload();
-        } catch (error) {
-            message.error('Có lỗi xảy ra khi lưu kế hoạch. Vui lòng thử lại.');
-            console.error('Error saving production task:', error);
-        }
-    } else {
-        message.error('Vui lòng chọn ít nhất một ngày!');
+    if (!isTaskAdded) {
+      message.error('Vui lòng thêm ít nhất một nhiệm vụ trước khi lưu.');
+      return;
     }
+
+    try {
+      for (const task of productionTasks) {
+        if (task.id) {
+          await axios.put(`${apiUrl}/productiontask/${task.id}`, task);
+          console.log('Updated Task:', task);
+        } else {
+          await axios.post(`${apiUrl}/productiontask`, task);
+          console.log('Created New Task:', task);
+        }
+      }
+      message.success('Kế hoạch đã được lưu hoặc cập nhật thành công!');
+
+      const refreshedTaskData = await fetchTaskData();
+      setTaskData(refreshedTaskData);
+
+      setSelectedDates([]);
+      setSelectedMachines([]);
+      onClose();
+    } catch (error) {
+      message.error('Có lỗi xảy ra khi lưu kế hoạch. Vui lòng thử lại.');
+      console.error('Error saving production task:', error);
+    }
+  } else {
+    message.error('Vui lòng chọn ít nhất một ngày!');
+  }
 };
 
 // Hàm để lấy dữ liệu mới nhất từ API
