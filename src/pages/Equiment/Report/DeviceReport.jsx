@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import Breadcrumb from '../../../Components/Breadcrumb/Breadcrumb';
 import DowntimePieChart from '../../../Components/Equiment/Analysis/DowntimePieChart';
 import TitleChart from '../../../Components/TitleChart/TitleChart';
@@ -13,23 +14,35 @@ const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 function DeviceReport() {
+  
   const [selectedMachines, setSelectedMachines] = useState([]);  
   const [selectedDate, setSelectedDate] = useState(null);
   const [startDate, setStartDate] = useState(null); 
-  const runtimeTrendChartRef = useRef(null); // Create a ref for the RuntimeTrendChart
-  const timelineChartRef = useRef(null); // Create a ref for the TimelineChart
-  const stackedBarChartRef = useRef(null); // Create a ref for the StackedBarChart
+  const [machineOptions, setMachineOptions] = useState([]); // State lưu dữ liệu máy từ API
 
-  const machineOptions = [
-    ...Array.from({ length: 17 }, (_, i) => ({
-      value: `CNC${i + 1}`,
-      label: `CNC ${i + 1}`
-    })),
-    ...Array.from({ length: 18 }, (_, i) => ({
-      value: `PHAY${i + 1}`,
-      label: `PHAY ${i + 1}`
-    }))
-  ];
+  const runtimeTrendChartRef = useRef(null);
+  const timelineChartRef = useRef(null);
+  const stackedBarChartRef = useRef(null);
+  console.log(selectedMachines)
+  useEffect(() => {
+    const fetchMachineOptions = async () => {
+      try {
+        const response = await axios.get('http://192.168.10.190:5001/api/machine-operations/machineOperations');
+        const machines = response.data.data; 
+        console.log(response)
+        const options = machines.map(machine => ({
+          value: machine._id, // Hoặc field phù hợp với mã máy
+          label: machine.operationStatusKey || `Machine ${machine.id}` // Tên máy hoặc thông tin mô tả
+        }));
+
+        setMachineOptions(options);
+      } catch (error) {
+        console.error('Error fetching machine options:', error);
+      }
+    };
+
+    fetchMachineOptions();
+  }, []); 
 
   const handleFullscreen = (chartRef) => {
     if (chartRef.current) {
@@ -48,22 +61,25 @@ function DeviceReport() {
   };
 
   const newDateChane = (dates) => {
-    console.log(dates)
-    setStartDate(null)
-    setSelectedDate({startDate : dates.startDate , endDate : dates.endDate});
+    console.log(dates);
+    setStartDate(null);
+    setSelectedDate({ startDate: dates.startDate, endDate: dates.endDate });
+  };
+  const machineChange = () => {
+
   }
   const handleDateChange = (dates) => {
-    console.log(dates)
-    setStartDate(null)
-    setSelectedDate({startDate : dates[0].$d , endDate : dates[1].$d});
+    console.log(dates);
+    setStartDate(null);
+    setSelectedDate({ startDate: dates[0].$d, endDate: dates[1].$d });
   };
+
   const handleDateChangeChoose = (dates) => {
-    setStartDate(dates[0])
-    // setSelectedDate(dates);
+    setStartDate(dates[0]);
   };
+
   const disabledDate = (current) => {
-    // Allow the selected start date and next 7 days
-    if (!startDate) return false; // If no start date selected, allow all dates
+    if (!startDate) return false; // Nếu không có ngày bắt đầu được chọn, cho phép tất cả các ngày
     return current < startDate || current > startDate.clone().add(6, 'days');
   };
 
@@ -103,18 +119,13 @@ function DeviceReport() {
       }
     ],
   };
-  
+
   return (
     <>
-    <div className="p-2 bg-white shadow-md rounded-md">
-      <Breadcrumb />
-      <hr />
-      <div className="flex justify-end items-center mb-4 mt-2">
-      
+      <div className="flex justify-end items-center mb-4">
         <div className="flex items-center space-x-4">
-      
           <Select
-            mode="multiple" 
+            // mode="multiple"
             value={selectedMachines}
             onChange={setSelectedMachines}
             placeholder="Chọn máy"
@@ -126,26 +137,26 @@ function DeviceReport() {
               </Option>
             ))}
           </Select>
-          
+
           <RangePicker onChange={handleDateChange} disabledDate={disabledDate} onCalendarChange={handleDateChangeChoose} />
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-1 p-1 sm:grid sm:grid-cols-4">
+      <div className="grid grid-cols-12 gap-2 p-1">
         {/* Charts */}
-        <div className="bg-white rounded-lg p-3 shadow-md col-span-2 sm:col-span-1 ">
+        <div className="bg-white rounded-lg p-4 shadow-md col-span-2 ">
           <TitleChart
             title="Tỷ lệ máy chạy"
             timeWindow="Last 24 hours"
             onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
             onPrint={handlePrint}
           />
-          <div className=" ">
+          <div className="h-28">
             <DowntimePieChart data={runtimeChartData} />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-3 shadow-md col-span-2 sm:col-span-1  ">
+        <div className="bg-white rounded-lg p-4 shadow-md col-span-2 ">
           <TitleChart
             title="Phân bố nhiệm vụ"
             timeWindow="Last 24 hours"
@@ -157,26 +168,26 @@ function DeviceReport() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-3 shadow-md col-span-4 sm:col-span-1 " ref={runtimeTrendChartRef}>
+        <div className="bg-white rounded-lg p-4 shadow-md col-span-4 " ref={runtimeTrendChartRef}>
           <TitleChart
             title="Xu hướng máy chạy"
             timeWindow="Last 24 hours"
             onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
             onPrint={handlePrint}
           />
-          <div className="w-full  h-full ">
+          <div className="w-full h-full mt-1 ml-2 p-2">
             <RuntimeTrendChart data={runtimeTrendData} />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-3 shadow-md col-span-4 sm:col-span-1 ">
+        <div className="bg-white rounded-lg p-2 shadow-md col-span-4">
           <TitleChart
             title="Thời gian dừng sửa chữa"
             timeWindow="Last 24 hours"
             onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
             onPrint={handlePrint}
           />
-          <div className="w-full h-full ">
+          <div className="w-full h-full mt-12 ml-2 px-3">
             <RepairBarChart data={repairDowntimeBarData} />
           </div>
         </div>
@@ -190,7 +201,7 @@ function DeviceReport() {
             onFullscreen={() => handleFullscreen(timelineChartRef)}
             onPrint={handlePrint}
           />
-          {selectedDate ? <TimelineChart data={datastatus.status} selectedDate={selectedDate} onDateChange={newDateChane}/> : <>No data</>}
+          {selectedDate ? <TimelineChart  data={datastatus.status} selectedDate={selectedDate} selectedMchine={selectedMachines} onDateChange={newDateChane}/> : <>No data</>}
         </div>
         <div className="bg-white p-3 col-span-1" ref={stackedBarChartRef}>
           <TitleChart 
@@ -199,12 +210,9 @@ function DeviceReport() {
             onFullscreen={() => handleFullscreen(stackedBarChartRef)}
             onPrint={handlePrint}
           />
-          <StackedBarChart selectedDate={selectedDate} onDateChange={newDateChane}/>
+          <StackedBarChart selectedDate={selectedDate} selectedMchine={selectedMachines} onDateChange={newDateChane}/>
         </div>
       </div>
-
-    </div>
-     
     </>
   );
 }
