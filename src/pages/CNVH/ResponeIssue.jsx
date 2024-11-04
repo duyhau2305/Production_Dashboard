@@ -334,6 +334,7 @@ const ResponeIssue = () => {
                   : interval.status === 'Idle'
                   ? 'border-yellow-500' // Màu vàng cho Idle
                   : '';
+            const timeOptions = { hour: '2-digit', minute: '2-digit',second: '2-digit', hour12: false };
 
   return (
     <div
@@ -345,7 +346,9 @@ const ResponeIssue = () => {
     style={{ boxShadow:`inset 0px 10px 40px 10px rgba(255, 0, 0, 0.8)` }}
   >
     <span className="col-span-1 flex ml-2">Trong khoảng</span>
-    <span className="col-span-1 flex">{`${startDate.toLocaleTimeString()} - ${endDate.toLocaleTimeString()}`}</span>
+    <span className="col-span-1 flex">
+      {`${startDate.toLocaleTimeString([], timeOptions)} - ${endDate.toLocaleTimeString([], timeOptions)}`}
+    </span>
     <span className="col-span-1 flex ml-2">Thời lượng</span>
     <span className="col-span-1 flex">{`${hours} giờ ${minutes} phút ${seconds} giây`}</span>
     <span className="col-span-1 flex">

@@ -12,7 +12,6 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
   const [loading, setLoading] = useState(true);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  // Hàm thêm khoảng thời gian Offline giữa các khoảng thời gian khác
   const addOfflineIntervals = (data) => {
     const newData = [];
     for (let i = 0; i < data.length; i++) {
@@ -122,7 +121,7 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
       const colorScale = d3
         .scaleOrdinal()
         .domain(['Chạy', 'Dừng', 'Chờ', 'Offline'])
-        .range(['#4aea4a', '#f10401', '#ffd700', '#d3d3d3']);
+        .range(['#00C8D7', '#f10401', '#FFC107', '#d3d3d3']);
 
       // Tính tổng thời gian cho mỗi trạng thái
       const totalTime = {
@@ -141,9 +140,9 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
 
       // Vẽ chú thích (legend) cho tổng thời gian
       const legendData = [
-        { status: 'Chạy', time: `${Math.floor(totalTime['Chạy'] / 60)} giờ ${totalTime['Chạy'] % 60} phút`, color: '#4aea4a' },
+        { status: 'Chạy', time: `${Math.floor(totalTime['Chạy'] / 60)} giờ ${totalTime['Chạy'] % 60} phút`, color: '#00C8D7' },
         { status: 'Dừng', time: `${Math.floor(totalTime['Dừng'] / 60)} giờ ${totalTime['Dừng'] % 60} phút`, color: '#f10401' },
-        { status: 'Chờ', time: `${Math.floor(totalTime['Chờ'] / 60)} giờ ${totalTime['Chờ'] % 60} phút`, color: '#ffd700' },
+        { status: 'Chờ', time: `${Math.floor(totalTime['Chờ'] / 60)} giờ ${totalTime['Chờ'] % 60} phút`, color: '#FFC107' },
       ];
 
       const legend = svg

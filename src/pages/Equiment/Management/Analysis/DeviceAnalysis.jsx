@@ -21,7 +21,7 @@ const DeviceAnalysis = () => {
   const [employeeData, setEmployeeData] = useState([]);
   const [productionData, setProductionData] = useState([]);
   const [telemetryData, setTelemetryData] = useState([]);
-  const apiUrl = import.meta.env.VITE_API_BASE_DEV
+  const apiUrl = import.meta.env.VITE_API_BASE_URL
   console.log(selectedDateRange)
 
   function secondsToTime(seconds) {
@@ -109,25 +109,37 @@ const handleDeviceSearch = (value) => {
       console.log('Selected Device:', selectedDevice);
     }
   };
- 
   useEffect(() => {
-   if(selectedDateRange != null){
-    const startDate = new Date(selectedDateRange[0].$d);
-    const endDate = new Date(selectedDateRange[1].$d);
-    const yearS = startDate.getFullYear();
-    const yearE = endDate.getFullYear();
-    const monthS = String(startDate.getMonth() + 1).padStart(2, '0'); 
-    const monthE = String(endDate.getMonth() + 1).padStart(2, '0'); 
+    const fetchDevicesAndSetDefaults = async () => {
+      try {
+        const response = await axios.get(`${apiUrl}/device`);
+        const devices = response.data;
+        setDevices(devices);
+        setFilteredDevices(devices);
 
-    const dayS = String(startDate.getDate()).padStart(2, '0');
-    const dayE = String(endDate.getDate()).padStart(2, '0');
+        // Thiết bị mặc định
+        const defaultDevice = devices[0]; // Lấy thiết bị đầu tiên trong danh sách hoặc thiết bị mặc định
+        setSelectedDevice({ _id: defaultDevice.id, deviceId: defaultDevice.deviceId });
 
-    const formattedDateS = `${yearS}-${monthS}-${dayS}`;
-    const formattedDateE = `${yearE}-${monthE}-${dayE}`;
-    fetchData(formattedDateS, formattedDateE);
-   }
+        // Ngày mặc định là 4 ngày gần nhất
+        const endDate = moment(); // Hôm nay
+        const startDate = moment().subtract(3, 'days'); // 4 ngày gần nhất
+        const defaultDateRange = [startDate, endDate];
+        setSelectedDateRange(defaultDateRange);
 
-  }, [selectedDateRange]);
+        // Gọi hàm fetchData với các giá trị mặc định
+        fetchData(startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD'));
+        fetchDowntimeData(defaultDevice.deviceId, [startDate, endDate]);
+        fetchEmployeeData(defaultDevice._id, [startDate, endDate]);
+        fetchTelemetryData(defaultDevice._id, [startDate, endDate]);
+
+      } catch (error) {
+        console.error('Error fetching devices:', error);
+      }
+    };
+
+    fetchDevicesAndSetDefaults();
+  }, []);
   // Hàm xử lý khi người dùng chọn ngày
   const handleDateChange = (dates) => {
     if (dates && dates.length === 2) {
@@ -300,9 +312,10 @@ const aggregateDowntimeHoursByReason = (data) => {
           showSearch
           style={{ width: 200, marginRight: 5 }}
           placeholder="Chọn thiết bị"
-          onSearch={handleDeviceSearch} // Lọc khi người dùng gõ vào
-          onChange={handleDeviceSelect} // Chọn thiết bị từ danh sách gợi ý
-          filterOption={false} // Vô hiệu hóa lọc mặc định để dựa hoàn toàn vào dữ liệu từ API
+          onSearch={handleDeviceSearch}
+          onChange={handleDeviceSelect}
+          filterOption={false}
+          value={selectedDevice ? selectedDevice._id : undefined} // Hiển thị thiết bị mặc định
         >
           {filteredDevices.map((device) => (
             <Option key={device.id} value={device.id}>
@@ -311,12 +324,13 @@ const aggregateDowntimeHoursByReason = (data) => {
           ))}
         </Select>
 
-
         <Space direction="vertical" size={12} style={{ width: 200 }}>
-          <RangePicker onChange={(dates) => {
-        console.log('Raw Dates from RangePicker:', dates); // Kiểm tra giá trị
-        handleDateChange(dates);
-  }}  />
+          <RangePicker 
+            onChange={(dates) => {
+              handleDateChange(dates);
+            }} 
+            defaultValue={selectedDateRange} // Hiển thị khoảng thời gian mặc định
+          />
         </Space>
       </div>
 
