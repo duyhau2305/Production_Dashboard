@@ -21,7 +21,13 @@
     transition: transform 0.2s ease-in-out; /* Thời gian hoạt ảnh */
   }
   
-  .zoomed {
-    transform: scale(1.1); /* Tăng kích thước lên 10% khi phóng to */
+  .center-expand {
+
+    transition: transform 0.5s ease;
+    transform-origin: center;
+  } 
+  
+  .center-expand:hover {
+    transform: scaleX(2); /* Tăng gấp đôi chiều dài từ giữa ra */
   }
   
