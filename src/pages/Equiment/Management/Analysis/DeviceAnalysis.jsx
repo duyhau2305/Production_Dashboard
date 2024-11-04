@@ -18,8 +18,7 @@ const DeviceAnalysis = () => {
   const [devices, setDevices] = useState([]);
   const [filteredDevices, setFilteredDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
-  const [selectedDateRange, setSelectedDateRange] = useState(null);
-  const [selectedMachineType, setSelectedMachineType] = useState('CNC');
+   const [selectedMachineType, setSelectedMachineType] = useState('CNC');
   const [downtimeData, setDowntimeData] = useState([]);
   const [employeeData, setEmployeeData] = useState([]);
   const [productionData, setProductionData] = useState([]);
