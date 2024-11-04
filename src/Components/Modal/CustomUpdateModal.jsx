@@ -3,7 +3,7 @@ import { Modal, Button, message } from 'antd';
 import axios from 'axios'; // Import Axios
 import CustomCalendar from '../../Components/Calendar/CustomCalendar';
 import ProductionTaskManagement from './ProductionTaskManagement';
-import axios from 'axios';
+
 import { toast } from 'react-toastify';
 
 const CustomUpdateModal = ({ open, onClose, onCancel, selectedDates, setSelectedMachines, setSelectedDates, selectedMachines }) => {

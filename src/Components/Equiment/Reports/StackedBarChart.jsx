@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import moment from 'moment';
 import './TimelineChart.css';
-const StackedBarChart = ({ selectedDate, onDateChange }) => {
+const StackedBarChart = ({ selectedDate,selectedMchine, onDateChange }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -102,6 +102,18 @@ const StackedBarChart = ({ selectedDate, onDateChange }) => {
     const totalOfflinePercentage = (totalOfflineTime / totalSecondsInDay) * 100;
     return totalOfflinePercentage.toFixed(2);
   };
+  const formatDateAndTime = (data) => {
+    return data
+        .map(entry => ({
+            date: moment.tz(entry.date, "Asia/Ho_Chi_Minh").format('YYYY-DD-MM'),
+            intervals: entry.intervals.map(interval => ({
+                ...interval,
+                startTime: moment.tz(interval.startTime, "Asia/Ho_Chi_Minh").format('HH:mm:ss'),
+                endTime: moment.tz(interval.endTime, "Asia/Ho_Chi_Minh").format('HH:mm:ss'),
+            }))
+        }))
+        .reverse()
+};
   function calculatePercentageOfDay(timeData) {
     console.log(timeData)
     const { startTime, endTime } = timeData;
@@ -115,41 +127,67 @@ const StackedBarChart = ({ selectedDate, onDateChange }) => {
   const fetchData = async (startDate, endDate) => {
     setLoading(true);
     setError(null);
-
+    const start = startDate.toISOString()
+    const end = new Date(endDate)
+    const utcDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1, 16, 59, 59, 0));
+    const isoDate = utcDate.toISOString();
     try {
-      const response = await axios.get(
-        `http://192.168.1.15:5000/api/telemetry?deviceId=${deviceId}&startDate=${formatDateForAPI(startDate)}&endDate=${formatDateForAPI(endDate)}`
+      
+      const responsePercent = await axios.get(
+        `${apiUrl}/machine-operations/${selectedMchine}/summary-status?startTime=${start}&endTime=${isoDate}`
       );
       let totalOfflinePercentArray = [];
-      let totalRun = []
-      let totalStop = [] 
+      let totalRun = [];
+      let totalStop = [];
+      let totalIdle = [];
+      const dataReverse = responsePercent.data.data.reverse()
+      dataReverse.forEach(entry => {
+        const runPercent = (entry.runTime / 86400) * 100;
+        console.log(runPercent)
+        const idlePercent = (entry.idleTime / 86400) * 100;
+        const stopPercent = (entry.stopTime / 86400) * 100;
+        const offlinePercent = 100 - (runPercent + stopPercent + idlePercent);
 
-      const processedData = response.data.map(entry => {
-        const gaps = findGaps(entry.intervals);    
-        const runPercent = calculateTotalOfflinePercentageBefore23(entry.intervals, 'Chạy');
-        const stopPercent = calculateTotalOfflinePercentageBefore23(entry.intervals, 'Dừng');
-        const offline = calculatePercentageOfDay(gaps[0]);
-
-        totalRun.push(runPercent);
-        totalOfflinePercentArray.push(offline);
-        totalStop.push(stopPercent)
-        const intervalsWithGaps = [...entry.intervals, ...gaps].sort((a, b) => moment(a.startTime, 'HH:mm') - moment(b.startTime, 'HH:mm'));
-        return { ...entry, intervals: intervalsWithGaps };
+        totalRun.push(runPercent.toFixed(2));
+        totalIdle.push(idlePercent.toFixed(2));
+        totalStop.push(stopPercent.toFixed(2));
+        totalOfflinePercentArray.push(offlinePercent.toFixed(2));
       });
-
       setArrayPercentOffline(totalOfflinePercentArray)
       setArrayPercentRun(totalRun)
       setArrayPercentStop(totalStop)
 
-      const combinedArray = totalRun.map((run, index) => {
-        const stop = Number(totalStop[index]) + Number(run);
-        const offline = totalOfflinePercentArray[index];
-
-        return ` #00ff07 0% , #00ff07 ${run}% ,red ${run}% , red ${stop}% , #d9d9d9 ${offline}%`;
+      const combinedArray = totalIdle.map((idle, index) => {
+        const runPercent = Number(totalRun[index]);
+        const stopPercent = runPercent + Number(totalStop[index]);
+        const idlePercent = stopPercent + Number(idle);
+        const offlinePercent = totalOfflinePercentArray[index];
+        console.log(runPercent)
+        return `
+          #00C8D7 0%, 
+          #00C8D7 ${runPercent}%, 
+          red ${runPercent}%, 
+          red ${stopPercent}%, 
+          #FFC107 ${stopPercent}%, 
+          #FFC107 ${idlePercent}%, 
+          #BFBFBF ${idlePercent}%, 
+          #BFBFBF ${offlinePercent}%
+        `;
       });
+
+      let arrayDate = [];
+      responsePercent.data.data.forEach(value => {
+        const datePart = value.logTime.split('T')[0];
+        const [year, month, day] = datePart.split('-');
+        const formattedDate = `${day}/${month}`;
+        arrayDate.push(formattedDate);
+      });
+
+      // Gán trực tiếp vào state
+      setDate(arrayDate);
       setListGradient(combinedArray);
 
-      setData(processedData);
+      setData(responsePercent.data.data);
 
     } catch (error) {
       setError(error.message);
@@ -171,11 +209,10 @@ const StackedBarChart = ({ selectedDate, onDateChange }) => {
       for (let m = startDate2; m.isBefore(endDate2) || m.isSame(endDate2); m.add(1, 'days')) {
         newArrDate.push(m.clone());
       }
-      setDate(newArrDate);
       fetchData(startDate, endDate);
     }
 
-  }, [selectedDate]);
+  }, [selectedDate,selectedMchine]);
 
 
   const chartWidth = '100%';
@@ -198,7 +235,7 @@ const StackedBarChart = ({ selectedDate, onDateChange }) => {
   const renderYAxisLabels = useMemo(() => (
     dates.map((date, index) => (
       <div key={index} style={{ textAlign: 'right', fontSize: '10px', display: 'flex' }}>
-        {date.format('DD/MM')}
+        {date}
       </div>
     ))
   ), [dates]);
@@ -281,9 +318,9 @@ const handleMouseLeave = () => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
-          <div style={{ width: '15px', height: '15px', backgroundColor: '#00ff07', marginRight: '5px' }}></div>
+          <div style={{ width: '15px', height: '15px', backgroundColor: '#00C8D7', marginRight: '5px' }}></div>
           <span>Chạy</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
@@ -291,7 +328,11 @@ const handleMouseLeave = () => {
           <span>Dừng</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ width: '15px', height: '15px', backgroundColor: '#E7E7E7', marginRight: '5px' }}></div>
+          <div style={{ width: '15px', height: '15px', backgroundColor: '#FFC107', marginRight: '5px' }}></div>
+          <span>Idle</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: '15px', height: '15px', backgroundColor: '#BFBFBF', marginRight: '5px' }}></div>
           <span>Offline</span>
         </div>
       </div>

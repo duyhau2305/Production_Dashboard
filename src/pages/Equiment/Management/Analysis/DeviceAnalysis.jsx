@@ -17,6 +17,8 @@ const DeviceAnalysis = () => {
   const [selectedArea, setSelectedArea] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [selectedDateRange, setSelectedDateRange] = useState(null);
+  const [selectedMachineType, setSelectedMachineType] = useState('CNC'); // Thêm state cho lựa chọn loại máy
+  const [selectedMachine, setSelectedMachine] = useState(null); // Thêm state cho lựa chọn máy cụ thể
   const [downtimeData, setDowntimeData] = useState([]);
   const [employeeData, setEmployeeData] = useState([]);
   const [productionData, setProductionData] = useState([]);
@@ -33,29 +35,29 @@ const DeviceAnalysis = () => {
     
     try {
       const response = await axios.get(
-        `http://192.168.1.11:5001/api/getprocessdata?deviceId=543ff470-54c6-11ef-8dd4-b74d24d26b24&startDate=${startDate}&endDate=${endDate}`
+        `http://192.168.1.10:5001/api/getprocessdata?deviceId=543ff470-54c6-11ef-8dd4-b74d24d26b24&startDate=${startDate}&endDate=${endDate}`
       );
-      console.log(response.data.productionTasks)
+      console.log(response)
       const newData = [{
-        date : response.data.productionTasks[0].date.split('T')[0],
+        date : response.data.availabilityData.logTime.split('T')[0],
         startTime : response.data.productionTasks[0].shifts[0].shiftDetails.startTime,
         endTime: response.data.productionTasks[0].shifts[0].shiftDetails.endTime,
-        workTime : response.data.productionTasks[0].date.split('T')[0],
-        planeTime : response.data.productionTasks[0].date.split('T')[0],
-        runTime : secondsToTime(Number(response.data.availabilityData.runtime)),
-        downTime : secondsToTime(Number(response.data.availabilityData.stopTime)),
-        maintenanceTime : response.data.productionTasks[0].date.split('T')[0],
-        runRate : (Number(response.data.availabilityData.runtime)/86400*100).toFixed(2) 
+        workTime : response.data.availabilityData.logTime.split('T')[0],
+        planeTime : response.data.availabilityData.logTime.split('T')[0],
+        runTime : secondsToTime(response.data.availabilityData.runtime),
+        downTime : secondsToTime(response.data.availabilityData.stopTime),
+        maintenanceTime : response.data.availabilityData.logTime.split('T')[0],
+        runRate : (response.data.availabilityData.runtime/86400*100).toFixed(2) 
       },{
-        date : response.data.productionTasks[0].date.split('T')[0],
+        date : response.data.availabilityData.logTime.split('T')[0],
         startTime : response.data.productionTasks[1].shifts[0].shiftDetails.startTime,
         endTime: response.data.productionTasks[1].shifts[0].shiftDetails.endTime,
-        workTime : response.data.productionTasks[1].date.split('T')[0],
-        planeTime : response.data.productionTasks[1].date.split('T')[0],
-        runTime : secondsToTime(Number(response.data.availabilityData.runtime)),
-        downTime : secondsToTime(Number(response.data.availabilityData.stopTime)),
-        maintenanceTime : response.data.productionTasks[1].date.split('T')[0],
-        runRate : (Number(response.data.availabilityData.runtime)/86400*100).toFixed(2) 
+        workTime : response.data.availabilityData.logTime.split('T')[0],
+        planeTime : response.data.availabilityData.logTime.split('T')[0],
+        runTime : secondsToTime(response.data.availabilityData.runtime),
+        downTime : secondsToTime(response.data.availabilityData.stopTime),
+        maintenanceTime : response.data.availabilityData.logTime.split('T')[0],
+        runRate : (response.data.availabilityData.runtime/86400*100).toFixed(2) 
       }
     ]
       console.log(response.data.stopTime)
@@ -269,7 +271,7 @@ console.log(employeeData.shift)
           {/* Lựa chọn loại máy CNC hoặc PHAY */}
           <Select
             value={selectedMachineType}
-            onChange={handleMachineTypeSelect}
+            // onChange={handleMachineTypeSelect}
             placeholder="Chọn loại máy"
             style={{ width: 200 }} // Sử dụng style của Ant Design
           >
@@ -280,7 +282,7 @@ console.log(employeeData.shift)
           {/* Lựa chọn máy cụ thể */}
           <Select
             value={selectedMachine}
-            onChange={handleMachineSelect}
+            // onChange={handleMachineSelect}
             placeholder={`Chọn máy ${selectedMachineType}`}
             style={{ width: 200 }}
             disabled={!selectedMachineType} // Vô hiệu hóa nếu chưa chọn loại máy
@@ -307,17 +309,17 @@ console.log(employeeData.shift)
 
             <div className="col-span-1 bg-white p-3">
               <h4 className="mb-4">Downtime Pie Chart - Máy CNC</h4>
-              <DowntimePieChart data={downtimeChartData} />
+              {/* <DowntimePieChart data={downtimeChartData} /> */}
             </div>
 
             <div className="col-span-2 bg-white p-3">
               <h4 className="mb-4">Pareto Time Chart - Máy CNC</h4>
-              <ParetoTimeChart data={paretoDataTime.values} labels={paretoDataTime.labels} />
+              {/* <ParetoTimeChart data={paretoDataTime.values} labels={paretoDataTime.labels} /> */}
             </div>
 
             <div className="col-span-2 bg-white p-3">
               <h4 className="mb-4">Pareto Frequency Chart - Máy CNC</h4>
-              <ParetoFrequencyChart data={paretoDataFrequency.values} labels={paretoDataFrequency.labels} />
+              {/* <ParetoFrequencyChart data={paretoDataFrequency.values} labels={paretoDataFrequency.labels} /> */}
             </div>
           </div>
 
@@ -334,17 +336,17 @@ console.log(employeeData.shift)
           <div className="grid grid-cols-5 gap-2 mt-4">
             <div className="col-span-1 bg-white p-3">
               <h4>Downtime Pie Chart - Máy PHAY</h4>
-              <DowntimePieChart data={downtimeChartData} />
+              {/* <DowntimePieChart data={downtimeChartData} /> */}
             </div>
 
             <div className="col-span-2 bg-white p-3">
               <h4>Pareto Time Chart - Máy PHAY</h4>
-              <ParetoTimeChart data={paretoDataTime.values} labels={paretoDataTime.labels} />
+              {/* <ParetoTimeChart data={paretoDataTime.values} labels={paretoDataTime.labels} /> */}
             </div>
 
             <div className="col-span-2 bg-white p-3">
               <h4>Pareto Frequency Chart - Máy PHAY</h4>
-              <ParetoFrequencyChart data={paretoDataFrequency.values} labels={paretoDataFrequency.labels} />
+              {/* <ParetoFrequencyChart data={paretoDataFrequency.values} labels={paretoDataFrequency.labels} /> */}
             </div>
           </div>
 
