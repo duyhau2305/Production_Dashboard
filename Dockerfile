@@ -1,19 +1,20 @@
-# Sử dụng node.js image
-FROM node:18
+FROM node:22-alpine AS build
 
-# Thiết lập thư mục làm việc trong container
 WORKDIR /app
 
-# Copy file package.json và cài đặt các dependencies
 COPY package*.json ./
 
 RUN npm install
 
-# Copy toàn bộ source code vào thư mục làm việc
 COPY . .
 
-# Expose port cho frontend
-EXPOSE 8686
+RUN npm run build
 
-# Chạy Vite server
-CMD ["npm", "run", "dev"]
+FROM nginx:1.27.1-alpine AS production
+
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY default.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 8080
+
+CMD ["nginx", "-g", "daemon off;"]

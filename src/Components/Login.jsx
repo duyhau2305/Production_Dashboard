@@ -20,26 +20,45 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+  
     try {
       const response = await axios.post(`${apiUrl}/login`, { username: email, password });
+  
       if (response.status === 200) {
         const { token } = response.data;
         localStorage.setItem('token', token);
+  
         const decodedToken = jwtDecode(token);
         const role = decodedToken.user.role;
         localStorage.setItem('role', role);
         setUserRole(role);
   
-        // Hiển thị toast khi đăng nhập thành công
         toast.success('Đăng nhập thành công!');
         navigate(role === 'CNVH' ? '/dashboard/mobile' : '/dashboard');
       }
     } catch (error) {
-      toast.error('Sai tên đăng nhập hoặc mật khẩu!');
+      // Check for various error cases and show appropriate messages
+      if (!error.response) {
+        // Network error
+        toast.error('Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối mạng của bạn!');
+      } else if (error.response.status === 400) {
+        // Bad request (invalid input)
+        toast.error('Yêu cầu không hợp lệ. Vui lòng kiểm tra thông tin đăng nhập.');
+      } else if (error.response.status === 401) {
+        // Unauthorized (invalid credentials)
+        toast.error('Sai tên đăng nhập hoặc mật khẩu!');
+      } else if (error.response.status === 500) {
+        // Server error
+        toast.error('Lỗi máy chủ, vui lòng thử lại sau.');
+      } else {
+        // Other errors
+        toast.error('Đã xảy ra lỗi không xác định.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
+  
   
   
   return (
@@ -118,6 +137,7 @@ function Login() {
           </button>
         </form>
       </div>
+      
     
     </div>
   );

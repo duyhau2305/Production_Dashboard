@@ -4,25 +4,23 @@ import moment from 'moment-timezone';
 import './TimelineChart.css';
 import { Slider } from 'antd';
 
-const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
-
+const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [dates, setDate] = useState([]);
+  const [dates, setDates] = useState([]);
   const [listGradient, setListGradient] = useState([]);
   const [listGradientToFild, setListGradientToFild] = useState([]);
-  const [hour, setHour] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23])
-  const [ArrayPercentOffline, setArrayPercentOffline] = useState([]);
-  const [ArrayPercentRun, setArrayPercentRun] = useState([]);
-  const [positionToTolipth, setPositionToTolipth] = useState(1)
-  const [textToTolipth, setTextToTolipth] = useState('')
-  const [currentIndex, setCurrentIndex] = useState(1)
-  const [start, setStart] = useState(0)
-  const [end, setEnd] = useState(0)
-  const [scale, setScale] = useState('1')
+  const [hour] = useState(Array.from({ length: 24 }, (_, i) => i));
+  const [arrayPercentOffline, setArrayPercentOffline] = useState([]);
+  const [arrayPercentRun, setArrayPercentRun] = useState([]);
+  const [positionToTooltip, setPositionToTooltip] = useState(1);
+  const [textToTooltip, setTextToTooltip] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(1);
+  const [start, setStart] = useState(0);
+  const [end, setEnd] = useState(0);
+  const [scale, setScale] = useState('1');
 
-  const deviceId = '43636810-8e2f-11ef-a040-4d4ce340ad51';
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const formatDateForAPI = (date) => moment(date).format('YYYY-MM-DD');
@@ -69,11 +67,13 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
     const mins = String(minutes % 60).padStart(2, '0');
     return `${hours}:${mins}`;
   };
+
   const calculateTotalOfflinePercentageBefore23 = (gaps, type) => {
     const totalSecondsInDay = 24 * 60 * 60;
     const limitTime = moment('23:00', 'HH:mm').hours() * 3600;
-    let totalOfflineTime
-    if (type == 'offline') {
+    let totalOfflineTime = 0;
+
+    if (type === 'offline') {
       totalOfflineTime = gaps.reduce((acc, gap) => {
         let startSeconds = moment(gap.startTime, 'HH:mm').hours() * 3600 + moment(gap.startTime, 'HH:mm').minutes() * 60;
         let endSeconds = moment(gap.endTime, 'HH:mm').hours() * 3600 + moment(gap.endTime, 'HH:mm').minutes() * 60;
@@ -81,28 +81,22 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
           endSeconds = limitTime;
         }
         if (endSeconds > startSeconds) {
-          const offlineDuration = endSeconds - startSeconds;
-          acc += offlineDuration;
+          acc += endSeconds - startSeconds;
         }
-
         return acc;
       }, 0);
     } else {
       totalOfflineTime = gaps.reduce((acc, gap) => {
-        let startSeconds
-        let endSeconds
-        if (gap.status == type) {
-          startSeconds = moment(gap.startTime, 'HH:mm').hours() * 3600 + moment(gap.startTime, 'HH:mm').minutes() * 60;
-          endSeconds = moment(gap.endTime, 'HH:mm').hours() * 3600 + moment(gap.endTime, 'HH:mm').minutes() * 60;
+        if (gap.status === type) {
+          let startSeconds = moment(gap.startTime, 'HH:mm').hours() * 3600 + moment(gap.startTime, 'HH:mm').minutes() * 60;
+          let endSeconds = moment(gap.endTime, 'HH:mm').hours() * 3600 + moment(gap.endTime, 'HH:mm').minutes() * 60;
+          if (endSeconds > limitTime) {
+            endSeconds = limitTime;
+          }
+          if (endSeconds > startSeconds) {
+            acc += endSeconds - startSeconds;
+          }
         }
-        if (endSeconds > limitTime) {
-          endSeconds = limitTime; // Chỉ tính đến 23:00
-        }
-        if (endSeconds > startSeconds) {
-          const offlineDuration = endSeconds - startSeconds;
-          acc += offlineDuration;
-        }
-
         return acc;
       }, 0);
     }
@@ -110,84 +104,43 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
     const totalOfflinePercentage = (totalOfflineTime / totalSecondsInDay) * 100;
     return totalOfflinePercentage.toFixed(2);
   };
-  function timeToSeconds(time) {
-    // Tách giờ và phút
-    const [hours, minutes] = time.split(':').map(Number);
 
-    // Tính tổng giây
-    const totalSeconds = (hours * 3600) + (minutes * 60);
-
-    return totalSeconds;
-  }
-  function calculatePercentageOfDay(timeData) {
-    const { startTime, endTime } = timeData;
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-    const totalSecondsStart = (startHour * 3600) + (startMinute * 60);
-    const totalSecondsEnd = (endHour * 3600) + (endMinute * 60);
-    const percent = (totalSecondsEnd - totalSecondsStart) / 86400 * 100
-    return percent.toFixed(2)
-  }
-  function percentOfDayToHMS(percentage) {
-    const totalSecondsInDay = 24 * 60 * 60;
-    const totalSeconds = totalSecondsInDay * (percentage / 100);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = Math.floor(totalSeconds % 60);
-    return `${hours}giờ ${minutes}phút ${seconds}giây`;
-  }
   const formatDateAndTime = (data) => {
     return data
-        .map(entry => ({
-            date: moment.tz(entry.date, "Asia/Ho_Chi_Minh").format('YYYY-DD-MM'),
-            intervals: entry.intervals.map(interval => ({
-                ...interval,
-                startTime: moment.tz(interval.startTime, "Asia/Ho_Chi_Minh").format('HH:mm:ss'),
-                endTime: moment.tz(interval.endTime, "Asia/Ho_Chi_Minh").format('HH:mm:ss'),
-            }))
+      .map(entry => ({
+        date: moment.tz(entry.date, "Asia/Ho_Chi_Minh").format('YYYY-MM-DD'),
+        intervals: entry.intervals.map(interval => ({
+          ...interval,
+          startTime: moment.tz(interval.startTime, "Asia/Ho_Chi_Minh").format('HH:mm:ss'),
+          endTime: moment.tz(interval.endTime, "Asia/Ho_Chi_Minh").format('HH:mm:ss'),
         }))
-        .reverse()
-};
+      }))
+      .reverse();
+  };
+
   const fetchData = async (startDate, endDate) => {
     setLoading(true);
-    setError(null); 
-    const start = startDate.toISOString()
-    const end = new Date(endDate)
-    const utcDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()+1, 16, 59, 59, 0));
-    const isoDate = utcDate.toISOString();
+    setError(null);
     try {
       const response = await axios.get(
-        `${apiUrl}/machine-operations/${selectedMchine}/timeline?startTime=${start}&endTime=${isoDate}`
+        `${apiUrl}/machine-operations/${selectedMchine}/timeline?startTime=${startDate.toISOString()}&endTime=${new Date(new Date(endDate).setDate(new Date(endDate).getDate() + 1)).toISOString()}`
       );
-      let totalOfflinePercentArray = [];
-      let totalRun = []
+
       const formattedData = formatDateAndTime(response.data.data);
       const processedData = formattedData.map(entry => {
-        const gaps = findGaps(entry.intervals);  
-        const totalOfflinePercent = [];
+        const gaps = findGaps(entry.intervals);
+        const runPercent = calculateTotalOfflinePercentageBefore23(entry.intervals, 'Run');
+        const totalOfflinePercent = calculateTotalOfflinePercentageBefore23(gaps, 'offline');
 
-        const runPercent = calculateTotalOfflinePercentageBefore23(entry.intervals, 'Chạy');
-        totalRun.push(runPercent);
-        totalOfflinePercentArray.push(totalOfflinePercent);
+        arrayPercentRun.push(runPercent);
+        arrayPercentOffline.push(totalOfflinePercent);
 
-        const intervalsWithGaps = [...entry.intervals, ...gaps].sort((a, b) => moment(a.startTime, 'HH:mm') - moment(b.startTime, 'HH:mm'));
-        return { ...entry, intervals: intervalsWithGaps };
-      }); 
-      let arrayDate = [];
-      response.data.data.forEach(value => {
-        const datePart = value.date.split('T')[0];
-        const [year, month, day] = datePart.split('-');
-        const formattedDate = `${day}/${month}`;
-        arrayDate.push(formattedDate);
+        return { ...entry, intervals: [...entry.intervals, ...gaps].sort((a, b) => moment(a.startTime, 'HH:mm') - moment(b.startTime, 'HH:mm')) };
       });
-      setDate(arrayDate);
-      setArrayPercentOffline(totalOfflinePercentArray)
-      setArrayPercentRun(totalRun)
-      const arrayGradient = processedData.map(value => createGradientStops(value.intervals));
-      setListGradient(arrayGradient);
-      setListGradientToFild(arrayGradient);
-      setData(processedData);
 
+      setDates(response.data.data.map(value => moment(value.date).format('DD/MM')));
+      setListGradient(processedData.map(value => createGradientStops(value.intervals)));
+      setData(processedData);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -197,117 +150,57 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Run':
-        return '#00C8D7';
-      case 'Stop':
-        return 'red';
-      case 'Idle':
-        return '#FFC107';
-      case 'offline':
-        return '#BFBFBF';
-      default:
-        return '#ffffff';
+      case 'Run': return '#00C8D7';
+      case 'Stop': return 'red';
+      case 'Idle': return '#FFC107';
+      case 'offline': return '#BFBFBF';
+      default: return '#ffffff';
     }
   };
+
   const handleMouseMove = (event, index) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const percentX = (x / rect.width) * 100;
+    const percentX = ((event.clientX - rect.left) / rect.width) * 100;
     const totalHours = (percentX / 100) * 24;
     const hours = Math.floor(totalHours);
     const minutes = Math.round((totalHours - hours) * 60);
-
-    const currentTimeInMinutes = hours * 60 + minutes; // Tổng số phút hiện tại
+    const currentTimeInMinutes = hours * 60 + minutes;
 
     data[index].intervals.forEach(interval => {
-      // Chuyển đổi startTime và endTime thành tổng số phút
-      const [startHour, startMinute] = interval.startTime.split(':').map(Number);
-      const [endHour, endMinute] = interval.endTime.split(':').map(Number);
-      const startTimeInMinutes = startHour * 60 + startMinute;
-      const endTimeInMinutes = endHour * 60 + endMinute;
-
-      // Kiểm tra nếu thời gian hiện tại nằm trong khoảng startTime và endTime
+      const startTimeInMinutes = timeToMinutes(interval.startTime);
+      const endTimeInMinutes = timeToMinutes(interval.endTime);
       if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) {
-        setTextToTolipth(`${interval.status} : ${interval.startTime}-${interval.endTime}  `)
+        setTextToTooltip(`${interval.status} : ${interval.startTime}-${interval.endTime}`);
       }
     });
-    setCurrentIndex(index)
-    setPositionToTolipth(percentX);
+
+    setCurrentIndex(index);
+    setPositionToTooltip(percentX);
   };
 
-
-
-  const calculatePercentage = (startTime, endTime) => {
-    const startInMinutes = moment.duration(startTime).asMinutes();
-    const endInMinutes = moment.duration(endTime).asMinutes();
-    const duration = endInMinutes - startInMinutes;
-    return {
-      startPercent: (startInMinutes / 1440) * 100,
-      durationPercent: (duration / 1440) * 100,
-    };
+  const handleMouseLeave = () => {
+    setTextToTooltip('');
+    setPositionToTooltip(0);
   };
 
-  const createGradientStops = (intervals) => {
-    const gradientStops = [];
-    let lastEndPercent = 0;
-  
-    intervals.forEach(item => {
-      const { startTime, endTime, status } = item;
-      const { startPercent, durationPercent } = calculatePercentage(startTime, endTime);
-      const color = getStatusColor(status);
-  
-      // Nếu có khoảng trống từ `lastEndPercent` đến `startPercent`, thêm khoảng trống đó với màu mặc định
-      if (startPercent > lastEndPercent) {
-        gradientStops.push(`transparent ${lastEndPercent}%, transparent ${startPercent}%`);
-      }
-  
-      // Thêm dải màu cho khoảng thời gian hiện tại
-      gradientStops.push(`${color} ${startPercent}%, ${color} ${startPercent + durationPercent}%`);
-      lastEndPercent = startPercent + durationPercent;
-    });
-  
-    // Nếu phần trăm cuối cùng không đạt `100%`, thêm dải màu trong suốt từ điểm kết thúc cuối cùng đến `100%`
-    if (lastEndPercent < 100) {
-      gradientStops.push(`transparent ${lastEndPercent}%, transparent 100%`);
-    }
-  
-    return gradientStops.join(', ');
+  const handleSliderChange = (newValue) => {
+    setStart(newValue[0]);
+    setEnd(newValue[1] - 30);
+    setScale(`1.${newValue[0] / 10}`);
   };
 
   useEffect(() => {
-    const startDate = selectedDate?.startDate;
-    const endDate = selectedDate?.endDate;
-
-    if (startDate != null && endDate != null) {
-      const startDate2 = moment(startDate);
-      const endDate2 = moment(endDate);
-      const newArrDate = [];
-
-      for (let m = startDate2; m.isBefore(endDate2) || m.isSame(endDate2); m.add(1, 'days')) {
-        newArrDate.push(m.clone());
-      }
-      fetchData(startDate, endDate);
+    if (selectedDate?.startDate && selectedDate?.endDate) {
+      fetchData(selectedDate.startDate, selectedDate.endDate);
     }
-
-  }, [selectedDate , selectedMchine]);
-
-  const scrollRef = useRef(null);
-
-  const chartWidth = '100%';
-  const chartHeight = '500px';
+  }, [selectedDate, selectedMchine]);
 
   const renderXAxisLabels = useMemo(() => (
-    hour.map((value) => (
-      <div key={value} style={{
-        display: 'inline-block',
-        width: '4.16%',
-        textAlign: 'center',
-        fontSize: '10px',
-        marginTop: '5px'
-      }}>
+    hour.map(value => (
+      <div key={value} style={{ display: 'inline-block', width: '4.16%', textAlign: 'center', fontSize: '10px', marginTop: '5px' }}>
         {`${value}:00`}
       </div>
-    )) 
+    ))
   ), [hour]);
 
   const renderYAxisLabels = useMemo(() => (
@@ -326,25 +219,38 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
     const endDate = new Date(selectedDate.endDate);
     startDate.setDate(startDate.getDate() + 1);
     endDate.setDate(endDate.getDate() + 1);
-    onDateChange({ startDate: startDate, endDate: endDate });
+    onDateChange({ startDate, endDate });
   };
-  const handleSliderChange = (newValue) => {
-    // console.log(start)
-    setStart(newValue[0])
-    setEnd(newValue[1] - 30)
-    setScale(`1.${newValue[0]/10}`)
-};
 
+  const createGradientStops = (intervals) => {
+    const gradientStops = [];
+    let lastEndPercent = 0;
 
+    intervals.forEach(item => {
+      const { startTime, endTime, status } = item;
+      const startPercent = (timeToMinutes(startTime) / 1440) * 100;
+      const endPercent = (timeToMinutes(endTime) / 1440) * 100;
+      const durationPercent = endPercent - startPercent;
+      const color = getStatusColor(status);
 
-  const handleMouseLeave = () => {
-    setTextToTolipth(''); // Xóa text để ẩn tooltip
-    setPositionToTolipth(0); // Reset vị trí của tooltip
-  }
+      if (startPercent > lastEndPercent) {
+        gradientStops.push(`transparent ${lastEndPercent}%, transparent ${startPercent}%`);
+      }
+      gradientStops.push(`${color} ${startPercent}%, ${color} ${endPercent}%`);
+      lastEndPercent = endPercent;
+    });
+
+    if (lastEndPercent < 100) {
+      gradientStops.push(`transparent ${lastEndPercent}%, transparent 100%`);
+    }
+
+    return gradientStops.join(', ');
+  };
+
   return (
-    <div style={{ position: 'relative', width: chartWidth, height: chartHeight }}>
+    <div style={{ position: 'relative', width: '100%', height: '500px' }}>
       <div className="y-axis-arrow" style={{ position: 'absolute', top: 0, left: 31, height: '100%', borderLeft: '2px solid black' }}>
-        <span className="arrow up-arrow" onClick={() => handleUpArrowClick()}>↑</span>
+        <span className="arrow up-arrow" onClick={handleUpArrowClick}>↑</span>
       </div>
       <div className="x-axis-arrow" style={{ position: 'absolute', bottom: 0, left: 31, width: '95%', borderBottom: '2px solid black' }}>
         <div style={{ position: 'absolute', width: '100%', display: 'flex', justifyContent: 'space-between' }}>{renderXAxisLabels}</div>
@@ -354,40 +260,26 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
         <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '10px 0' }}>
           {renderYAxisLabels}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '99%' }} >
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '99%' }}>
           {data.length > 0 ? data.map((entry, index) => (
-            <div onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={() => handleMouseLeave()} style={{overflow: 'hidden' , height: `${((100 / data.length-1)) - 10}%`}} >
-              <div  className='gradient-container gradient-section gradient' key={index} style={{
-                height: `100%`,
+            <div key={index} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave} style={{ overflow: 'hidden', height: `${(100 / data.length) - 1}%` }}>
+              <div className="gradient-container gradient-section gradient" style={{
+                height: '100%',
                 background: `linear-gradient(to right, ${listGradient[index]})`,
                 marginTop: '10px',
-                width: `100%`,
-                position :'relative',
+                width: '100%',
+                position: 'relative',
                 transition: 'transform 0.1s ease-in-out',
-                transformOrigin: `50%`,
+                transformOrigin: '50%',
                 transform: `scaleX(${scale})`,
-                zIndex : '1'
-              }} >  
-              {currentIndex == index ? <span style={{ display: 'flex'  , justifyContent : 'space-between' ,  position : 'absolute' , top : '0' , marginLeft : `${positionToTolipth}%` ,background: '#ffff95'} }>
-                {textToTolipth}
-              </span> : <></>}  
+                zIndex: '1'
+              }}>
+                {currentIndex === index && (
+                  <span style={{ display: 'flex', justifyContent: 'space-between', position: 'absolute', top: 0, marginLeft: `${positionToTooltip}%`, background: '#ffff95' }}>
+                    {textToTooltip}
+                  </span>
+                )}
               </div>
-              {/* <div style={{ display: 'flex'  , justifyContent : 'space-between'}}>
-                <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' , fontSize : '10px' ,marginTop : '5px'  }}>
-                  <div style={{ width: '15px', height: '15px', backgroundColor: '#00ff07', marginRight: '5px'}}></div>
-                  Chạy : {ArrayPercentRun[index]} %
-                </div>
-               
-                <div style={{ display: 'flex', alignItems: 'center', fontSize : '10px' ,marginTop : '5px' }}>
-                  <div style={{ width: '15px', height: '15px', backgroundColor: '#E7E7E7', marginRight: '5px' }}></div>
-                  <span> Offline: {ArrayPercentOffline[index]} %</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px', fontSize : '10px', marginTop : '5px' }}>
-                  <div style={{ width: '15px', height: '15px', backgroundColor: 'red', marginRight: '5px' }}></div>
-                  <span>Dừng :{(100 - ArrayPercentRun[index] - ArrayPercentOffline[index]).toFixed(2)}%</span>
-                </div>
-              </div> */}
-             
             </div>
           )) : (
             <div style={{ height: '32px', backgroundColor: '#E7E7E7', marginTop: '10px', width: '100%' }} />
@@ -402,8 +294,8 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
           onChange={handleSliderChange}
           defaultValue={[0, 100]}
         />
-
       </div>
+
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
         <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
           <div style={{ width: '15px', height: '15px', backgroundColor: '#00C8D7', marginRight: '5px' }}></div>
@@ -413,7 +305,7 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
           <div style={{ width: '15px', height: '15px', backgroundColor: 'red', marginRight: '5px' }}></div>
           <span>Dừng</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
           <div style={{ width: '15px', height: '15px', backgroundColor: '#FFC107', marginRight: '5px' }}></div>
           <span>Idle</span>
         </div>
@@ -422,8 +314,7 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
           <span>Offline</span>
         </div>
       </div>
-    </div >
-
+    </div>
   );
 };
 

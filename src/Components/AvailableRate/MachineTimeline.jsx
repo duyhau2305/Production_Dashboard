@@ -4,15 +4,15 @@ import axios from 'axios';
 import moment from 'moment';
 
 const MachineTimeline = ({ deviceId, selectedDate }) => {
-  const fixedHeight = 150;
+  const fixedHeight = 200;
   const svgRef = useRef();
   const wrapperRef = useRef();
   const [deviceData, setDeviceData] = useState({});
   const [dimensions, setDimensions] = useState({ width: 800, height: fixedHeight });
+  const [loading, setLoading] = useState(true);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const formatDateForAPI = (date) => date.format('YYYY-MM-DD');
-
+  // Hàm thêm khoảng thời gian Offline giữa các khoảng thời gian khác
   const addOfflineIntervals = (data) => {
     const newData = [];
     for (let i = 0; i < data.length; i++) {
@@ -37,44 +37,70 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
 
   useEffect(() => {
     if (deviceId && selectedDate) {
-      fetchTelemetryData(deviceId); // Fetch data when selectedDate or deviceId changes
+      fetchTelemetryData(deviceId); 
     }
-  }, [deviceId, selectedDate]); // Re-fetch data when deviceId or selectedDate changes
+  }, [deviceId, selectedDate]);
 
-  const fetchTelemetryData = async (code) => {
+  const fetchTelemetryData = async (deviceId) => {
+    setLoading(true); 
     try {
-      const formattedDate = formatDateForAPI(selectedDate);
-      console.log(`Formatted Date for API: ${formattedDate}`);
-      const apiEndpoint = `${apiUrl}/telemetry?deviceId=${code}&startDate=${formattedDate}&endDate=${formattedDate}`;
+      const startTime = selectedDate.clone().startOf('day').toISOString();
+      const endTime = selectedDate.clone().endOf('day').toISOString();
+      const apiEndpoint = `${apiUrl}/machine-operations/${deviceId}/timeline?startTime=${startTime}&endTime=${endTime}`;
       const response = await axios.get(apiEndpoint);
 
-      if (response.data && response.data.length > 0 && response.data[0].intervals) {
-        const flatData = response.data[0].intervals.flatMap(interval => ({
-          startTime: moment(interval.startTime, 'HH:mm').format('HH:mm'),
-          endTime: moment(interval.endTime, 'HH:mm').format('HH:mm'),
-          status: interval.status
+      if (response.data && response.data.data && response.data.data.length > 0) {
+        const intervals = response.data.data[0].intervals;
+        const flatData = intervals.map((interval) => ({
+          startTime: moment(interval.startTime).format('HH:mm'),
+          endTime: moment(interval.endTime).format('HH:mm'),
+          status: interval.status === 'Run' ? 'Chạy' : interval.status === 'Stop' ? 'Dừng' : 'Chờ'
         }));
         const processedData = addOfflineIntervals(flatData);
-        setDeviceData(prevData => ({ ...prevData, [code]: processedData }));
+        setDeviceData((prevData) => ({ ...prevData, [deviceId]: processedData }));
       } else {
-        console.warn(`No intervals found for ${code}`);
-        setDeviceData(prevData => ({ ...prevData, [code]: [] }));
+        console.warn(`No intervals found for deviceId ${deviceId}`);
+        setDeviceData((prevData) => ({ ...prevData, [deviceId]: [] }));
       }
     } catch (error) {
-      console.error(`Error fetching telemetry data for ${code}:`, error);
-      setDeviceData(prevData => ({ ...prevData, [code]: [] }));
+      console.error(`Error fetching telemetry data for deviceId ${deviceId}:`, error);
+      setDeviceData((prevData) => ({ ...prevData, [deviceId]: [] }));
+    } finally {
+      setLoading(false); 
     }
   };
 
   useEffect(() => {
+    // Tạo tooltip chỉ một lần khi component mount
+    const tooltip = d3.select('body')
+      .append('div')
+      .attr('class', 'tooltip')
+      .style('position', 'absolute')
+      .style('background-color', 'white')
+      .style('border', '1px solid #ccc')
+      .style('padding', '5px')
+      .style('border-radius', '4px')
+      .style('display', 'none')
+      .style('pointer-events', 'none');
+
     const drawChart = () => {
       const svg = d3.select(svgRef.current);
       const { width, height } = dimensions;
       const margin = { top: 20, right: 35, bottom: 80, left: 50 };
-  
-      svg.selectAll('*').remove(); // Clear the previous chart
-  
-      // Check if there's data for the current device
+
+      svg.selectAll('*').remove();
+
+      if (loading) {
+        svg.append('text')
+          .attr('x', width / 2)
+          .attr('y', height / 2)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '16px')
+          .style('fill', '#888')
+          .text('Đang tải...');
+        return;
+      }
+
       if (!deviceData[deviceId] || deviceData[deviceId].length === 0) {
         svg.append('text')
           .attr('x', width / 2)
@@ -82,50 +108,84 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
           .attr('text-anchor', 'middle')
           .style('font-size', '16px')
           .style('fill', '#888')
-          .text('Không có dữ liệu để hiển thị'); // Message indicating no data
-        return; // Exit the function if there's no data
+          .text('Không có dữ liệu để hiển thị');
+        return;
       }
-  
+
       const data = deviceData[deviceId];
       const timeParse = d3.timeParse('%H:%M');
-      const timeFormat = d3.timeFormat('%H:%M');
-  
       const xScale = d3
         .scaleTime()
         .domain([timeParse('00:00'), timeParse('23:59')])
         .range([margin.left, width - margin.right]);
-  
+
       const colorScale = d3
         .scaleOrdinal()
-        .domain(['Chạy', 'Dừng', 'Offline'])
-        .range(['#4aea4a', '#f10401', '#d3d3d3']);
-  
-      // Create tooltip
-      const tooltip = d3.select('body')
-        .append('div')
-        .style('position', 'absolute')
-        .style('background-color', 'white')
-        .style('border', '1px solid #ccc')
-        .style('padding', '5px')
-        .style('border-radius', '4px')
-        .style('display', 'none')
-        .style('pointer-events', 'none');
-  
-      // Draw x-axis
+        .domain(['Chạy', 'Dừng', 'Chờ', 'Offline'])
+        .range(['#4aea4a', '#f10401', '#ffd700', '#d3d3d3']);
+
+      // Tính tổng thời gian cho mỗi trạng thái
+      const totalTime = {
+        'Chạy': 0,
+        'Dừng': 0,
+        'Chờ': 0,
+        'Offline': 0
+      };
+
+      data.forEach(d => {
+        const start = moment(d.startTime, 'HH:mm');
+        const end = moment(d.endTime, 'HH:mm');
+        const duration = moment.duration(end.diff(start));
+        totalTime[d.status] += duration.asMinutes();
+      });
+
+      // Vẽ chú thích (legend) cho tổng thời gian
+      const legendData = [
+        { status: 'Chạy', time: `${Math.floor(totalTime['Chạy'] / 60)} giờ ${totalTime['Chạy'] % 60} phút`, color: '#4aea4a' },
+        { status: 'Dừng', time: `${Math.floor(totalTime['Dừng'] / 60)} giờ ${totalTime['Dừng'] % 60} phút`, color: '#f10401' },
+        { status: 'Chờ', time: `${Math.floor(totalTime['Chờ'] / 60)} giờ ${totalTime['Chờ'] % 60} phút`, color: '#ffd700' },
+      ];
+
+      const legend = svg
+        .selectAll('.legend')
+        .data(legendData)
+        .enter()
+        .append('g')
+        .attr('class', 'legend')
+        .attr('transform', (d, i) => `translate(${margin.left + i * 150},${height - margin.bottom + 45})`);
+
+      legend
+        .append('rect')
+        .attr('x', 0)
+        .attr('y', -10)
+        .attr('width', 20)
+        .attr('height', 10)
+        .style('fill', d => d.color);
+
+      legend
+        .append('text')
+        .attr('x', 25)
+        .attr('y', 0)
+        .text(d => `${d.status}: ${d.time}`)
+        .style('font-size', '12px')
+        .style('text-anchor', 'start');
+
+      // Vẽ trục x
       svg
         .append('g')
         .attr('transform', `translate(0,${height - margin.bottom - 30})`)
-        .call(d3.axisBottom(xScale).ticks(d3.timeHour.every(2)).tickFormat(timeFormat))
+        .call(d3.axisBottom(xScale).ticks(d3.timeHour.every(2)).tickFormat(d3.timeFormat('%H:%M')))
         .selectAll("text")
         .attr("transform", "translate(-10,0)rotate(-45)")
         .style("text-anchor", "end");
-  
-      // Draw rectangles for status
+
+      // Vẽ các hình chữ nhật biểu thị trạng thái
       svg
-        .selectAll('rect')
+        .selectAll('.status-rect')
         .data(data)
         .enter()
         .append('rect')
+        .attr('class', 'status-rect')
         .attr('x', d => xScale(timeParse(d.startTime)) + 1)
         .attr('y', height - margin.bottom - 60)
         .attr('width', d => {
@@ -135,67 +195,26 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
         .attr('height', 30)
         .attr('fill', d => colorScale(d.status))
         .on('mouseover', (event, d) => {
-          tooltip.style('display', 'block')
-            .html(`Trạng thái: <b>${d.status}</b><br>Thời gian: ${d.startTime} - ${d.endTime}`)
-            .style('left', `${event.pageX + 10}px`)
-            .style('top', `${event.pageY - 20}px`);
+          tooltip
+            .style('display', 'block')
+            .html(`Trạng thái: <b>${d.status}</b><br>Thời gian: ${d.startTime} - ${d.endTime}`);
         })
         .on('mousemove', event => {
-          tooltip.style('left', `${event.pageX + 10}px`).style('top', `${event.pageY - 20}px`);
+          tooltip
+            .style('left', `${event.pageX + 10}px`)
+            .style('top', `${event.pageY - 20}px`);
         })
         .on('mouseout', () => {
           tooltip.style('display', 'none');
         });
-  
-      // Calculate total time for each status
-      const totalTime = {
-        'Chạy': 0,
-        'Dừng': 0,
-        'Offline': 0
-      };
-  
-      data.forEach(d => {
-        const start = moment(d.startTime, 'HH:mm');
-        const end = moment(d.endTime, 'HH:mm');
-        const duration = moment.duration(end.diff(start));
-        totalTime[d.status] += duration.asMinutes();
-      });
-  
-      // Create legend
-      const legendData = [
-        { status: 'Chạy', time: `${Math.floor(totalTime['Chạy'] / 60)} giờ ${totalTime['Chạy'] % 60} phút`, color: '#4aea4a' },
-        { status: 'Dừng', time: `${Math.floor(totalTime['Dừng'] / 60)} giờ ${totalTime['Dừng'] % 60} phút`, color: '#f10401' },
-        { status: 'Offline', time: `${Math.floor(totalTime['Offline'] / 60)} giờ ${totalTime['Offline'] % 60} phút`, color: '#d3d3d3' },
-      ];
-  
-      const legend = svg
-        .selectAll('.legend')
-        .data(legendData)
-        .enter()
-        .append('g')
-        .attr('class', 'legend')
-        .attr('transform', (d, i) => `translate(${margin.left + i * 150},${height - margin.bottom + 25})`);
-  
-      legend
-        .append('rect')
-        .attr('x', 0)
-        .attr('y', -10)
-        .attr('width', 20)
-        .attr('height', 10)
-        .style('fill', d => d.color);
-  
-      legend
-        .append('text')
-        .attr('x', 25)
-        .attr('y', 0)
-        .text(d => `${d.status}: ${d.time}`)
-        .style('font-size', '12px')
-        .style('text-anchor', 'start');
     };
-  
-    drawChart(); // Draw chart when deviceData or dimensions change
-  }, [deviceData, dimensions, deviceId]);
-  
+
+    drawChart();
+    
+    return () => {
+      tooltip.remove(); // Loại bỏ tooltip khi component unmount
+    };
+  }, [deviceData, dimensions, deviceId, loading]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -204,7 +223,7 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
     };
 
     window.addEventListener('resize', handleResize);
-    handleResize(); // Call it once on mount to set initial size
+    handleResize();
 
     return () => {
       window.removeEventListener('resize', handleResize);

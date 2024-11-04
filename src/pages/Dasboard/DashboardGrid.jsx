@@ -1,5 +1,5 @@
 import React from 'react';
-import MachineCard from '../../Components/MachineCard/MachineCard';  // Import MachineCard component
+import MachineCard from '../../Components/MachineCard/MachineCard'; // Import MachineCard component
 
 const DashboardGrid = ({ machines ,isFullscreen}) => {
   console.log(machines)

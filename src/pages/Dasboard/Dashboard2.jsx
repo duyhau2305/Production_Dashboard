@@ -16,7 +16,7 @@ const Dashboard2 = () => {
 
   const selectedDate = useSelector((state) => state.interval?.selectedDate);
   const selectedMachine = useSelector((state) => state.interval?.selectedMachine);
-
+  console.log(selectedMachine)
   useEffect(() => {
     fetchAreas();
     fetchDevices();

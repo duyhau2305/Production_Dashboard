@@ -16,6 +16,7 @@ const getSignalLightColors = (status) => {
   if (status === 'Chạy') return { red: 'white', yellow: 'white', green: '#13a113' };
   if (status === 'Chờ' || status === 'Cài Đặt') return { red: 'white', yellow: '#f4f41e', green: 'white' };
   if (status === 'Dừng') return { red: '#e60000', yellow: 'white', green: 'white' };
+  if (status === 'Dừng') return { red: '#e60000', yellow: 'white', green: 'white' };
   if (status === 'Off') return { red: 'white', yellow: 'white', green: 'white' };
   return { red: 'white', yellow: 'white', green: 'white' }; // Default case
 };

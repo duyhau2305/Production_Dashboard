@@ -23,6 +23,8 @@ const EmployeeCatalog = () => {
   const [areas, setAreas] = useState([]); // State cho danh sách khu vực
   const [form] = Form.useForm(); // Ant Design Form
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const apiUrl =import.meta.env.VITE_API_BASE_URL
 
   // Fetch employees from API on component mount
@@ -45,12 +47,14 @@ const EmployeeCatalog = () => {
       toast.error('Lỗi khi tải danh sách khu vực');
     }
   };
-
+  const openDeleteModal = (employee) => {
+    setEmployeeToDelete(employee); 
+    setIsDeleteModalOpen(true); 
+  };
   useEffect(() => {
     fetchEmployees(); // Gọi API khi component được mount
     fetchAreas(); // Gọi API để lấy khu vực khi component được mount
   }, []);
-
   // Handle search input change
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -60,45 +64,69 @@ const EmployeeCatalog = () => {
     );
     setFilteredEmployees(filtered);
   };
-  const handleImport = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
+ // Hàm handleImport để nhập dữ liệu từ file Excel
+
+ const handleImport = (file) => {
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
-  
-      // Chuyển đổi dữ liệu thành định dạng phù hợp
+
+      // Kiểm tra dữ liệu đọc từ file Excel
+      console.log('Dữ liệu từ Excel:', jsonData);
+
+      if (jsonData.length === 0) {
+        toast.error('Không tìm thấy dữ liệu trong file Excel');
+        return;
+      }
+
+      // Format lại dữ liệu từ Excel
       const formattedData = jsonData.map((item) => ({
-        employeeCode: item["Mã nhân viên"],
-        employeeName:item["Tên nhân viên"],
-        areaName: item["Tên khu vực sản xuất"],
+        employeeCode: item['Mã nhân viên'] || 'Không rõ',
+        employeeName: item['Tên nhân viên'] || 'Không rõ',
+        areaName: item['Khu vực'] || 'Không rõ',
       }));
-      console.log(formattedData)
-  
-      // Gửi từng khu vực lên API và cập nhật state
-      const promises = formattedData.map(async (employee) => {
-        try {
-          const response = await axios.post(`${apiUrl}/employees`, employee);
-          // Cập nhật state ngay sau khi thêm thành công
-          return response.data;
-        } catch (error) {
-          toast.error('Failed to save area');
-          return null;
-        }
-      });
-  
-      // Đợi tất cả các yêu cầu hoàn tất và cập nhật bảng
-      Promise.all(promises).then((results) => {
-        const addedEmployee = results.filter((employee) => employee !== null);
-        setAreas((Employee ) => [...Employee , ...addedEmployee]);
-        setFilteredAreas((prevFiltered) => [...prevFiltered, ...addedEmployee]);
-        toast.success('Thêm nhân viên thành công!');
-      });
-    };
-    reader.readAsArrayBuffer(file);
+
+      console.log('Dữ liệu sau khi format:', formattedData);
+
+      if (formattedData.length === 0) {
+        toast.error('Dữ liệu không hợp lệ hoặc không có khu vực.');
+        return;
+      }
+
+      // Gọi API để thêm dữ liệu
+      const results = await Promise.all(
+        formattedData.map(async (employee) => {
+          try {
+            const response = await axios.post(`${apiUrl}/employees`, employee);
+            return response.data;
+          } catch (error) {
+            console.error('Lỗi khi thêm nhân viên:', employee, error);
+            toast.error(`Lỗi khi thêm: ${employee.employeeName}`);
+            return null;
+          }
+        })
+      );
+
+      const addedEmployees = results.filter((emp) => emp !== null);
+      setEmployees((prev) => [...prev, ...addedEmployees]);
+      setFilteredEmployees((prev) => [...prev, ...addedEmployees]);
+
+      toast.success('Nhập dữ liệu thành công!');
+    } catch (error) {
+      toast.error('Lỗi khi đọc file Excel');
+      console.error('Lỗi:', error);
+    }
   };
+  reader.readAsArrayBuffer(file);
+};
+
+
+
 
   // Handle saving new or edited employee
   const handleSave = async (values) => {
@@ -125,9 +153,10 @@ const EmployeeCatalog = () => {
   // Handle delete employee by ID
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${apiUrl}/employees/${id}`);
+      await axios.delete(`${apiUrl}/employees/${employeeToDelete._id}`);
       toast.success('Xóa nhân viên thành công!');
       fetchEmployees(); // Refresh employee list after delete
+      setIsDeleteModalOpen(false);
     } catch (error) {
       toast.error('Lỗi khi xóa nhân viên');
     }
@@ -148,8 +177,9 @@ const EmployeeCatalog = () => {
   return (
     <div className="p-4 bg-white shadow-md rounded-md">
       <Breadcrumb/>
+      <hr />
       {/* Các nút tìm kiếm, thêm mới và xuất Excel */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4 mt-2">
         <SearchButton
           placeholder="Tìm kiếm mã nhân viên, tên nhân viên..."
           onSearch={(q) => handleSearch(q)}
@@ -158,7 +188,16 @@ const EmployeeCatalog = () => {
         <AddButton onClick={() => openModal()} />
         <FormSample href={sampleTemplate}  label="Tải Form Mẫu" />
         <ImportButton onImport={handleImport}/>
-        <ExportExcelButton data={filteredEmployees} fileName="DanhSachNhanVien.xlsx" />
+        <ExportExcelButton
+            data={filteredEmployees}
+            parentComponentName="DanhSachNhanVien"
+            headers={[
+              { key: 'employeeCode', label: 'Mã nhân viên' },
+              { key: 'employeeName', label: 'Tên Ca Làm Việc' },
+              { key: 'areaName', label: 'Khu vực sản xuất' },
+              
+            ]}
+          />
       </div>
 
       {/* Bảng hiển thị danh sách nhân viên */}
@@ -188,7 +227,7 @@ const EmployeeCatalog = () => {
                 </button>
                 <button
                   className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDelete(employee._id)}
+                  onClick={() => openDeleteModal(employee)}
                 >
                   <FaTrash />
                 </button>
@@ -240,6 +279,14 @@ const EmployeeCatalog = () => {
             </Select>
           </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+              title="Xác nhận xóa"
+              open={isDeleteModalOpen}
+              onCancel={() => setIsDeleteModalOpen(false)}
+              onOk={handleDelete}
+            >
+              <p>Bạn có chắc chắn muốn xóa ca nhân viên này không?</p>
       </Modal>
 
       <ToastContainer />

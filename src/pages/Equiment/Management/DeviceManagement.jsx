@@ -25,6 +25,8 @@ const DeviceManagement = () => {
   const [form] = Form.useForm();
   const [sortOrderDate, setSortOrderDate] = useState('asc'); // 'asc' cho tăng dần, 'desc' cho giảm dần
   const apiUrl =import.meta.env.VITE_API_BASE_URL;
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); 
+  const [deviceToDelete, setDeviceToDelete] = useState(null);
   const sortDevicesByDate = () => {
     const sortedDevices = [...filteredDevices].sort((a, b) => {
       if (sortOrderDate === 'asc') {
@@ -133,14 +135,14 @@ const handleSearch = (query) => {
   };
   
 
- 
-
   // Delete device by ID
-  const handleDelete = async (id) => {
+  const handleDelete = async () => {
     try {
-      await axios.delete(`${apiUrl}/device/${id}`);
+      await axios.delete(`${apiUrl}/device/${deviceToDelete._id}`);
       toast.success('Xóa thiết bị thành công!');
-      fetchDevicesAndAreas(); // Refresh device list after delete
+      fetchDevicesAndAreas();
+      setIsDeleteModalOpen(false);
+      
     } catch (error) {
       toast.error('Failed to delete device');
     }
@@ -149,6 +151,11 @@ const handleSearch = (query) => {
     // Excel's serial date format offset
     const date = new Date(Math.round((excelDate - 25569) * 86400 * 1000));
     return moment(date).format("MM-DD-YYYY");
+  };
+
+  const openDeleteModal = (device) => {
+    setDeviceToDelete(device); 
+    setIsDeleteModalOpen(true); 
   };
   const handleImport = (file) => {
     const reader = new FileReader();
@@ -227,8 +234,9 @@ const handleSearch = (query) => {
   
 
   return (
-    <div className="p-8 bg-white shadow-md rounded-md">
+    <div className="p-4 bg-white shadow-md rounded-md">
       <Breadcrumb />
+      <hr />
       <div className="flex items-center gap-2 mb-4 mt-2">
         <SearchButton
           placeholder="Tìm kiếm mã thiết bị, tên thiết bị, khu vực..."
@@ -238,7 +246,21 @@ const handleSearch = (query) => {
           <AddButton onClick={() => openModal()} /> {/* Open modal for new device */}
           <FormSample href={sampleTemplate} label="Tải Form Mẫu" />
           <ImportButton onImport={handleImport}/>
-          <ExportExcelButton data={devices} fileName="DanhSachThietBi.xlsx" />
+          <ExportExcelButton
+            data={devices}
+            parentComponentName="DanhSachThietBi"
+            headers={[
+              { key: 'deviceId', label: 'Mã thiết bị' },
+              { key: 'deviceName', label: 'Tên thiết bị' },
+              { key: 'areaName', label: 'Khu vực' },
+              { key: 'model',label: 'Model' },
+              { key: 'technicalSpecifications',label: 'Thông số kỹ thuật' },
+              { key: 'purchaseDate',label: 'Ngày mua',
+                transform: (purchaseDate) => 
+                  purchaseDate ? moment(purchaseDate).format('DD-MM-YYYY') : 'N/A',
+               },
+            ]}
+          />
         </div>
       </div>
 
@@ -246,13 +268,13 @@ const handleSearch = (query) => {
         <thead>
           <tr className="bg-gray-100">
             <th className="border px-4 py-2 text-xs">STT</th>
-            <th className="border px-4 py-2 text-xs">Mã Thiết Bị</th>
-            <th className="border px-4 py-2 text-xs">Tên Thiết Bị</th>
-            <th className="border px-4 py-2 text-xs">Khu Vực</th>
-            <th className="border px-4 py-2 text-xs">Model</th>
-            <th className="border px-4 py-2 text-xs">Thông Số Kỹ Thuật</th>
+            <th className="border px-4 py-2 text-xs">Mã thiết bị</th>
+            <th className="border px-4 py-2 text-xs">Tên tên thiết bị</th>
+            <th className="border px-4 py-2 text-xs">Khu vực sản xuất</th>
+            <th className="border px-4 py-2 text-xs">Model thiết bị</th>
+            <th className="border px-4 py-2 text-xs">Thông số kĩ thuật</th>
             <th className="border px-4 py-2 text-xs">
-                Ngày Mua
+                Ngày mua
                 <button onClick={sortDevicesByDate} className="ml-2">
                   {sortOrderDate === 'asc' ? '▼' : '▲'} {/* Biểu tượng sắp xếp */}
                 </button>
@@ -282,7 +304,7 @@ const handleSearch = (query) => {
                 </button>
                 <button
                   className="text-red-500 hover:text-red-700"
-                  onClick={() => handleDelete(device._id)}
+                  onClick={() => openDeleteModal(device)}
                 >
                   <FaTrash />
                 </button>
@@ -351,7 +373,7 @@ const handleSearch = (query) => {
                   <Form.Item
                     label="Thông Số Kỹ Thuật"
                     name="technicalSpecifications"
-                    rules={[{ required: true, message: 'Thông Số Kỹ Thuật là bắt buộc' }]}
+                   
                   >
                     <Input />
                   </Form.Item>
@@ -359,15 +381,20 @@ const handleSearch = (query) => {
                   <Form.Item
                     label="Ngày Mua"
                     name="purchaseDate"
-                    rules={[{ required: true, message: 'Ngày Mua là bắt buộc' }]}
-                  >
+                    >
                     <Input type="date" />
                   </Form.Item>
                 </Form>
               </Modal>
-
-
-      
+              <Modal
+              title="Xác nhận xóa"
+              open={isDeleteModalOpen}
+              onCancel={() => setIsDeleteModalOpen(false)}
+              onOk={handleDelete}
+            >
+              <p>Bạn có chắc chắn muốn xóa thiết bị này không?</p>
+            </Modal>
+            
     </div>
   );
 };

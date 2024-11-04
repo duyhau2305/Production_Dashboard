@@ -5,6 +5,7 @@ import 'chartjs-plugin-datalabels';
 const RuntimeTrendChart = ({ data }) => {
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     scales: {
       y: {
         beginAtZero: true,
@@ -38,11 +39,11 @@ const RuntimeTrendChart = ({ data }) => {
   };
 
   return (
-    <div>
-      <div>
+    <div style={{ width: '100%', height: '250px' }}>
+     
         {/* Biểu đồ Line nhận data từ component cha */}
         <Line data={data} options={chartOptions} />
-      </div>
+      
     </div>
   );
 };

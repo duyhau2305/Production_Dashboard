@@ -13,8 +13,7 @@ const Dashboard1 = () => {
   const cardsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const fixedDate = moment().format('YYYY-MM-DD'); 
-
+  const fixedDate = moment().format('YYYY-MM-DD');
 
   // Hàm lấy thiết bị và khu vực
   const fetchDevicesAndAreas = async () => {
@@ -29,7 +28,7 @@ const Dashboard1 = () => {
       return { devices: [], areas: [] };
     }
   };
-  
+
   // Hàm lấy thông tin chi tiết về máy
   const fetchMachineDetails = async () => {
     try {
@@ -39,10 +38,10 @@ const Dashboard1 = () => {
       return response.data.data;
     } catch (error) {
       console.error('Lỗi khi lấy thông tin chi tiết máy:', error);
-      return []; // Trả về mảng rỗng để tránh lỗi nếu không có dữ liệu
+      return [];
     }
   };
-  
+
   // Hàm tổng hợp dữ liệu
   const fetchData = async () => {
     setLoading(true);
@@ -51,11 +50,11 @@ const Dashboard1 = () => {
         fetchDevicesAndAreas(),
         fetchMachineDetails(),
       ]);
-  
+
       const { devices, areas } = devicesAndAreas;
       setAreas(areas);
       setMachines(machinesWithDetails);
-  
+
       console.log('Dữ liệu thiết bị:', devices);
       console.log('Dữ liệu khu vực:', areas);
       console.log('Dữ liệu cho từng máy:', machinesWithDetails);
@@ -66,18 +65,17 @@ const Dashboard1 = () => {
     }
   };
 
-
-  
   useEffect(() => {
     fetchData();
   }, []);
 
   const getRealTimeStatusAndElapsed = (intervals) => {
-    if (!intervals || intervals.length === 0)
+    if (!intervals || intervals.length === 0) {
       return { status: 'Không xác định', elapsedTime: '0 phút' };
+    }
 
     const now = moment();
-    const latestInterval = intervals[intervals.length - 1]; // Interval gần nhất
+    const latestInterval = intervals[intervals.length - 1];
     const intervalEnd = moment(latestInterval.endTime, 'HH:mm');
 
     const status = latestInterval.status || 'Không xác định';

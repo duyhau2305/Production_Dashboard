@@ -8,55 +8,101 @@ import { toast } from 'react-toastify';
 
 const CustomUpdateModal = ({ open, onClose, onCancel, selectedDates, setSelectedMachines, setSelectedDates, selectedMachines }) => {
   const [taskData, setTaskData] = useState({}); // Dữ liệu nhiệm vụ sản xuất lưu theo ngày
-  
-
+  const [tasks, setTasks] = useState([]); // Quản lý trạng thái tasks
+  const apiUrl =import.meta.env.VITE_API_BASE_URL;
   // Hàm xử lý khi lưu nhiệm vụ cùng ngày đã chọn
-  const handleSave = async () => {
-    const updatedTaskData = { ...taskData };
+  const getDataWithSessionID = async (sessionID) => {
+    try {
+      const response = await axios.put('https://192.168.1.13/data/tags/T8:Status', 
+       
+        {
+          headers: {
+            'Referer': "https://127.0.0.1/",
+            'Content-Type': 'application/json',
+            'Cookie': `SID=003bbe4229ef448c13b15cd34232d397f4e`
+          }
+        }
+      );
+  
+      console.log('Data:', response.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+};
+const handleSave = async () => {
+  const updatedTaskData = { ...taskData };
 
-    let isTaskAdded = false;
-    const productionTasks = [];
+  let isTaskAdded = false;
+  const productionTasks = [];
 
+  if (Array.isArray(selectedDates) && selectedDates.length > 0) {
     selectedDates.forEach(date => {
-      if (selectedMachines.length > 0) {
-        if (!updatedTaskData[date]) {
-          updatedTaskData[date] = {
-            machines: selectedMachines,
-            tasks: [], // Bắt buộc phải có ít nhất một nhiệm vụ
+      if (updatedTaskData[date] && Array.isArray(updatedTaskData[date].tasks) && updatedTaskData[date].tasks.length > 0) {
+        selectedMachines.forEach(machine => {
+          const tasksForDate = updatedTaskData[date].tasks || []; // đảm bảo tasksForDate là một mảng
+          
+          const shifts = tasksForDate.map(task => ({
+            shiftName: task.selectedShift,
+            status: task.status,
+            employeeName: task.selectedEmployees,
+          }));
+
+          const formattedTask = {
+            id: tasksForDate[0]?.id || null, // Sử dụng ID từ task đầu tiên nếu có
+            date: new Date(date).toISOString().split('T')[0],
+            deviceId: machine.deviceId, // Thêm deviceId vào đây
+            deviceName: machine.deviceName,
+            shifts: shifts,
           };
-        }
-        // Đảm bảo có ít nhất một nhiệm vụ cho ngày được chọn
-        if (updatedTaskData[date].tasks.length > 0) {
-          isTaskAdded = true; // Có nhiệm vụ được thêm
-        }
+
+          productionTasks.push(formattedTask);
+          isTaskAdded = true;
+        });
       }
     });
+
     if (!isTaskAdded) {
       message.error('Vui lòng thêm ít nhất một nhiệm vụ trước khi lưu.');
       return;
     }
+
     try {
-      const response = await axios.get(`http://192.168.1.11:5001/api/updateTask`);
-      console.log(response)
-      if(response.data.status == "success"){
-        message.success('Bật thành công');
+      for (const task of productionTasks) {
+        if (task.id) {
+          await axios.put(`${apiUrl}/productiontask/${task.id}`, task);
+          console.log('Updated Task:', task);
+        } else {
+          await axios.post(`${apiUrl}/productiontask`, task);
+          console.log('Created New Task:', task);
+        }
       }
-      console.log(response)
+      message.success('Kế hoạch đã được lưu hoặc cập nhật thành công!');
+
+      const refreshedTaskData = await fetchTaskData();
+      setTaskData(refreshedTaskData);
+
+      setSelectedDates([]);
+      setSelectedMachines([]);
+      onClose();
     } catch (error) {
-      console.error('Failed to fetch telemetry data:', error.message);
-      throw new Error('Failed to fetch telemetry data');
+      message.error('Có lỗi xảy ra khi lưu kế hoạch. Vui lòng thử lại.');
+      console.error('Error saving production task:', error);
     }
-    setTaskData(updatedTaskData);
-    
-    console.log('Dữ liệu nhiệm vụ đã lưu:', updatedTaskData);
-    
-    setSelectedDates([]); 
-    setSelectedMachines([]); 
-    
-    // Thông báo thành công và đóng modal
-    message.success('Kế hoạch đã được lưu thành công!');
-    onClose(); 
-  };
+  } else {
+    message.error('Vui lòng chọn ít nhất một ngày!');
+  }
+};
+
+// Hàm để lấy dữ liệu mới nhất từ API
+const fetchTaskData = async () => {
+    try {
+        const response = await axios.get(`${apiUrl}/productiontask`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching task data:', error);
+        return {};
+    }
+};
 
   // Hàm xử lý khi nhấn nút Hủy bỏ
   const handleCancel = () => {

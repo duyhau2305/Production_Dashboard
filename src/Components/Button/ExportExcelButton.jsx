@@ -1,23 +1,39 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx/xlsx.mjs';
 import { toast } from 'react-toastify';
 
-const ExportExcelButton = ({ data, parentComponentName }) => {
+const ExportExcelButton = ({ data, headers, parentComponentName }) => {
   const handleExportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    
-    // Generate the filename dynamically based on parentComponentName
-    const fileName = `${parentComponentName || 'ExportedData'}.xlsx`;
+    try {
+      const formattedData = data.map((item, index) => {
+        const row = { STT: index + 1 };
 
-    XLSX.writeFile(workbook, fileName);
-    toast.success('Xuất dữ liệu thành công!');
+        headers.forEach(({ key, label, transform }) => {
+          row[label] = transform ? transform(item[key]) : item[key];
+        });
+
+        return row;
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(formattedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+
+      const fileName = `${parentComponentName || 'ExportedData'}.xlsx`;
+
+      // Xuất file Excel đồng bộ
+      XLSX.writeFile(workbook, fileName);
+
+      toast.success('Xuất dữ liệu thành công!');
+    } catch (error) {
+      console.error('Error exporting file:', error);
+      toast.error('Lỗi khi xuất dữ liệu. Vui lòng thử lại.');
+    }
   };
 
   return (
     <div className="flex justify-end">
       <button
-        className="bg-green-400 text-sm text-white px-3 py-2 rounded-md flex items-center hover:bg-green-700 transition-colors"
+        className="bg-[#080f4c] text-sm text-white px-3 py-2 rounded-md flex items-center hover:bg-blue-700 transition-colors"
         onClick={handleExportExcel}
       >
         Xuất Dữ Liệu
