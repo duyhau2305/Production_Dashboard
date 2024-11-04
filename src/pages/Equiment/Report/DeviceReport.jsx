@@ -14,7 +14,7 @@ const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 function DeviceReport() {
-  
+  const apiUrl =import.meta.env.VITE_API_BASE_URL
   const [selectedMachines, setSelectedMachines] = useState([]);  
   const [selectedDate, setSelectedDate] = useState(null);
   const [startDate, setStartDate] = useState(null); 
@@ -27,7 +27,7 @@ function DeviceReport() {
   useEffect(() => {
     const fetchMachineOptions = async () => {
       try {
-        const response = await axios.get('http://192.168.10.190:5001/api/machine-operations/machineOperations');
+        const response = await axios.get(`${apiUrl}/machine-operations/machineOperations`);
         const machines = response.data.data; 
         console.log(response)
         const options = machines.map(machine => ({
