@@ -3,6 +3,7 @@ import { Menu, Transition } from '@headlessui/react';
 import { FiChevronDown } from 'react-icons/fi';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link và useNavigate
 import user_avatar from '../../assets/image/user.png';
+import {message} from 'antd'
 
 const UserDropdown = () => {
   const navigate = useNavigate(); // Khởi tạo useNavigate
@@ -11,6 +12,7 @@ const UserDropdown = () => {
     // Xóa token khỏi localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('role'); // Nếu bạn lưu role
+    message.success('Đã đăng xuất thành công!');
 
     // Điều hướng về trang login
     navigate('/login');

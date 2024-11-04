@@ -7,6 +7,7 @@
   import { toast } from 'react-toastify';
   import logo from '../../assets/image/logo.png'; 
   import logodark from '../../assets/image/logodark.png'; 
+  import {message } from 'antd'
 
   const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     const { userRole } = useContext(AuthContext);
@@ -30,7 +31,7 @@
     const handleLogout = () => {
       localStorage.removeItem('token');
       localStorage.removeItem('role');
-      toast.success('Đã đăng xuất thành công!');
+      message.success('Đã đăng xuất thành công!');
       navigate('/login');
     };
 

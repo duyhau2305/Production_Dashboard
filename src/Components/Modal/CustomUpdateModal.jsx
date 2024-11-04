@@ -74,6 +74,7 @@ const handleSave = async () => {
           console.log('Created New Task:', task);
         }
       }
+     
       message.success('Kế hoạch đã được lưu hoặc cập nhật thành công!');
 
       const refreshedTaskData = await fetchTaskData();
@@ -82,6 +83,7 @@ const handleSave = async () => {
       setSelectedDates([]);
       setSelectedMachines([]);
       onClose();
+      
     } catch (error) {
       message.error('Có lỗi xảy ra khi lưu kế hoạch. Vui lòng thử lại.');
       console.error('Error saving production task:', error);

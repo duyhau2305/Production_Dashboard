@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaGoogle, FaFacebook, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { Modal, Button, message } from 'antd';
 import { toast,ToastContainer } from 'react-toastify';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
@@ -33,26 +34,26 @@ function Login() {
         localStorage.setItem('role', role);
         setUserRole(role);
   
-        toast.success('Đăng nhập thành công!');
+        message.success('Đăng nhập thành công!');
         navigate(role === 'CNVH' ? '/dashboard/mobile' : '/dashboard');
       }
     } catch (error) {
       // Check for various error cases and show appropriate messages
       if (!error.response) {
         // Network error
-        toast.error('Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối mạng của bạn!');
+        message.error('Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối mạng của bạn!');
       } else if (error.response.status === 400) {
         // Bad request (invalid input)
-        toast.error('Yêu cầu không hợp lệ. Vui lòng kiểm tra thông tin đăng nhập.');
+       message.error('Yêu cầu không hợp lệ. Vui lòng kiểm tra thông tin đăng nhập.');
       } else if (error.response.status === 401) {
         // Unauthorized (invalid credentials)
-        toast.error('Sai tên đăng nhập hoặc mật khẩu!');
+        message.error('Sai tên đăng nhập hoặc mật khẩu!');
       } else if (error.response.status === 500) {
         // Server error
-        toast.error('Lỗi máy chủ, vui lòng thử lại sau.');
+        message.error('Lỗi máy chủ, vui lòng thử lại sau.');
       } else {
         // Other errors
-        toast.error('Đã xảy ra lỗi không xác định.');
+        message.error('Đã xảy ra lỗi không xác định.');
       }
     } finally {
       setIsLoading(false);
@@ -64,8 +65,8 @@ function Login() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
             <div 
-                  className="lg:w-2/3 bg-cover bg-center  bg-no-repeat text-white flex flex-col justify-center items-center p-16"
-                  style={{ backgroundImage: 'url(/src/assets/image/QCS.jpg)' }}  // Thay thế bằng đường dẫn ảnh của bạn
+                  className="lg:w-2/3 bg-cover bg-center  bg-no-repeat text-white flex flex-col bg-qcsLogin justify-center items-center p-16"
+                  // style={{ backgroundImage: 'url(../src/assets/image/QCS.jpg)' }}  
                 >
                   
       </div>
@@ -77,10 +78,6 @@ function Login() {
           
         </div>
         <h2 className="text-2xl font-bold ml-2 text-blue-600 mb-8">DI.OEE</h2>
-
-        
-       
-        
         <form onSubmit={handleLogin} className="w-full max-w-sm p-6 ">
           <div className="relative">
             <input
@@ -137,7 +134,7 @@ function Login() {
           </button>
         </form>
       </div>
-      
+      <ToastContainer />
     
     </div>
   );

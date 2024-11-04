@@ -161,7 +161,7 @@ const TimelineChart = ({ selectedDate,selectedMchine , onDateChange }) => {
     const isoDate = utcDate.toISOString();
     try {
       const response = await axios.get(
-        `http://localhost:5001/api/machine-operations/${selectedMchine}/timeline?startTime=2024-10-20T17:00:00Z&endTime=2024-10-30T16:59:59Z`
+        `${apiUrl}/machine-operations/${selectedMchine}/timeline?startTime=2024-10-20T17:00:00Z&endTime=2024-10-30T16:59:59Z`
       );
       let totalOfflinePercentArray = [];
       let totalRun = []

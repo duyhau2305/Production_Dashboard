@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Select, DatePicker, Space, Radio, Tabs } from 'antd';
-import moment from 'moment';  
+import moment from 'moment-timezone';
 import DeviceTable from '../../../../Components/Equiment/Analysis/DeviceTable'; 
 import DowntimePieChart from '../../../../Components/Equiment/Analysis/DowntimePieChart'; 
 import ParetoTimeChart from '../../../../Components/Equiment/Analysis/ParetoTimeChart'; 
@@ -8,14 +8,14 @@ import ParetoFrequencyChart from '../../../../Components/Equiment/Analysis/Paret
 import Breadcrumb from '../../../../Components/Breadcrumb/Breadcrumb'; 
 import axios from 'axios';
 
+
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 const DeviceAnalysis = () => {
   const [selectedDateRange, setSelectedDateRange] = useState(null);
-  const [areas, setAreas] = useState([]);
   const [devices, setDevices] = useState([]);
-  const [selectedArea, setSelectedArea] = useState(null);
+  const [filteredDevices, setFilteredDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [downtimeData, setDowntimeData] = useState([]);
   const [employeeData, setEmployeeData] = useState([]);
@@ -45,7 +45,7 @@ useEffect(() => {
   const fetchData = async (startDate, endDate) => {
     try {
       const response = await axios.get(
-        `http://192.168.1.9:5001/api/getprocessdata?deviceId=543ff470-54c6-11ef-8dd4-b74d24d26b24&startDate=${startDate}&endDate=${endDate}`
+        `${apiUrl}/getprocessdata?deviceId=543ff470-54c6-11ef-8dd4-b74d24d26b24&startDate=${startDate}&endDate=${endDate}`
       );
       console.log(response.data.productionTasks)
       const newData = [{
@@ -80,56 +80,36 @@ useEffect(() => {
   };
 // Fetch areas from API
 useEffect(() => {
-  fetch(`${apiUrl}/areas`)
-    .then((response) => response.json())
-    .then((data) => setAreas(data))
-    .catch((error) => console.error('Error fetching areas:', error));
+  const fetchDevices = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/device`);
+      setDevices(response.data);
+      setFilteredDevices(response.data); // Ban đầu, hiển thị tất cả thiết bị
+    } catch (error) {
+      console.error('Error fetching devices:', error);
+    }
+  };
+
+  fetchDevices();
 }, []);
 
-// Fetch devices when an area is selected
-const handleAreaSelect = async (areaId) => {
-  setSelectedArea(areaId);
-  console.log('Selected Area ID:', areaId);
-
-  try {
-    // Gọi API để lấy toàn bộ danh sách thiết bị
-    const response = await axios.get(`${apiUrl}/device`);
-    console.log('Fetched Devices (Unfiltered):', response.data);
-
-    // Lọc danh sách thiết bị theo `areaId` đã chọn
-    const filteredDevices = response.data.filter(device => {
-      console.log(`Device Area ID: ${device.areaId}, Selected Area ID: ${areaId}`);
-      return device.areaId === areaId;
-    });
-
-    if (filteredDevices.length > 0) {
-      // Cập nhật danh sách thiết bị đã lọc
-      setDevices(filteredDevices);
-    } else {
-      console.warn('No devices found for this area.');
-      setDevices([]); // Xóa dữ liệu nếu không có thiết bị phù hợp
+// Hàm lọc thiết bị khi người dùng gõ vào ô tìm kiếm
+const handleDeviceSearch = (value) => {
+  const searchValue = value.toLowerCase();
+  const filtered = devices.filter((device) =>
+    device.deviceName.toLowerCase().includes(searchValue)
+  );
+  setFilteredDevices(filtered);
+};
+ const handleDeviceSelect = (objectId) => {
+    // Tìm thiết bị theo `_id` và lấy cả `deviceId`
+    const selectedDevice = devices.find((device) => device.id === objectId);
+    if (selectedDevice) {
+      setSelectedDevice({ _id: selectedDevice.id, deviceId: selectedDevice.deviceId });
+      console.log('Selected Device:', selectedDevice);
     }
-  } catch (error) {
-    console.error('Error fetching devices:', error);
-    setDevices([]); // Đảm bảo không hiển thị dữ liệu cũ nếu gặp lỗi
-  }
-};
-
-
-
-
-
-
-const handleDeviceSelect = (deviceId) => {
-  console.log('Selected Device ID:', deviceId); // Debug để kiểm tra
-  setSelectedDevice(deviceId);
-
-  if (selectedDateRange) {
-    fetchDowntimeData(deviceId, selectedDateRange);
-  }
-};
-
-  
+  };
+ 
   useEffect(() => {
    if(selectedDateRange != null){
     const startDate = new Date(selectedDateRange[0].$d);
@@ -152,56 +132,54 @@ const handleDeviceSelect = (deviceId) => {
   const handleDateChange = (dates) => {
     if (dates && dates.length === 2) {
       const [startDate, endDate] = dates;
-  
-      // Kiểm tra nếu moment object hợp lệ
-      if (!startDate.isValid() || !endDate.isValid()) {
-        console.error('Invalid date range selected.');
-        return;
+      const formattedDateRange = [startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD')];
+      setSelectedDateRange(formattedDateRange);
+      
+      // Kiểm tra xem `selectedDevice` và `formattedDateRange` đã có giá trị hợp lệ
+      if (selectedDevice.deviceId && formattedDateRange) {
+        fetchDowntimeData(selectedDevice.deviceId, formattedDateRange);
+        fetchEmployeeData(selectedDevice._id, formattedDateRange);
       }
-  
-      const formattedStartDate = startDate.format('YYYY-MM-DD');
-      const formattedEndDate = endDate.format('YYYY-MM-DD');
-  
-      console.log('Selected Start Date:', formattedStartDate);
-      console.log('Selected End Date:', formattedEndDate);
-  
-      // Cập nhật state và gọi API nếu có thiết bị được chọn
-      setSelectedDateRange([formattedStartDate, formattedEndDate]);
-  
-      if (selectedDevice) {
-        fetchDowntimeData(selectedDevice, [formattedStartDate, formattedEndDate]);
-        fetchEmployeeData(selectedDevice, [formattedStartDate, formattedEndDate]);
-        fetchTelemetryData(selectedDevice, [formattedStartDate, formattedEndDate]);
+      if (selectedDevice._id && formattedDateRange) {
+      
+        fetchTelemetryData(selectedDevice._id, formattedDateRange);
       }
     } else {
       console.warn('Please select a valid date range.');
     }
   };
   
-  
   useEffect(() => {
-    if (selectedDevice && selectedDateRange) {
-      console.log('Triggering fetch with new data:', selectedDevice, selectedDateRange);
-      fetchDowntimeData(selectedDevice, selectedDateRange);
-      fetchEmployeeData(selectedDevice,selectedDateRange);
+    // Kiểm tra nếu `selectedDevice` đã có `deviceId` và `selectedDateRange` đã được chọn
+    if (selectedDevice && selectedDevice.deviceId && selectedDateRange) {
+      fetchDowntimeData(selectedDateRange);
+    }
+  
+    // Kiểm tra nếu `selectedDevice` đã có `_id` và `selectedDateRange` đã được chọn
+    if (selectedDevice && selectedDevice._id && selectedDateRange) {
+      fetchEmployeeData(selectedDateRange);
+      fetchTelemetryData(selectedDateRange);
     }
   }, [selectedDevice, selectedDateRange]);
+  
   
   const fetchDowntimeData = async (deviceId, [startDate, endDate]) => {
     const formattedStartDate = moment(startDate).format('YYYY-MM-DD');
     const formattedEndDate = moment(endDate).format('YYYY-MM-DD');
-  
+    
     console.log(`Fetching with Device ID: ${deviceId}, Start: ${formattedStartDate}, End: ${formattedEndDate}`);
-  
+    
     try {
       const response = await axios.get(
         `${apiUrl}/downtime?deviceId=${deviceId}&startDate=${formattedStartDate}&endDate=${formattedEndDate}`
       );
       setDowntimeData(response.data);
-          } catch (error) {
+    } catch (error) {
       console.error('Error fetching downtime data:', error);
     }
   };
+  
+  
   const fetchEmployeeData = async (deviceId, [startDate, endDate]) => {
     const formattedStartDate = moment(startDate).format('YYYY-MM-DD');
     const formattedEndDate = moment(endDate).format('YYYY-MM-DD');
@@ -210,73 +188,88 @@ const handleDeviceSelect = (deviceId) => {
   
     try {
       const response = await axios.get(
-        `${apiUrl}/productiontask?deviceName=MÁY%20TIỆN%2001&startDate=${formattedStartDate}&endDate=${formattedEndDate}`
+        `${apiUrl}/productiontask?deviceId=${deviceId}&startDate=${formattedStartDate}&endDate=${formattedEndDate}`
       );
       setEmployeeData(response.data);
     } catch (error) {
-      console.error('Error fetching downtime data:', error);
+    
     }
   };
   // Khởi tạo state cho dữ liệu telemetry
 
-  const fetchTelemetryData = async (deviceId, [startDate, endDate]) => {
-    const formattedStartDate = moment(startDate).format('YYYY-MM-DD');
-    const formattedEndDate = moment(endDate).format('YYYY-MM-DD');
-  
-    console.log(`Fetching telemetry for Device ID: ${deviceId}, Start: ${formattedStartDate}, End: ${formattedEndDate}`);
-  
+
+  const fetchTelemetryData = async (_id, [startDate, endDate]) => {
+    // Thiết lập thời gian theo timezone Asia/Ho_Chi_Minh và định dạng như yêu cầu
+    const formattedStartDate = moment.tz(startDate, 'Asia/Ho_Chi_Minh').set({ hour: 17, minute: 0, second: 0 }).format("YYYY-MM-DDTHH:mm:ss[Z]");
+    const formattedEndDate = moment.tz(endDate, 'Asia/Ho_Chi_Minh').set({ hour: 16, minute: 59, second: 59 }).format("YYYY-MM-DDTHH:mm:ss[Z]");
+    
     try {
       const response = await axios.get(
-        `${apiUrl}/telemetry?deviceId=${deviceId}&startDate=${formattedStartDate}&endDate=${formattedEndDate}`
+        `${apiUrl}/machine-operations/${_id}/timeline`,
+        {
+          params: {
+            startTime: formattedStartDate,
+            endTime: formattedEndDate,
+          },
+        }
       );
   
-      // Lọc các interval có status "Dừng" và thời lượng > 5 phút, đồng thời gắn date vào interval
-      const filteredData = response.data.flatMap((entry) =>
-        entry.intervals
-          .filter((interval) => {
-            if (interval.status === "Dừng") {
-              const start = moment(interval.startTime, 'HH:mm:ss');
-              const end = moment(interval.endTime, 'HH:mm:ss');
-              const duration = moment.duration(end.diff(start)).asMinutes();
-              return duration > 5; // Giữ lại những interval dừng > 5 phút
-            }
-            return false;
-          })
-          .map((interval) => ({
-            ...interval,
-            date: entry.date, // Gắn thêm date vào mỗi interval
-          }))
-      );
+      // Kiểm tra cấu trúc dữ liệu trả về
+      if (response.data && response.data.data) {
+        // Lọc các khoảng thời gian "Stop" với thời lượng > 5 phút
+        const filteredData = response.data.data.flatMap((entry) =>
+          entry.intervals
+            .filter((interval) => {
+              if (interval.status === "Stop") {
+                const start = moment(interval.startTime);
+                const end = moment(interval.endTime);
+                const duration = moment.duration(end.diff(start)).asMinutes();
+                return duration > 5; 
+              }
+              return false;
+            })
+            .map((interval) => ({
+              ...interval,
+              date: moment.tz(entry.date, 'Asia/Ho_Chi_Minh').format("YYYY-MM-DDTHH:mm:ss[Z]"), // Gắn thêm date với timezone Asia/Ho_Chi_Minh
+            }))
+        );
   
-      setTelemetryData(filteredData); // Lưu dữ liệu đã lọc vào state
-      console.log('Filtered Telemetry Data with Date:', filteredData);
+        // Lưu dữ liệu đã lọc vào state
+        setTelemetryData(filteredData);
+        console.log('Filtered Telemetry Data with Date:', filteredData); // Kiểm tra dữ liệu đã lọc
+      } else {
+        console.warn("Unexpected response structure:", response.data);
+      }
     } catch (error) {
       console.error('Error fetching telemetry data:', error);
     }
   };
   
-  const aggregateDowntimeHoursByReason = (data) => {
-    const reasonHours = data.reduce((acc, item) => {
-      const reason = item.reasonName;
-      const totalIntervalHours = item.interval.reduce((sum, interval) => {
-        const [startHour, startMinute] = interval.startTime.split(':').map(Number);
-        const [endHour, endMinute] = interval.endTime.split(':').map(Number);
-  
-        const startTime = startHour + startMinute / 60;
-        const endTime = endHour + endMinute / 60;
-  
-        return sum + (endTime - startTime); // Calculate duration in hours
-      }, 0);
-  
-      acc[reason] = (acc[reason] || 0) + totalIntervalHours;
-      return acc;
-    }, {});
-  
-    return {
-      labels: Object.keys(reasonHours),
-      values: Object.values(reasonHours),
-    };
+const aggregateDowntimeHoursByReason = (data) => {
+  const reasonHours = data.reduce((acc, item) => {
+    const reason = item.reasonName;
+
+    // Tổng thời gian downtime cho mỗi lý do
+    const totalIntervalHours = item.interval.reduce((sum, interval) => {
+      const startTime = moment(interval.startTime);
+      const endTime = moment(interval.endTime);
+
+      // Tính chênh lệch thời gian giữa `startTime` và `endTime` bằng giờ
+      const durationInHours = moment.duration(endTime.diff(startTime)).asHours();
+      
+      return sum + durationInHours; // Cộng dồn thời gian downtime
+    }, 0);
+
+    // Thêm hoặc cập nhật thời gian cho lý do trong accumulator
+    acc[reason] = (acc[reason] || 0) + totalIntervalHours;
+    return acc;
+  }, {});
+
+  return {
+    labels: Object.keys(reasonHours),
+    values: Object.values(reasonHours),
   };
+};
   const aggregateFrequencyByReason = (data) => {
     const reasonCounts = data.reduce((acc, item) => {
       const reason = item.reasonName;
@@ -303,32 +296,20 @@ const handleDeviceSelect = (deviceId) => {
       <Breadcrumb />
       <hr />
       <div className="flex justify-end items-center mb-4 mt-2">
-        <Select
-          value={selectedArea}
-          onChange={handleAreaSelect}
-          placeholder="Chọn khu vực"
-          style={{ width: 150,marginRight: 5 }}
+      <Select
+          showSearch
+          style={{ width: 200, marginRight: 5 }}
+          placeholder="Chọn thiết bị"
+          onSearch={handleDeviceSearch} // Lọc khi người dùng gõ vào
+          onChange={handleDeviceSelect} // Chọn thiết bị từ danh sách gợi ý
+          filterOption={false} // Vô hiệu hóa lọc mặc định để dựa hoàn toàn vào dữ liệu từ API
         >
-          {areas.map((area) => (
-            <Option key={area._id} value={area._id}>
-              {area.areaName}
+          {filteredDevices.map((device) => (
+            <Option key={device.id} value={device.id}>
+              {device.deviceName}
             </Option>
           ))}
         </Select>
-
-        <Select
-            value={selectedDevice} // deviceId được lưu trong state
-            onChange={handleDeviceSelect} // Gọi khi người dùng chọn thiết bị
-            placeholder="Chọn thiết bị"
-            style={{ width: 150, marginRight: 5}}
-            disabled={!selectedArea}
-          >
-            {devices.map((device) => (
-              <Option key={device.id} value={device.id}> 
-                {device.name} {/* Hiển thị deviceName */}
-              </Option>
-            ))}
-          </Select>
 
 
 

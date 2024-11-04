@@ -24,6 +24,10 @@ export default {
       // => @media (min-width: 1536px) { ... }
     },
     extend: {
+      backgroundImage : {
+        'qcsLogin': "url('../src/assets/image/QCS.jpg')"
+      },
+
       colors: {
         primary: {
           50: 'rgba(240,255,255, 0.05)', 

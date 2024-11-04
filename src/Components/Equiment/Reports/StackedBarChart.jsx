@@ -131,7 +131,7 @@ const StackedBarChart = ({ selectedDate,selectedMchine, onDateChange }) => {
     try {
       
       const responsePercent = await axios.get(
-        `http://localhost:5001/api/machine-operations/${selectedMchine}/summary-status?startTime=2024-10-20T17:00:00Z&endTime=2024-10-30T16:59:59Z`
+        `${apiUrl}/machine-operations/${selectedMchine}/summary-status?startTime=2024-10-20T17:00:00Z&endTime=2024-10-30T16:59:59Z`
       );
       let totalOfflinePercentArray = [];
       let totalRun = [];
