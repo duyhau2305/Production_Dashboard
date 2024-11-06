@@ -188,7 +188,7 @@ function DeviceReport() {
 
       const fetchTaskChartData = async () => {
         try {
-          const response = await axios.get(`http://192.168.10.186:5000/api/downtime`, {
+          const response = await axios.get(`${apiUrl}/downtime`, {
             params: {
               deviceId: selectedMachine,
               startDate: startDate,
