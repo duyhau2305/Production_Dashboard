@@ -132,10 +132,11 @@ const DeviceTable = ({ downtimeData, telemetryData, productionData, employeeData
 
 
 // Bảng thống kê sản xuất
+// Bảng thống kê sản xuất
 const TableProduction = ({ productionData }) => {
-  // Kiểm tra nếu productionData là undefined hoặc null
-  if (!productionData || !productionData.productionTasks) {
-    return null; // Không render gì nếu productionData không hợp lệ
+  // Kiểm tra nếu productionData là undefined hoặc null hoặc không có productionTasks dưới dạng mảng
+  if (!productionData || !Array.isArray(productionData.productionTasks)) {
+    return <p className="text-red-500">Không có dữ liệu sản xuất.</p>;
   }
 
   return (
@@ -172,5 +173,6 @@ const TableProduction = ({ productionData }) => {
     </table>
   );
 };
+
 
 export default DeviceTable;

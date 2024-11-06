@@ -16,8 +16,8 @@ const Header = () => {
         <h2 className="font-bold lg:hidden  lg:block sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-blue-500 dark:text-white">
           DI.OEE
         </h2>
-        <h2 className="font-bold ml-64 lg:text-3xl sm:hidden lg:block sm:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-blue-500 dark:text-white">
-          Nhà máy chuyển đổi số cơ khí Q.C.S
+        <h2 className="font-bold ml-72 lg:text-4xl sm:hidden lg:block sm:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-blue-500 dark:text-white">
+          NHÀ MÁY CHUYỂN ĐỔI SỐ CƠ KHÍ Q.C.S
         </h2>
       </div>
 

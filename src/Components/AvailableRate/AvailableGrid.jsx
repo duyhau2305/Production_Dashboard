@@ -1,20 +1,16 @@
-import React from 'react';
-import AvailableCard from './AvailableCard'; // Import AvailableCard
+import AvailableCard from "./AvailableCard";
 
-function AvailableGrid({ machines, machineType,selectedDate }) {
-  console.log("AvailableGrid selectedDate:", selectedDate.format("YYYY-MM-DD"));
+function AvailableGrid({ machines, machineType, selectedDate, viewMode }) {
   return (
-    <div
-      className="grid grid-cols-2 gap-2 overflow-y-auto"
-      style={{ maxHeight: 'calc(2 * 230px + 1rem)' }} // Giới hạn chiều cao (2 hàng + khoảng cách giữa)
-    >
+    <div className="grid grid-cols-2 gap-2 overflow-y-auto" style={{ maxHeight: 'calc(3 * 530px + 1rem)' }}>
       {machines.map((machine) => (
         <AvailableCard
-          key={machine._id} // Sử dụng `_id` làm key để đảm bảo duy nhất
-          machineName={machine.deviceName} // Truyền tên thiết bị
-          deviceId={machine._id} // Truyền `deviceCode`
-          selectedDate={selectedDate} // Ngày hiện tại
-          machineType={machineType} // Truyền loại máy hoặc khu vực
+          key={machine._id}
+          machineName={machine.deviceName}
+          deviceId={machine._id}
+          selectedDate={selectedDate}
+          machineType={machineType}
+          viewMode={viewMode} // Truyền viewMode vào AvailableCard
         />
       ))}
     </div>

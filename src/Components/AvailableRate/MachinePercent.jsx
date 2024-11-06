@@ -1,41 +1,38 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as d3 from 'd3';
+import React, { useEffect, useState } from 'react';
+import { Bar } from 'react-chartjs-2';
 import axios from 'axios';
 import moment from 'moment';
+import 'chart.js/auto';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 
 const MachinePercent = ({ deviceId, selectedDate }) => {
-  const fixedHeight = 150;
-  const svgRef = useRef();
-  const wrapperRef = useRef();
   const [deviceData, setDeviceData] = useState({});
-  const [dimensions, setDimensions] = useState({ width: 800, height: fixedHeight });
   const [loading, setLoading] = useState(true);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-   const calculateTotalTimes = (data) => {
-    const totalTime = { 'Chạy': 0, 'Dừng': 0, 'Chờ': 0, 'Offline': 0 };
 
-    data.forEach((interval) => {
-      const start = moment(interval.startTime, 'HH:mm');
-      const end = moment(interval.endTime, 'HH:mm');
-      const duration = moment.duration(end.diff(start));
-      const minutes = duration.asMinutes();
+  const totalSeconds = 86400;
 
-      totalTime[interval.status] += minutes;
-    });
+  const calculatePercentages = (data) => {
+    const runTimeSeconds = data.runTime || 0;
+    const stopTimeSeconds = data.stopTime || 0;
+    const idleTimeSeconds = data.idleTime || 0;
+    const offlineTimeSeconds = Math.max(0, totalSeconds - (runTimeSeconds + stopTimeSeconds + idleTimeSeconds));
 
-    return Object.fromEntries(Object.entries(totalTime).map(([status, minutes]) => [
-      status,
-      `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`
-    ]));
+    return {
+      Chạy: (runTimeSeconds / totalSeconds) * 100,
+      Dừng: (stopTimeSeconds / totalSeconds) * 100,
+      Chờ: (idleTimeSeconds / totalSeconds) * 100,
+      Offline: (offlineTimeSeconds / totalSeconds) * 100,
+    };
   };
 
   useEffect(() => {
     if (deviceId && selectedDate) {
-      fetchTelemetryData(deviceId);
+      fetchTelemetryData(deviceId, selectedDate);
     }
   }, [deviceId, selectedDate]);
 
-  const fetchTelemetryData = async (deviceId) => {
+  const fetchTelemetryData = async (deviceId, selectedDate) => {
     setLoading(true);
     try {
       const startTime = selectedDate.clone().startOf('day').toISOString();
@@ -44,184 +41,112 @@ const MachinePercent = ({ deviceId, selectedDate }) => {
       const response = await axios.get(apiEndpoint);
 
       if (response.data?.data?.length > 0) {
-        const intervals = response.data.data[0].intervals;
-        const flatData = intervals.map((interval) => ({
-          startTime: moment(interval.startTime).format('HH:mm'),
-          endTime: moment(interval.endTime).format('HH:mm'),
-          status: interval.status === 'Run' ? 'Chạy' : interval.status === 'Stop' ? 'Dừng' : 'Chờ'
-        }));
-        setDeviceData((prevData) => ({ ...prevData, [deviceId]: addOfflineIntervals(flatData) }));
+        setDeviceData(response.data.data[0]);
       } else {
-        console.warn(`No intervals found for deviceId ${deviceId}`);
-        setDeviceData((prevData) => ({ ...prevData, [deviceId]: [] }));
+        console.warn(`No data found for deviceId ${deviceId}`);
+        setDeviceData({});
       }
     } catch (error) {
       console.error(`Error fetching telemetry data for deviceId ${deviceId}:`, error);
-      setDeviceData((prevData) => ({ ...prevData, [deviceId]: [] }));
+      setDeviceData({});
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const tooltip = d3.select('body')
-      .append('div')
-      .attr('class', 'tooltip')
-      .style('position', 'absolute')
-      .style('background-color', 'white')
-      .style('border', '1px solid #ccc')
-      .style('padding', '5px')
-      .style('border-radius', '4px')
-      .style('display', 'none')
-      .style('pointer-events', 'none');
+  const getChartData = () => {
+    if (!deviceData) return { labels: [], datasets: [] };
 
-    const drawChart = () => {
-      const svg = d3.select(svgRef.current);
-      const { width, height } = dimensions;
-      const margin = { top: 0, right: 15, bottom: 80, left: 30 };
+    const percentages = calculatePercentages(deviceData);
 
-      svg.selectAll('*').remove();
+    const adjustedData = Object.entries(percentages).map(([status, percent]) => ({
+      status,
+      displayPercent: percent < 0 ? 0 : percent,  // Set minimum of 1% for display
+    }));
 
-      if (loading) {
-        svg.append('text')
-          .attr('x', width / 2)
-          .attr('y', height / 2)
-          .attr('text-anchor', 'middle')
-          .style('font-size', '16px')
-          .style('fill', '#888')
-          .text('Đang tải...');
-        return;
-      }
-
-      if (!deviceData[deviceId] || deviceData[deviceId].length === 0) {
-        svg.append('text')
-          .attr('x', width / 2)
-          .attr('y', height / 2)
-          .attr('text-anchor', 'middle')
-          .style('font-size', '16px')
-          .style('fill', '#888')
-          .text('Không có dữ liệu để hiển thị');
-        return;
-      }
-
-      const data = deviceData[deviceId];
-      const totalTimes = calculateTotalTimes(data);
-
-      const timeParse = d3.timeParse('%H:%M');
-      const xScale = d3.scaleTime()
-        .domain([timeParse('00:00'), timeParse('23:59')])
-        .range([margin.left, width - margin.right]);
-
-      const colorScale = d3.scaleOrdinal()
-        .domain(['Chạy', 'Dừng', 'Chờ', 'Offline'])
-        .range(['#00C8D7', '#f10401', '#FFC107', '#d3d3d3']);
-
-      const legendData = [
-        { status: 'Chạy', time: totalTimes['Chạy'], color: '#00C8D7' },
-        { status: 'Dừng', time: totalTimes['Dừng'], color: '#f10401' },
-        { status: 'Chờ', time: totalTimes['Chờ'], color: '#FFC107' },
-        { status: 'Offline', time: totalTimes['Offline'], color: '#d3d3d3' }
-      ];
-
-      const zoom = d3.zoom()
-        .scaleExtent([1, 24])
-        .translateExtent([[margin.left, 0], [width - margin.right, 0]])
-        .extent([[margin.left, 0], [width - margin.right, 0]])
-        .on('zoom', (event) => {
-          const newXScale = event.transform.rescaleX(xScale);
-          updateChart(newXScale);
-        });
-
-      svg.call(zoom);
-
-      const updateChart = (newXScale) => {
-        svg.selectAll('.status-rect')
-          .data(data)
-          .attr('x', d => newXScale(timeParse(d.startTime)) + 1)
-          .attr('width', d => Math.max(newXScale(timeParse(d.endTime)) - newXScale(timeParse(d.startTime)), 1));
-
-        svg.selectAll('.x-axis')
-          .call(d3.axisBottom(newXScale).ticks(d3.timeHour.every(2)).tickFormat(d3.timeFormat('%H:%M')));
-      };
-
-      const legend = svg.selectAll('.legend')
-        .data(legendData)
-        .enter()
-        .append('g')
-        .attr('class', 'legend')
-        .attr('transform', (d, i) => `translate(${margin.left + i * 150},${height - margin.bottom + 40})`);
-
-      legend.append('rect')
-        .attr('x', 70)
-        .attr('y', -10)
-        .attr('width', 20)
-        .attr('height', 10)
-        .style('fill', d => d.color);
-
-      legend.append('text')
-        .attr('x', 95)
-        .attr('y', 0)
-        .text(d => `${d.status}: ${d.time}`)
-        .style('font-size', '12px')
-        .style('text-anchor', 'start');
-
-      svg.append('g')
-        .attr('class', 'x-axis')
-        .attr('transform', `translate(0,${height - margin.bottom - 30})`)
-        .call(d3.axisBottom(xScale).ticks(d3.timeHour.every(2)).tickFormat(d3.timeFormat('%H:%M')))
-        .selectAll("text")
-        .attr("transform", "translate(-10,0)rotate(-45)")
-        .style("text-anchor", "end");
-
-      svg.selectAll('.status-rect')
-        .data(data)
-        .enter()
-        .append('rect')
-        .attr('class', 'status-rect')
-        .attr('x', d => xScale(timeParse(d.startTime)) + 1)
-        .attr('y', height - margin.bottom - 60)
-        .attr('width', d => Math.max(xScale(timeParse(d.endTime)) - xScale(timeParse(d.startTime)), 1))
-        .attr('height', 30)
-        .attr('fill', d => colorScale(d.status))
-        .on('mouseover', (event, d) => {
-          tooltip
-            .style('display', 'block')
-            .html(`Trạng thái: <b>${d.status}</b><br>Thời gian: ${d.startTime} - ${d.endTime}`);
-        })
-        .on('mousemove', event => {
-          tooltip
-            .style('left', `${event.pageX + 10}px`)
-            .style('top', `${event.pageY - 20}px`);
-        })
-        .on('mouseout', () => {
-          tooltip.style('display', 'none');
-        });
+    return {
+      labels: ['Machine Status'],
+      datasets: [
+        {
+          label: `Chạy (${adjustedData.find(d => d.status === 'Chạy').displayPercent.toFixed(2)}%)`,
+          data: [adjustedData.find(d => d.status === 'Chạy').displayPercent],
+          backgroundColor: '#00C8D7',
+        },
+        {
+          label: `Dừng (${adjustedData.find(d => d.status === 'Dừng').displayPercent.toFixed(2)}%)`,
+          data: [adjustedData.find(d => d.status === 'Dừng').displayPercent],
+          backgroundColor: '#f10401',
+        },
+        {
+          label: `Chờ (${adjustedData.find(d => d.status === 'Chờ').displayPercent.toFixed(2)}%)`,
+          data: [adjustedData.find(d => d.status === 'Chờ').displayPercent],
+          backgroundColor: '#FFC107',
+        },
+        {
+          label: `Offline (${adjustedData.find(d => d.status === 'Offline').displayPercent.toFixed(2)}%)`,
+          data: [adjustedData.find(d => d.status === 'Offline').displayPercent],
+          backgroundColor: '#d3d3d3',
+        },
+      ],
     };
-
-    drawChart();
-    
-    return () => {
-      tooltip.remove();
-    };
-  }, [deviceData, dimensions, deviceId, loading]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      const clientWidth = wrapperRef.current.clientWidth;
-      setDimensions({ width: clientWidth, height: fixedHeight });
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize();
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
+  };
 
   return (
-    <div ref={wrapperRef}>
-      <svg ref={svgRef} width="100%" height={fixedHeight} />
+    <div style={{ height: '150px' }}>
+      {loading ? (
+        <p>Đang tải...</p>
+      ) : (
+        <Bar
+          data={getChartData()}
+          options={{
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              datalabels: {
+                display: (context) => context.dataset.data[0] >= 0.8, // Only show if >= 1%
+                color: (context) => context.dataset.label.includes('Dừng') ? 'white' : 'black', // Set text color for 'Dừng' to white
+                anchor: 'center',
+                align: 'center',
+                formatter: (value) => `${value.toFixed(2)}%`, // Display percentage on each bar
+              },
+              legend: {
+                display: true,
+                position: 'bottom',
+                labels: {
+                  boxWidth: 25,
+                  boxHeight: 7,
+                },
+              },
+            },
+            scales: {
+              x: {
+                stacked: true,
+                max: 100,
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  callback: function (value) {
+                    return `${value}%`;
+                  },
+                },
+              },
+              y: {
+                stacked: true,
+                display: false,
+              },
+            },
+            layout: {
+              padding: {
+                top: -10,
+                bottom: 10,
+              },
+            },
+          }}
+          plugins={[ChartDataLabels]}
+        />
+      )}
     </div>
   );
 };

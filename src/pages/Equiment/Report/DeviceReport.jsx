@@ -141,7 +141,7 @@ function DeviceReport() {
   
           const data = response.data.data;
   
-          // Calculate total runtime, idle, and stop times for pie chart
+          // Tính tổng thời gian idle, run, và stop cho biểu đồ pie chart
           const totalIdleTime = data.reduce((acc, entry) => acc + entry.idleTime, 0);
           const totalRunTime = data.reduce((acc, entry) => acc + entry.runTime, 0);
           const totalStopTime = data.reduce((acc, entry) => acc + entry.stopTime, 0);
@@ -150,23 +150,27 @@ function DeviceReport() {
             labels: ['Run', 'Idle', 'Stop'],
             values: [totalRunTime, totalIdleTime, totalStopTime]
           });
-          const totalSecondsInDay = 86400
-          // Prepare data for runtimeTrendData (daily runtime percentage)
-          const trendLabels = [];
-          const runtimePercentages = data.map(entry => {
-            const totalTime = entry.runTime + entry.idleTime + entry.stopTime;
-            const runtimePercentage = totalTime ? (entry.runTime / totalSecondsInDay) * 100 : 0;
-            trendLabels.push(moment(entry.date).format('DD/MM'));
-            return runtimePercentage;
-          });
-          console.log(trendLabels)
   
+          // Hàm chuyển đổi giây thành định dạng hh:mm
+          const formatSecondsToHHMM = (seconds) => {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          };
+  
+          // Chuẩn bị dữ liệu cho biểu đồ xu hướng thời gian runtime
+          const trendLabels = [];
+          const runtimeHours = data.map(entry => {
+            trendLabels.push(moment(entry.logTime).format('DD/MM')); // Lấy ngày từ logTime
+            return formatSecondsToHHMM(entry.runTime); // Đổi runTime thành hh:mm
+          });
+          console.log(runtimeHours)
           setRuntimeTrendData({
             labels: trendLabels,
             datasets: [
               {
-                label: "Daily Runtime Percentage (%)",
-                data: runtimePercentages,
+                label: "Daily Runtime (hh:mm)",
+                data: runtimeHours,
                 fill: false,
                 borderColor: 'green',
                 borderWidth: 2,
@@ -181,6 +185,8 @@ function DeviceReport() {
       fetchRuntimeChartData();
     }
   }, [selectedMachines, selectedDate]);
+  
+
   useEffect(() => {
     if (selectedMachine && selectedDate && selectedDate.startDate && selectedDate.endDate) {
       const startDate = moment(selectedDate.startDate).format('YYYY-MM-DD');

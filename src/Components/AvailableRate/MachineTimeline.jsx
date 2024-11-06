@@ -115,7 +115,7 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
     const drawChart = () => {
       const svg = d3.select(svgRef.current);
       const { width, height } = dimensions;
-      const margin = { top: 0, right: 15, bottom: 80, left: 30 };
+      const margin = { top: 0, right: 10, bottom: 80, left: 20 };
 
       svg.selectAll('*').remove();
 

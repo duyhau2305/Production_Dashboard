@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import axios from 'axios';
 import moment from 'moment-timezone';
 
-const MachineComparisonChart = ({ selectedDate, machineType }) => {
+const MachineComparisonChart = ({ selectedDate, machineType, viewMode }) => {
   const svgRef = useRef();
   const wrapperRef = useRef();
   const [data, setData] = useState([]);
@@ -12,7 +12,7 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   // Hàm gọi API
-  const fetchMachineData = async (startTime, endTime) => {
+  const fetchMachineData = async () => {
     setLoading(true);
     setError(null);
 
@@ -26,26 +26,25 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
         );
 
         if (response.status === 200 && response.data && response.data.data.length > 0) {
-          const { runTime, idleTime, stopTime } = response.data.data[0];
+          const { runTime } = response.data.data[0];
           const totalPossibleSeconds = moment(endTime).diff(moment(startTime), 'seconds');
           const runtimePercentage = ((runTime || 0) / totalPossibleSeconds) * 100;
+          const runtimeHours = (runTime || 0) / 3600;
 
           return {
             machine: deviceName,
             percentage: runtimePercentage > 0 ? runtimePercentage : 0,
+            hours: runtimeHours > 0 ? runtimeHours : 0,
           };
         } else {
-          return {
-            machine: deviceName,
-            percentage: 0,
-          };
+          return null; // Không có dữ liệu cho máy này
         }
       });
 
-      const results = await Promise.all(fetchPromises);
+      const results = (await Promise.all(fetchPromises)).filter((item) => item !== null); // Loại bỏ các phần tử null
       setData(results);
     } catch (error) {
-      setError('There was an error fetching data.');
+      setError('Có lỗi xảy ra khi lấy dữ liệu.');
       setData([]);
     } finally {
       setLoading(false);
@@ -53,12 +52,15 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
   };
 
   useEffect(() => {
-    // Cập nhật startTime và endTime mỗi khi selectedDate thay đổi
-    
-   
-    // Gọi API với thời gian được chuyển đổi từ selectedDate
     fetchMachineData();
-  }, [selectedDate, machineType]); 
+  }, [selectedDate, machineType]);
+
+  const formatHours = (hours) => {
+    const totalMinutes = Math.round(hours * 60);
+    const hh = Math.floor(totalMinutes / 60);
+    const mm = totalMinutes % 60;
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     const tooltip = d3.select('body')
@@ -80,7 +82,17 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
 
       svg.selectAll('*').remove();
 
-      if (data.length === 0) return;
+      // Kiểm tra nếu không có dữ liệu thì hiển thị thông báo
+      if (data.length === 0) {
+        svg.append('text')
+          .attr('x', width / 2)
+          .attr('y', height / 2)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '16px')
+          .style('fill', '#888')
+          .text('Không có dữ liệu để hiển thị');
+        return;
+      }
 
       const xScale = d3
         .scaleBand()
@@ -90,7 +102,7 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
 
       const yScale = d3
         .scaleLinear()
-        .domain([0, 100])
+        .domain([0, viewMode === 'percentage' ? 100 : d3.max(data, (d) => d.hours)])
         .range([height - margin.bottom, margin.top]);
 
       svg
@@ -101,7 +113,9 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
       svg
         .append('g')
         .attr('transform', `translate(${margin.left},0)`)
-        .call(d3.axisLeft(yScale).ticks(5).tickFormat((d) => `${d}%`));
+        .call(d3.axisLeft(yScale).ticks(5).tickFormat((d) => 
+          viewMode === 'percentage' ? `${d}%` : formatHours(d)
+        ));
 
       svg
         .selectAll('.bar')
@@ -110,14 +124,18 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
         .append('rect')
         .attr('class', 'bar')
         .attr('x', (d) => xScale(d.machine))
-        .attr('y', (d) => yScale(d.percentage))
+        .attr('y', (d) => yScale(viewMode === 'percentage' ? d.percentage : d.hours))
         .attr('width', xScale.bandwidth())
-        .attr('height', (d) => height - margin.bottom - yScale(d.percentage))
+        .attr('height', (d) => height - margin.bottom - yScale(viewMode === 'percentage' ? d.percentage : d.hours))
         .attr('fill', '#4aea4a')
         .on('mouseover', (event, d) => {
           tooltip
             .style('display', 'block')
-            .html(`Machine: <b>${d.machine}</b><br>Runtime: ${d.percentage.toFixed(2)}%`);
+            .html(`Machine: <b>${d.machine}</b><br>${
+              viewMode === 'percentage' 
+                ? `Runtime: ${d.percentage.toFixed(2)}%` 
+                : `Runtime: ${formatHours(d.hours)}`
+            }`);
         })
         .on('mousemove', (event) => {
           tooltip
@@ -141,12 +159,14 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
       tooltip.remove();
       resizeObserver.disconnect();
     };
-  }, [data]);
+  }, [data, viewMode]);
 
   return (
     <div ref={wrapperRef} className="bg-white rounded-lg shadow-sm p-4">
       <header className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold">Machine Runtime Percentage</h3>
+        <h3 className="text-lg font-bold">
+          Machine {viewMode === 'percentage' ? 'Runtime Percentage' : 'Runtime Hours'}
+        </h3>
       </header>
 
       {loading && <p>Loading data...</p>}
