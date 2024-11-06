@@ -2,10 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import moment from 'moment-timezone';
 import './TimelineChart.css';
-import { Slider, Checkbox } from 'antd';
+import { Slider, Checkbox, Radio, Dropdown, Menu, Button } from 'antd';
 
 const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [data, setData] = useState([]);
+  const [dataFilter, setDataFilter] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dates, setDates] = useState([]);
@@ -25,6 +27,9 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [scale, setScale] = useState('1');
   const [showYAxis, setShowYAxis] = useState(true);
   const [showXAxis, setShowXAxis] = useState(true);
+  const [viewMode, setViewMode] = useState('24h'); // State to track view mode
+  const [shift, setShift] = useState('morning'); // Default shift for shift-based view
+
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
   const formatDateForAPI = (date) => moment(date).format('YYYY-MM-DD');
@@ -153,6 +158,8 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       setDates(response.data.data.map(value => moment(value.date).format('DD/MM')));
       setListGradient(processedData.map(value => createGradientStops(value.intervals, 0, 1440)));
       setData(processedData);
+      setDataFilter(processedData);
+
     } catch (error) {
       setError(error.message);
     } finally {
@@ -176,30 +183,71 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     }
     return null; // Return null if the time is invalid
   };
-
   const handleMouseMove = (event, index) => {
+    if (shift == '') {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const percentX = ((event.clientX - rect.left) / rect.width) * 100;
+      const totalHours = (percentX / 100) * 24;
+      const hours = Math.floor(totalHours);
+      const minutes = Math.round((totalHours - hours) * 60);
+      const currentTimeInMinutes = hours * 60 + minutes;
+      const filteredData = data[index].intervals.filter(item => {
+        const endHour = getHour(item.endTime);
+        return endHour !== null && endHour < Math.max(...hour);
+      });
+
+      filteredData.forEach(interval => {
+        const startTimeInMinutes = timeToMinutes(interval.startTime);
+        const endTimeInMinutes = timeToMinutes(interval.endTime);
+        if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) {
+          setTextToTooltip(`${interval.status} : ${interval.startTime}-${interval.endTime}`);
+        }
+      });
+      setCurrentIndex(index);
+      setPositionToTooltip(percentX);
+      return;
+    }
     const rect = event.currentTarget.getBoundingClientRect();
     const percentX = ((event.clientX - rect.left) / rect.width) * 100;
-    const totalHours = (percentX / 100) * 24;
-    const hours = Math.floor(totalHours);
-    const minutes = Math.round((totalHours - hours) * 60);
-    const currentTimeInMinutes = hours * 60 + minutes;
-    const filteredData = data[index].intervals.filter(item => {
-      const endHour = getHour(item.endTime);
-      return endHour !== null && endHour < Math.max(...hour);
-    });
 
-    filteredData.forEach(interval => {
+    let startHour;
+    let endHour;
+
+    if (shift === 'morning') {
+      startHour = 6;
+      endHour = 14;
+    } else if (shift === 'afternoon') {
+      startHour = 14;
+      endHour = 22;
+
+    } else {
+      startHour = hour[0];
+      endHour = hour[hour.length - 1];
+    }
+
+    const totalHours = (percentX / 100) * (endHour - startHour); // Scale to 0-8 hours (for morning) or 0-8 hours (for afternoon)
+    const hours = Math.floor(totalHours) + startHour; // Convert to actual hour by adding startHour
+    const minutes = Math.round((totalHours - Math.floor(totalHours)) * 60);
+
+    // Calculate current time in minutes starting from the defined startHour
+    const currentTimeInMinutes = (hours * 60 + minutes);
+
+    console.log(data[index].intervals);
+    data[index].intervals.some(interval => {
       const startTimeInMinutes = timeToMinutes(interval.startTime);
       const endTimeInMinutes = timeToMinutes(interval.endTime);
-      if (currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes) {
+
+      if (endTimeInMinutes > currentTimeInMinutes) {
         setTextToTooltip(`${interval.status} : ${interval.startTime}-${interval.endTime}`);
+        return true; // This stops the iteration
       }
+      return false; // Continue iteration
     });
 
     setCurrentIndex(index);
     setPositionToTooltip(percentX);
   };
+
 
   const handleMouseLeave = () => {
     setTextToTooltip('');
@@ -207,12 +255,14 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   };
 
   const handleSliderChange = (newValue) => {
-    setListGradient(data.map(value => createGradientStops(value.intervals, newValue[0] * 1440 / 100, newValue[1] * 1440 / 100)));
+    // setListGradient(data.map(value => createGradientStops(value.intervals, newValue[0] * 1440 / 100, newValue[1] * 1440 / 100)));
     const newListHour = hourFil.filter((value, index) => {
       if (index * 4.16 > newValue[0] && index * 4.16 < newValue[1]) {
         return value;
       }
     });
+    handleShift('', newListHour[0], newListHour[newListHour.length - 1], 'slider')
+    setShift('slider')
     setHour(newListHour);
   };
 
@@ -257,11 +307,122 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     const secs = totalSeconds % 60;
     return `${hours.toString().padStart(2, '0')} giờ ${minutes.toString().padStart(1, '0')} phút`;
   }
+  const handleShiftChange = ({ key }) => {
+    setShift(key);
+    // Adjust displayed hours based on shift selection
+    switch (key) {
+      case 'morning':
+        setHour([6, 7, 8, 9, 10, 11, 12, 14]); // Morning shift hours
+        break;
+      case 'afternoon':
+        setHour([14, 15, 16, 17, 18, 19, 20, 21, 22]); // Afternoon shift hours
+        break;
+      case 'evening':
+        setHour([20, 21, 22, 23, 0, 1, 2, 3, 4, 5]); // Evening shift hours
+        break;
+      default:
+        setHour(Array.from({ length: 24 }, (_, i) => i)); // Default 24h mode
+    }
+  };
+  const isTimeInRange = (time, startHour, endHour) => {
+    const [hours] = time.split(':').map(Number); // Lấy phần giờ từ thời gian
+    return hours >= startHour && hours < endHour;
+  };
 
+  const handleShift = (shift, startDateHour, endDateHour, type) => {
+    let startHour;
+    let endHour;
+    if (type != 'slider') {
+      if (shift === 'morning') {
+        startHour = 6;
+        endHour = 14;
+      } else if (shift === 'afternoon') {
+        startHour = 14;
+        endHour = 22;
+      }
+    } else {
+      startHour = startDateHour;
+      endHour = endDateHour;
+    }
+
+    console.log(startHour);
+
+    const filteredData = dataFilter.map(entry => {
+      const intervals = entry.intervals.filter(interval => {
+        const startInRange = isTimeInRange(interval.startTime, startHour, endHour);
+        const endInRange = isTimeInRange(interval.endTime, startHour, endHour);
+        return startInRange && endInRange;
+      });
+
+      const offlineIntervals = [];
+      const minutesInRange = endHour * 60 - startHour * 60; // Tổng số phút trong khoảng thời gian
+
+      for (let minute = 0; minute < minutesInRange; minute++) {
+        const currentMinute = moment().startOf('day').add(startHour * 60 + minute, 'minutes');
+        const currentStartTime = currentMinute.format('HH:mm');
+        const currentEndTime = currentMinute.clone().add(1, 'minute').format('HH:mm');
+
+        const isActive = intervals.some(interval => {
+          const intervalStart = moment(interval.startTime, 'HH:mm');
+          const intervalEnd = moment(interval.endTime, 'HH:mm');
+          return (intervalStart.isBefore(currentEndTime) && intervalEnd.isAfter(currentMinute)); // Kiểm tra xem có hoạt động không
+        });
+
+        if (!isActive) {
+          offlineIntervals.push({
+            status: 'offline',
+            startTime: currentStartTime,
+            endTime: currentEndTime
+          });
+        }
+      }
+
+      // Kết hợp intervals với offlineIntervals
+      const allIntervals = [...intervals, ...offlineIntervals];
+
+      // Sort lại allIntervals theo startTime
+      allIntervals.sort((a, b) => {
+        const startA = moment(a.startTime, 'HH:mm');
+        const startB = moment(b.startTime, 'HH:mm');
+        return startA - startB; // Sắp xếp tăng dần theo startTime
+      });
+
+      return {
+        date: entry.date,
+        intervals: allIntervals // Trả về intervals đã sắp xếp
+      };
+    }).filter(entry => entry.intervals.length > 0); // Lọc ra những ngày có intervals phù hợp
+
+    console.log(filteredData);
+    setData(filteredData);
+    setListGradient(filteredData.map(value => createGradientStops(value.intervals, startHour * 60, endHour * 60)));
+  };
+
+  const handleFilterByDay = () => {
+    setHour(Array.from({ length: 24 }, (_, i) => i))
+    setData(dataFilter)
+    setListGradient(dataFilter.map(value => createGradientStops(value.intervals, 0, 1440)));
+    setShift('')
+  }
+  const shiftMenu = (
+    <Menu onClick={handleShiftChange}>
+      <Menu.Item key="morning" onClick={() => handleShift("morning")}>Ca sáng</Menu.Item>
+      <Menu.Item key="afternoon" onClick={() => handleShift("afternoon")}>Ca chiều</Menu.Item>
+    </Menu>
+  );
   return (
     <div style={{ position: 'relative', width: '100%', height: '500px' }}>
-      <div style={{ position: 'absolute', top: '-35px', right: '70px' }}>
+      <div style={{ position: 'absolute', top: '-35px', right: '70px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <Checkbox checked={showYAxis} onChange={(e) => setShowYAxis(e.target.checked)}></Checkbox>
+        <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)}>
+          <Radio.Button value="24h" onClick={() => handleFilterByDay()}>Theo 24h</Radio.Button>
+          <Radio.Button value="shift">Theo ca làm việc</Radio.Button>
+        </Radio.Group>
+        {viewMode === 'shift' && (
+          <Dropdown overlay={shiftMenu} trigger={['click']}>
+            <Button>{shift === 'morning' ? 'Ca sáng' : shift === 'afternoon' ? 'Ca chiều' : 'Ca Sáng'}</Button>
+          </Dropdown>
+        )}
       </div>
       <div className="y-axis-arrow" style={{ position: 'absolute', top: 0, left: 31, height: '100%', borderLeft: '2px solid black', display: showYAxis ? 'block' : 'none' }}>
         <span className="arrow up-arrow" onClick={handleUpArrowClick}>↑</span>
@@ -280,7 +441,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
               <div className="gradient-container gradient-section gradient" style={{
                 height: '50px',
                 background: `linear-gradient(to right, ${listGradient[index]})`,
-                marginTop: '10px',
+                marginTop: index > 0 ? '15px' : '0',
                 width: '100%',
                 position: 'relative',
                 zIndex: '1'
@@ -319,8 +480,9 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         <Slider
           style={{ marginTop: '-5px', width: '95%' }}
           range={{ draggableTrack: true }}
-          onChange={handleSliderChange}
-          defaultValue={[0, 100]}
+          onChange={() => { }} // Optionally handle the change event if needed
+          onAfterChange={handleSliderChange} // Call the function when the user releases the slider
+          defaultValue={[0, 100]} 
         />
       </div>
 
@@ -347,4 +509,3 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
 };
 
 export default TimelineChart;
-

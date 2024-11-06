@@ -22,7 +22,6 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [textToTooltip, setTextToTooltip] = useState('');
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  console.log(selectedMchine)
 
   const formatDateForAPI = (date) => moment(date).format('YYYY-MM-DD');
 
@@ -139,10 +138,10 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       <div style={{ position: 'absolute', top: '-35px', right: '70px' }}>
         <Checkbox checked={showYAxis} onChange={(e) => setShowYAxis(e.target.checked)}></Checkbox>
       </div>
-      <div className="y-axis-arrow" style={{ position: 'absolute', top: 0, left: 31, height: '100%', borderLeft: '2px solid black' , display: showYAxis ? 'block' : 'none' }}>
+      <div className="y-axis-arrow" style={{ position: 'absolute', top: 0, left: 31, height: '100%', borderLeft: '2px solid black', display: showYAxis ? 'block' : 'none' }}>
         <span className="arrow up-arrow" onClick={handleUpArrowClick}>↑</span>
       </div>
-      <div className="x-axis-arrow" style={{ position: 'absolute', bottom: 0, left: 31, width: '95%', borderBottom: '2px solid black'  , display: showYAxis ? 'block' : 'none'}}>
+      <div className="x-axis-arrow" style={{ position: 'absolute', bottom: 0, left: 31, width: '95%', borderBottom: '2px solid black', display: showYAxis ? 'block' : 'none' }}>
         <div style={{ position: 'absolute', width: '100%', display: 'flex', justifyContent: 'space-between' }}>
           {hour.map(value => (
             <div key={value} style={{ display: 'inline-block', width: '4.16%', textAlign: 'center', fontSize: '10px', marginTop: '5px' }}>
@@ -153,21 +152,23 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         <span className="arrow right-arrow">→</span>
       </div>
       <div style={{ paddingLeft: '33px', position: 'relative', height: '100%' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0' , display: showYAxis ? 'block' : 'none' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0', display: showYAxis ? 'block' : 'none' }}>
           {dates.map((date, index) => (
-            <div key={index} style={{ textAlign: 'right', fontSize: '10px', display: 'flex',  height: '70px' }}>
+            <div key={index} style={{
+              textAlign: 'right', fontSize: '10px', display: 'flex', marginTop: index > 0 ? '70px' : '0',
+            }}>
               {date}
             </div>
           ))}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', height: '99%' }}>
           {data.length > 0 ? data.map((entry, index) => (
-            <div key={index}  onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave}>
+            <div key={index} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave}>
               <div className='gradient-container gradient-section gradient' style={{
                 height: '50px',
                 background: `linear-gradient(to right, ${listGradient[index]})`,
                 width: '100%',
-                marginTop : '15px',
+                marginTop: index > 0 ? '35px' : '0',
                 position: 'relative',
               }}>
                 <div style={{ display: 'flex', position: 'absolute', top: '10px', width: '100%' }}>
@@ -261,3 +262,4 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
 };
 
 export default StackedBarChart;
+
