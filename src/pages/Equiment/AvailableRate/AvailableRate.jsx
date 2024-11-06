@@ -68,7 +68,7 @@ function AvailableRate() {
             value={selectedArea}
             onChange={handleAreaSelect}
             placeholder="Chọn khu vực"
-            style={{ width: 200 }}
+            style={{ width: 150 }}
             allowClear
           >
             <Option value="all">Toàn nhà máy</Option>

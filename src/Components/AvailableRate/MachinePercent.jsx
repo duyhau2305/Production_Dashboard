@@ -5,7 +5,7 @@ import moment from 'moment';
 import 'chart.js/auto';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 
-const MachinePercent = ({ deviceId, selectedDate }) => {
+const MachinePercent = ({ deviceId, selectedDate , machineName}) => {
   const [deviceData, setDeviceData] = useState({});
   const [loading, setLoading] = useState(true);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -92,7 +92,9 @@ const MachinePercent = ({ deviceId, selectedDate }) => {
   };
 
   return (
-    <div style={{ height: '150px' }}>
+    <div style={{ height: '140px' }} className="flex justify-center p-2">
+       <h2 className="text-xl font-semibold mt-2 ml-4">{machineName}
+       </h2>
       {loading ? (
         <p>Đang tải...</p>
       ) : (
@@ -139,8 +141,8 @@ const MachinePercent = ({ deviceId, selectedDate }) => {
             },
             layout: {
               padding: {
-                top: -10,
-                bottom: 10,
+                top: 0,
+                bottom: 0,
               },
             },
           }}

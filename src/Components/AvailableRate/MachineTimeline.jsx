@@ -3,8 +3,8 @@ import * as d3 from 'd3';
 import axios from 'axios';
 import moment from 'moment';
 
-const MachineTimeline = ({ deviceId, selectedDate }) => {
-  const fixedHeight = 150;
+const MachineTimeline = ({ deviceId, selectedDate,machineName }) => {
+  const fixedHeight = 130;
   const svgRef = useRef();
   const wrapperRef = useRef();
   const [deviceData, setDeviceData] = useState({});
@@ -115,7 +115,7 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
     const drawChart = () => {
       const svg = d3.select(svgRef.current);
       const { width, height } = dimensions;
-      const margin = { top: 0, right: 10, bottom: 80, left: 20 };
+      const margin = { top: 0, right: 10, bottom: 40, left: 20 };
 
       svg.selectAll('*').remove();
 
@@ -186,7 +186,7 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
         .enter()
         .append('g')
         .attr('class', 'legend')
-        .attr('transform', (d, i) => `translate(${margin.left + i * 150},${height - margin.bottom + 40})`);
+        .attr('transform', (d, i) => `translate(${margin.left + i * 150},${height - margin.bottom + 20})`);
 
       legend.append('rect')
         .attr('x', 70)
@@ -257,8 +257,9 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
   }, []);
 
   return (
-    <div ref={wrapperRef}>
-      <svg ref={svgRef} width="100%" height={fixedHeight} />
+    <div ref={wrapperRef} className="flex justify-center ">  
+         <h2 className="text-xl font-semibold mt-6">{machineName}
+          </h2><svg ref={svgRef} width="100%" height={fixedHeight} />
     </div>
   );
 };

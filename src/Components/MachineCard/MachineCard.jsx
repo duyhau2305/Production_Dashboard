@@ -99,10 +99,10 @@ const MachineCard = ({ machine }) => {
 
       {/* 3. Time Labels Section */}
       <div className="flex justify-between bg-white text-black px-2 py-1">
-        <span className="text-sm font-semibold">
+        <span className="text-md font-bold">
           {machine.productionTasks?.[0]?.shift?.startTime || ''} - {machine.productionTasks?.[0]?.shift?.endTime || ''}
         </span>
-        <span className="text-sm font-semibold -ml-1">
+        <span className="text-md font-bold -ml-1">
           Total Run: {formatSecondsToTime(machine.summaryStatus || 0)}
         </span>
       </div>
