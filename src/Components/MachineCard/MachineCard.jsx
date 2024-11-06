@@ -14,7 +14,7 @@ const getHeaderColor = (status) => {
 const getSignalLightColors = (status) => {
   if (status === 'Chạy') return { red: 'white', yellow: 'white', green: '#13a113' };
   if (status === 'Chờ' || status === 'Cài Đặt') return { red: 'white', yellow: '#f4f41e', green: 'white' };
-  if (status === 'Dừng') return { red: '#e60000', yellow: 'white', green: 'white' };
+  if (status === 'Stop') return { red: '#e60000', yellow: 'white', green: 'white' };
   if (status === 'Off') return { red: 'white', yellow: 'white', green: 'white' };
   return { red: 'white', yellow: 'white', green: 'white' }; // Default case
 };
@@ -22,25 +22,28 @@ const getSignalLightColors = (status) => {
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.currentStatus || '');
   const signalLightColors = getSignalLightColors(machine.productionTasks?.[0]?.shift?.status || '');
-  const blinkClass = machine?.status === 'Lỗi' ? 'animate-blinkError' : '';
+  const blinkClass = machine?.status === 'Stop' ? 'animate-blinkError' : '';
   function formatSecondsToTime(totalSeconds) {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
-
-  const calculateDurationInHoursAndMinutes = (startTime, endTime) => {
+  console.log(machine)
+  const calculateDurationInHoursAndMinutes= (startTime, endTime) => {
     if (!startTime || !endTime) return '';
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+    
+    const start = new Date(endTime);
+    const end = Date.now()
     const durationInSeconds = (end - start) / 1000;
   
     const hours = Math.floor(durationInSeconds / 3600);
     const minutes = Math.floor((durationInSeconds % 3600) / 60);
+    const seconds = Math.floor(durationInSeconds % 60);
   
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
+  
   
 
   return (

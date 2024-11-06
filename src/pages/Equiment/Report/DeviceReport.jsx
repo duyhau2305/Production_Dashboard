@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import Breadcrumb from '../../../Components/Breadcrumb/Breadcrumb';
-import DowntimePieChart from '../../../Components/Equiment/Analysis/DowntimePieChart';
+import DowntimePieChart from '../../../Components/Equiment/Reports/DowntimePieChart';
 import TitleChart from '../../../Components/TitleChart/TitleChart';
 import { Select, DatePicker, Button, Dropdown, Menu } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';

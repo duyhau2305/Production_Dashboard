@@ -174,7 +174,7 @@ const handleDeviceSelect = (objectId) => {
       if (response.data?.data) {
         const filteredData = response.data.data.flatMap(entry => 
           entry.intervals
-            .filter(interval => interval.status === "Stop" && moment.duration(moment(interval.endTime).diff(moment(interval.startTime))).asMinutes() > 5)
+            .filter(interval => (interval.status === "Stop" ||interval.status ==="Idle" )&& moment.duration(moment(interval.endTime).diff(moment(interval.startTime))).asMinutes() > 5)
             .map(interval => ({
               ...interval,
               date: moment.tz(entry.date, 'Asia/Ho_Chi_Minh').format("YYYY-MM-DDTHH:mm:ss[Z]")

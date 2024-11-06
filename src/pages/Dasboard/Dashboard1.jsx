@@ -6,8 +6,7 @@ import moment from 'moment';
 
 const Dashboard1 = () => {
   const [machines, setMachines] = useState([]);
-  const [machinesFilter, setMachinesFilter] = useState([]);
-
+  const [filteredMachines, setFilteredMachines] = useState([]);
   const [areas, setAreas] = useState([]);
   const [selectedArea, setSelectedArea] = useState('All Areas');
   const [loading, setLoading] = useState(false);
@@ -15,26 +14,44 @@ const Dashboard1 = () => {
   const cardsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const fixedDate = moment().format('YYYY-MM-DD');
-
-  const fetchDevicesAndAreas = async () => {
-    try {
-      const [devicesResponse, areasResponse] = await Promise.all([
-        axios.get(`${apiUrl}/device`),
-        axios.get(`${apiUrl}/areas`),
-      ]);
-      return { devices: devicesResponse.data, areas: areasResponse.data };
-    } catch (error) {
-      console.error('Lỗi khi lấy danh sách thiết bị và khu vực:', error);
-      return { devices: [], areas: [] };
+  const applyFilter = (machinesData, area) => {
+    if (area === 'PHAY') {
+      return machinesData.filter(machine => machine.deviceId.startsWith("P"));
+    } else if (area === 'TIEN') {
+      return machinesData.filter(machine => machine.deviceId.startsWith("T"));
+    } else {
+      return machinesData; // Tất cả máy
     }
   };
 
+  // Lấy danh sách thiết bị và khu vực khi component mount lần đầu
+  useEffect(() => {
+    const fetchDevicesAndAreas = async () => {
+      setLoading(true);
+      try {
+        const [devicesResponse, areasResponse] = await Promise.all([
+          axios.get(`${apiUrl}/device`),
+          axios.get(`${apiUrl}/areas`),
+        ]);
+        setAreas(areasResponse.data);
+
+        const initialMachines = await fetchMachineDetails();
+        setMachines(initialMachines);
+        setFilteredMachines(applyFilter(initialMachines, selectedArea));
+      } catch (error) {
+        console.error('Lỗi khi lấy dữ liệu:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDevicesAndAreas();
+  }, [apiUrl]);
+
+  // Hàm gọi API lấy thông tin chi tiết máy
   const fetchMachineDetails = async () => {
     try {
-      const response = await axios.get(
-        `${apiUrl}/machine-operations/machine-information`
-      );
+      const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
       return response.data.data;
     } catch (error) {
       console.error('Lỗi khi lấy thông tin chi tiết máy:', error);
@@ -42,78 +59,22 @@ const Dashboard1 = () => {
     }
   };
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [devicesAndAreas, machinesWithDetails] = await Promise.all([
-        fetchDevicesAndAreas(),
-        fetchMachineDetails(),
-      ]);
-
-      const { devices, areas } = devicesAndAreas;
-      setAreas(areas);
-      setMachines(machinesWithDetails);
-      setMachinesFilter(machinesWithDetails)
-      console.log('Dữ liệu thiết bị:', devices);
-      console.log('Dữ liệu khu vực:', areas);
-      console.log('Dữ liệu cho từng máy:', machinesWithDetails);
-    } catch (error) {
-      console.error('Lỗi khi lấy dữ liệu:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Cập nhật danh sách máy liên tục với `setInterval`
   useEffect(() => {
-    fetchData();
-  }, []);
+    const interval = setInterval(async () => {
+      const updatedMachines = await fetchMachineDetails();
+      setMachines(updatedMachines);
+      setFilteredMachines(applyFilter(updatedMachines, selectedArea));
+    }, 2000); 
 
-  const getRealTimeStatusAndElapsed = (intervals) => {
-    if (!intervals || intervals.length === 0) {
-      return { status: 'Không xác định', elapsedTime: '0 phút' };
-    }
-
-    const now = moment();
-    const latestInterval = intervals[intervals.length - 1];
-    const intervalEnd = moment(latestInterval.endTime, 'HH:mm');
-
-    const status = latestInterval.status || 'Không xác định';
-    const elapsedMinutes = now.diff(intervalEnd, 'minutes');
-
-    const elapsedTime = `${Math.floor(elapsedMinutes / 60)} giờ ${
-      elapsedMinutes % 60
-    } phút`;
-
-    return { status, elapsedTime };
-  };
+    return () => clearInterval(interval); // Xóa interval khi unmount
+  }, [selectedArea]);
 
   const handleAreaChange = (e) => {
     const area = e.target.value;
-
-    if (area == 'PHAY') {
-      console.log(machines)
-      const machineData = machinesFilter.filter(value => {
-        console.log(value.deviceId)
-        return value.deviceId.startsWith("P")
-      })
-      setMachines(machineData)
-    } else{
-      console.log("TIện")
-      const machineData = machinesFilter.filter(value => {
-        console.log(value.deviceId)
-        return value.deviceId.startsWith("T")
-      })
-      setMachines(machineData)
-
-    }
     setSelectedArea(area);
-    // console.log(area)
-    // else {
-    //   fetchData();
-    // }
+    setFilteredMachines(applyFilter(machines, area));
   };
-
-
 
   const toggleFullscreen = () => {
     if (!isFullscreen) {
@@ -133,7 +94,7 @@ const Dashboard1 = () => {
       <div className="flex justify-end items-center mb-4 px-1">
         <div className="relative flex justify-end items-center space-x-2">
           <button className="bg-white border border-gray-300 rounded-lg py-2 px-4 leading-tight text-gray-800">
-            Tổng số máy chạy: {machines.filter((m) => m.currentStatus === 'Run').length}/{machines.length} máy
+            Tổng số máy chạy: {filteredMachines.filter(m => m.currentStatus === 'Run').length}/{filteredMachines.length} máy
           </button>
           <select
             value={selectedArea}
@@ -141,12 +102,9 @@ const Dashboard1 = () => {
             className="appearance-none bg-white border border-gray-300 rounded-lg py-2 px-8 leading-tight"
           >
             <option value="All Areas">Tất cả khu vực</option>
-
-            {areas.map((area) => (
-              <option key={area.areaName} value={area.areaName}>
-                {area.areaName}
-              </option>
-            ))}
+            <option value="PHAY">Khu vực Phay</option>
+            <option value="TIEN">Khu vực Tiện</option>
+           
           </select>
         </div>
       </div>
@@ -157,7 +115,7 @@ const Dashboard1 = () => {
             Loading...
           </div>
         ) : (
-          <DashboardGrid machines={machines} />
+          <DashboardGrid machines={filteredMachines} />
         )}
       </div>
 

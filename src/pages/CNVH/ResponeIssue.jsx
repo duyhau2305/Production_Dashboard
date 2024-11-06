@@ -9,6 +9,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { setMachineData } from '../../redux/intervalSlice';
+import moment from 'moment-timezone';
 
 
 const ResponeIssue = () => {
@@ -66,62 +67,66 @@ const ResponeIssue = () => {
   const handleMachineSelect = (device) => {
     dispatch(setMachineData({ selectedDate, selectedMachine: device }));
   };
-  useEffect(() => {
-    // Chỉ thực hiện khi `selectedMachine` và `selectedDate` có giá trị hợp lệ
-    if (selectedMachine && selectedDate) {
-      const fetchTelemetryData = async () => {
-        setLoading(true)
-        try {
-          // Định dạng thời gian bắt đầu và kết thúc dựa trên `selectedDate`
-          const formattedStartDate = `${selectedDate}T00:00:00Z`;
-          const formattedEndDate = `${selectedDate}T23:59:59Z`;
   
-          const response = await axios.get(
-            `${apiUrl}/machine-operations/${selectedMachine._id}/timeline`,
-            {
-              params: {
-                startTime: formattedStartDate,
-                endTime: formattedEndDate,
-              },
-            }
-          );
-  
-          // Lọc khoảng thời gian "Stop" hoặc "Idle" lớn hơn 5 phút
-          if (response.data && response.data.data.length > 0) {
-            const filteredIntervals = response.data.data.flatMap(dayData => 
-              dayData.intervals.filter(interval => {
-                const startTime = new Date(interval.startTime);
-                const endTime = new Date(interval.endTime);
-                const totalSeconds = (endTime - startTime) / 1000;
-                
-                // Chỉ giữ lại các khoảng có trạng thái "Stop" hoặc "Idle" lớn hơn 5 phút
-                return (interval.status === 'Stop' || interval.status === 'Stop' ) && totalSeconds > 300;
-              })
-            );
-            
-            // Cập nhật lại `telemetryData`
-            setTelemetryData(filteredIntervals);
-            
-          } else {
-            // Đặt `telemetryData` là mảng rỗng nếu không có dữ liệu
-            setTelemetryData([]);
+useEffect(() => {
+  // Chỉ thực hiện khi `selectedMachine` và `selectedDate` có giá trị hợp lệ
+  if (selectedMachine && selectedDate) {
+    const fetchTelemetryData = async () => {
+      setLoading(true);
+      try {
+        // Định dạng thời gian bắt đầu và kết thúc dựa trên `selectedDate` và timezone Asia/Ho_Chi_Minh
+        const startDate = moment.tz(selectedDate, 'Asia/Ho_Chi_Minh').subtract(1, 'days').set({ hour: 17, minute: 0, second: 0 });
+        const endDate = moment.tz(selectedDate, 'Asia/Ho_Chi_Minh').set({ hour: 16, minute: 59, second: 59 });
+
+        const formattedStartDate = startDate.format("YYYY-MM-DDTHH:mm:ss[Z]");
+        const formattedEndDate = endDate.format("YYYY-MM-DDTHH:mm:ss[Z]");
+
+        const response = await axios.get(
+          `${apiUrl}/machine-operations/${selectedMachine._id}/timeline`,
+          {
+            params: {
+              startTime: formattedStartDate,
+              endTime: formattedEndDate,
+            },
           }
-        } catch (error) {
-          console.error('Error fetching telemetry data:', error);
-          toast.error('Có lỗi khi tải dữ liệu telemetry.');
+        );
+
+        // Lọc khoảng thời gian "Stop" hoặc "Idle" lớn hơn 5 phút
+        if (response.data && response.data.data.length > 0) {
+          const filteredIntervals = response.data.data.flatMap(dayData =>
+            dayData.intervals.filter(interval => {
+              const startTime = new Date(interval.startTime);
+              const endTime = new Date(interval.endTime);
+              const totalSeconds = (endTime - startTime) / 1000;
+
+              // Chỉ giữ lại các khoảng có trạng thái "Stop" hoặc "Idle" lớn hơn 5 phút
+              return (interval.status === 'Stop' || interval.status === 'Idle') && totalSeconds > 300;
+            })
+          );
+
+          // Cập nhật lại `telemetryData`
+          setTelemetryData(filteredIntervals);
+          
+        } else {
+          // Đặt `telemetryData` là mảng rỗng nếu không có dữ liệu
+          setTelemetryData([]);
         }
-        finally {
-          setLoading(false); // Kết thúc tải
-        }
-      };
-  
-      // Gọi hàm fetchTelemetryData
-      fetchTelemetryData();
-    } else {
-      // Đặt lại `telemetryData` nếu không có ngày hoặc máy được chọn
-      setTelemetryData([]);
-    }
-  }, [selectedMachine, selectedDate]); // Theo dõi cả `selectedMachine` và `selectedDate`
+      } catch (error) {
+        console.error('Error fetching telemetry data:', error);
+        toast.error('Có lỗi khi tải dữ liệu telemetry.');
+      } finally {
+        setLoading(false); // Kết thúc tải
+      }
+    };
+
+    // Gọi hàm fetchTelemetryData
+    fetchTelemetryData();
+  } else {
+    // Đặt lại `telemetryData` nếu không có ngày hoặc máy được chọn
+    setTelemetryData([]);
+  }
+}, [selectedMachine, selectedDate]);
+
   
   
 

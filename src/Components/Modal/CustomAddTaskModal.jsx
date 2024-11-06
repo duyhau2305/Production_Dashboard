@@ -70,15 +70,11 @@ const handleSave = async () => {
 
     try {
       for (const task of productionTasks) {
-        if (task.id) {
-          // Nếu nhiệm vụ đã có ID, dùng PUT để cập nhật
-          await axios.put(`${apiUrl}/productiontask/${task.id}`, task);
-          console.log('Updated Task:', task);
-        } else {
+       
           // Nếu không có ID, dùng POST để tạo mới
           await axios.post(`${apiUrl}/productiontask`, task);
           console.log('Created New Task:', task);
-        }
+       
       }
      
       message.success('Kế hoạch đã được lưu hoặc cập nhật thành công!');
