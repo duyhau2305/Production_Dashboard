@@ -2,42 +2,27 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AiOutlineFullscreen, AiOutlineFullscreenExit } from 'react-icons/ai';
 import DashboardGrid from './DashboardGrid';
 import axios from 'axios';
-import moment from 'moment';
 
-const Dashboard1 = () => {
+const DashboardPhayAreas = () => {
   const [machines, setMachines] = useState([]);
   const [filteredMachines, setFilteredMachines] = useState([]);
-  const [areas, setAreas] = useState([]);
-  const [selectedArea, setSelectedArea] = useState('All Areas');
   const [loading, setLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const cardsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const applyFilter = (machinesData, area) => {
-    if (area === 'PHAY') {
-      return machinesData.filter(machine => machine.deviceId.startsWith("P"));
-    } else if (area === 'TIEN') {
-      return machinesData.filter(machine => machine.deviceId.startsWith("T"));
-    } else {
-      return machinesData; // Tất cả máy
-    }
+  const applyFilter = (machinesData) => {
+    // Chỉ lọc máy Phay (deviceId bắt đầu với "P")
+    return machinesData.filter(machine => machine.deviceId.startsWith("P"));
   };
 
-  // Lấy danh sách thiết bị và khu vực khi component mount lần đầu
   useEffect(() => {
     const fetchDevicesAndAreas = async () => {
       setLoading(true);
       try {
-        const [devicesResponse, areasResponse] = await Promise.all([
-          axios.get(`${apiUrl}/device`),
-          axios.get(`${apiUrl}/areas`),
-        ]);
-        setAreas(areasResponse.data);
-
         const initialMachines = await fetchMachineDetails();
         setMachines(initialMachines);
-        setFilteredMachines(applyFilter(initialMachines, selectedArea));
+        setFilteredMachines(applyFilter(initialMachines));
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
       } finally {
@@ -48,7 +33,6 @@ const Dashboard1 = () => {
     fetchDevicesAndAreas();
   }, [apiUrl]);
 
-  // Hàm gọi API lấy thông tin chi tiết máy
   const fetchMachineDetails = async () => {
     try {
       const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
@@ -59,23 +43,17 @@ const Dashboard1 = () => {
     }
   };
 
-  // Cập nhật danh sách máy liên tục với `setInterval`
   useEffect(() => {
     const interval = setInterval(async () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
-      setFilteredMachines(applyFilter(updatedMachines, selectedArea));
-    }, 50000); 
+      setFilteredMachines(applyFilter(updatedMachines));
+    }, 50000);
 
-    return () => clearInterval(interval); // Xóa interval khi unmount
-  }, [selectedArea]);
+    return () => clearInterval(interval);
+  }, []);
 
-  const handleAreaChange = (e) => {
-    const area = e.target.value;
-    setSelectedArea(area);
-    setFilteredMachines(applyFilter(machines, area));
-  };
-const toggleFullscreen = () => {
+  const toggleFullscreen = () => {
     if (!isFullscreen) {
       if (cardsRef.current.requestFullscreen) {
         cardsRef.current.requestFullscreen();
@@ -112,28 +90,27 @@ const toggleFullscreen = () => {
     };
   }, []);
 
-
   return (
-    <div className="w-full h-full mx-auto relative bg-gray-100 p-6 overflow-hidden">
-      <div className="flex justify-end items-center mb-4 px-1">
-        <div className="relative flex justify-end items-center space-x-2">
+    <div className="w-full h-full mx-auto relative bg-[#35393c] p-6 overflow-hidden">
+      
+      {/* Dòng chứa tiêu đề và các nút */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-white text-3xl text-center ml-10 flex-1">Nhà máy chuyển đổi số cơ khí Q.C.S</h2>
+        <div className="flex items-center space-x-2">
           <button className="bg-white border border-gray-300 rounded-lg py-2 px-4 leading-tight text-gray-800">
             Tổng số máy chạy: {filteredMachines.filter(m => m.currentStatus === 'Run').length}/{filteredMachines.length} máy
           </button>
-          <select
-            value={selectedArea}
-            onChange={handleAreaChange}
-            className="appearance-none bg-white border border-gray-300 rounded-lg py-2 px-8 leading-tight"
+          <button
+            value="PHAY"
+            className="appearance-none bg-white border border-gray-100 rounded-lg py-2 px-8 leading-tight"
+            disabled // Vô hiệu hóa dropdown để người dùng không thể thay đổi
           >
-            <option value="All Areas">Tất cả khu vực</option>
-            <option value="PHAY">Khu vực Phay</option>
-            <option value="TIEN">Khu vực Tiện</option>
-           
-          </select>
+            <option value="PHAY">Khu vực PHAY</option>
+          </button>
         </div>
       </div>
 
-      <div ref={cardsRef} className="overflow-auto h-[calc(100vh)]">
+      <div ref={cardsRef} className="overflow-auto [calc(100vh)]">
         {loading ? (
           <div className="flex justify-center text-2xl items-center h-64">
             Loading...
@@ -142,25 +119,25 @@ const toggleFullscreen = () => {
           <DashboardGrid machines={filteredMachines} />
         )}
       </div>
-      {/* Nút bật/tắt fullscreen */}
-      <button
-              className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
-              onClick={toggleFullscreen}
-            >
-              {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
-            </button>
+            {/* Nút bật/tắt fullscreen */}
+            <button
+                    className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
+                    onClick={toggleFullscreen}
+                >
+                    {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
+                </button>
 
-            {/* Nút thu nhỏ màn hình */}
-            {isFullscreen && (
-              <button
-                className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
-                onClick={toggleFullscreen} // Sử dụng lại hàm toggleFullscreen để thoát chế độ toàn màn hình
-              >
-                <span className="text-white">&#8722;</span> {/* Dấu trừ để thu nhỏ */}
-              </button>
-            )}    
-          </div>
+                {/* Nút thu nhỏ màn hình */}
+                {isFullscreen && (
+                    <button
+                    className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
+                    onClick={toggleFullscreen} // Sử dụng lại hàm toggleFullscreen để thoát chế độ toàn màn hình
+                    >
+                    <span className="text-white">&#8722;</span> {/* Dấu trừ để thu nhỏ */}
+                    </button>
+                )}
+    </div>
   );
 };
 
-export default Dashboard1;
+export default DashboardPhayAreas;

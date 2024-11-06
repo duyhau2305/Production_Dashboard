@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import axios from 'axios';
 import moment from 'moment';
 
-const MachineTimeline = ({ deviceId, selectedDate }) => {
+const MachinePercent = ({ deviceId, selectedDate }) => {
   const fixedHeight = 150;
   const svgRef = useRef();
   const wrapperRef = useRef();
@@ -11,44 +11,7 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
   const [dimensions, setDimensions] = useState({ width: 800, height: fixedHeight });
   const [loading, setLoading] = useState(true);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
-  const addOfflineIntervals = (data) => {
-    const newData = [];
-    const startOfDay = moment('00:00', 'HH:mm');
-    const endOfDay = moment('23:59', 'HH:mm');
-
-    if (data.length === 0) {
-      newData.push({ startTime: startOfDay.format('HH:mm'), endTime: endOfDay.format('HH:mm'), status: 'Offline' });
-      return newData;
-    }
-
-    const firstIntervalStart = moment(data[0].startTime, 'HH:mm');
-    if (firstIntervalStart.isAfter(startOfDay)) {
-      newData.push({ startTime: startOfDay.format('HH:mm'), endTime: firstIntervalStart.format('HH:mm'), status: 'Offline' });
-    }
-
-    data.forEach((interval, i) => {
-      newData.push(interval);
-      if (i < data.length - 1) {
-        const nextInterval = data[i + 1];
-        const currentEndTime = moment(interval.endTime, 'HH:mm');
-        const nextStartTime = moment(nextInterval.startTime, 'HH:mm');
-
-        if (currentEndTime.isBefore(nextStartTime)) {
-          newData.push({ startTime: currentEndTime.format('HH:mm'), endTime: nextStartTime.format('HH:mm'), status: 'Offline' });
-        }
-      }
-    });
-
-    const lastIntervalEnd = moment(data[data.length - 1].endTime, 'HH:mm');
-    if (lastIntervalEnd.isBefore(endOfDay)) {
-      newData.push({ startTime: lastIntervalEnd.format('HH:mm'), endTime: endOfDay.format('HH:mm'), status: 'Offline' });
-    }
-
-    return newData;
-  };
-
-  const calculateTotalTimes = (data) => {
+   const calculateTotalTimes = (data) => {
     const totalTime = { 'Chạy': 0, 'Dừng': 0, 'Chờ': 0, 'Offline': 0 };
 
     data.forEach((interval) => {
@@ -77,7 +40,7 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
     try {
       const startTime = selectedDate.clone().startOf('day').toISOString();
       const endTime = selectedDate.clone().endOf('day').toISOString();
-      const apiEndpoint = `${apiUrl}/machine-operations/${deviceId}/timeline?startTime=${startTime}&endTime=${endTime}`;
+      const apiEndpoint = `${apiUrl}/machine-operations/${deviceId}/summary-status?startTime=${startTime}&endTime=${endTime}`;
       const response = await axios.get(apiEndpoint);
 
       if (response.data?.data?.length > 0) {
@@ -263,4 +226,4 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
   );
 };
 
-export default MachineTimeline;
+export default MachinePercent;

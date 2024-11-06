@@ -164,13 +164,27 @@ useEffect(() => {
   const handleCallMaintenance = () => handleCallHelp('Bảo Trì');
   const handleCallTechnical = () => handleCallHelp('Đội kỹ thuật');
   const handleTimeClick = (interval, index) => {
-    const isDeclared = isIntervalDeclared(interval); // Kiểm tra đã khai báo chưa
+    const isDeclared = isIntervalDeclared(interval); // Kiểm tra nếu khoảng thời gian đã khai báo
   
+    // Nếu đã khai báo, hiển thị thông báo và không cho phép chọn
     if (isDeclared) {
       toast.info('Khoảng thời gian này đã được khai báo!');
-      return; // Không cho phép chọn nếu đã khai báo
+      return;
     }
   
+    // Nếu `selectedDiv` có ít nhất một phần tử, kiểm tra trạng thái của `interval` mới
+    if (selectedDiv.length > 0) {
+      const firstSelectedInterval = telemetryData[selectedDiv[0]];
+      const firstStatus = firstSelectedInterval.status;
+  
+      // Nếu trạng thái không giống nhau, hiển thị thông báo và không cho phép chọn
+      if (firstStatus !== interval.status) {
+        toast.warning('Chỉ có thể chọn các khoảng thời gian có cùng trạng thái!');
+        return;
+      }
+    }
+  
+    // Xử lý chọn hoặc bỏ chọn interval
     setSelectedDiv((prevSelected) =>
       prevSelected.includes(index)
         ? prevSelected.filter((i) => i !== index) // Bỏ chọn nếu đã chọn trước đó
@@ -180,6 +194,7 @@ useEffect(() => {
     setIsResponseEnabled(true); // Kích hoạt nút phản hồi
     console.log('Khoảng thời gian đã chọn:', interval);
   };
+  
   
   console.log(selectedDiv)
 

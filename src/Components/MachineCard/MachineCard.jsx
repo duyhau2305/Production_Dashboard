@@ -14,7 +14,7 @@ const getHeaderColor = (status) => {
 const getSignalLightColors = (status) => {
   if (status === 'Chạy') return { red: 'white', yellow: 'white', green: '#13a113' };
   if (status === 'Chờ' || status === 'Cài Đặt') return { red: 'white', yellow: '#f4f41e', green: 'white' };
-  if (status === 'Stop') return { red: '#e60000', yellow: 'white', green: 'white' };
+  if (status === 'Dừng') return { red: '#e60000', yellow: 'white', green: 'white' };
   if (status === 'Off') return { red: 'white', yellow: 'white', green: 'white' };
   return { red: 'white', yellow: 'white', green: 'white' }; // Default case
 };
@@ -22,7 +22,8 @@ const getSignalLightColors = (status) => {
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.currentStatus || '');
   const signalLightColors = getSignalLightColors(machine.productionTasks?.[0]?.shift?.status || '');
-  const blinkClass = machine?.status === 'Stop' ? 'animate-blinkError' : '';
+  console.log(signalLightColors)
+  const blinkClass = machine?.status === 'Dừng' ? 'animate-blinkError' : '';
   function formatSecondsToTime(totalSeconds) {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -33,8 +34,8 @@ const MachineCard = ({ machine }) => {
   const calculateDurationInHoursAndMinutes= (startTime, endTime) => {
     if (!startTime || !endTime) return '';
     
-    const start = new Date(endTime);
-    const end = Date.now()
+    const start = new Date(startTime);
+    const end = Date.now();
     const durationInSeconds = (end - start) / 1000;
   
     const hours = Math.floor(durationInSeconds / 3600);
@@ -92,15 +93,16 @@ const MachineCard = ({ machine }) => {
           <div className="absolute mt-2 font-bold text-xl -translate-x-1/4 ml-3">
             {machine.productionTasks?.[0]?.shift?.employeeName?.[0] || ''}
           </div>
+          
         </div>
       </div>
 
       {/* 3. Time Labels Section */}
       <div className="flex justify-between bg-white text-black px-2 py-1">
-        <span className="text-sm">
+        <span className="text-sm font-semibold">
           {machine.productionTasks?.[0]?.shift?.startTime || ''} - {machine.productionTasks?.[0]?.shift?.endTime || ''}
         </span>
-        <span className="text-sm -ml-1">
+        <span className="text-sm font-semibold -ml-1">
           Total Run: {formatSecondsToTime(machine.summaryStatus || 0)}
         </span>
       </div>

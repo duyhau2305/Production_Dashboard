@@ -19,6 +19,8 @@ import ResponeIssue from '../pages/CNVH/ResponeIssue';
 import ResponeSubmbit from '../pages/CNVH/ResponeSubmbit';
 import Profile  from '../pages/Profile/Profile'
 import { useAuth } from '../context/AuthContext';  // Import AuthContext
+import DashboardTienAreas from '../pages/Dasboard/DashboardTienAreas';
+import DashboardPhayAreas from '../pages/Dasboard/DashboardPhayAreas';
 
 // Protected Route component sử dụng AuthContext để xác thực
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -52,6 +54,8 @@ const AppRouter = () => {
       <Routes>
         {/* Route cho trang đăng nhập */}
         <Route path="/login" element={<Login />} />
+        <Route path="/display1" element={<DashboardTienAreas />} />
+        <Route path="/display2" element={<DashboardPhayAreas />} />
         
         {/* Route dành riêng cho CNVH */}
         <Route

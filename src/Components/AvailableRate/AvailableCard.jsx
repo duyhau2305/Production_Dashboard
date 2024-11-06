@@ -5,7 +5,7 @@ const AvailableCard = ({ machineName, deviceId, selectedDate, machineType }) => 
   console.log("AvailableCard selectedDate:", selectedDate.format("YYYY-MM-DD"));
   console.log(deviceId)
   return (
-    <div className="bg-white shadow-md rounded-lg p-4 ">
+    <div className="bg-white shadow-md rounded-lg p-3 ">
       <header className="flex justify-between items-center mb-4">
         {/* Hiển thị tên máy dựa trên loại máy được chọn */}
         <h2 className="text-xl font-semibold">{machineName}</h2>
