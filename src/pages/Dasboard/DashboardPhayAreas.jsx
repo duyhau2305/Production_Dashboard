@@ -48,7 +48,7 @@ const DashboardPhayAreas = () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
       setFilteredMachines(applyFilter(updatedMachines));
-    }, 50000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
