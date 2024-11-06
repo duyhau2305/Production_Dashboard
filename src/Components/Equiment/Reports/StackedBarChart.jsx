@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import moment from 'moment';
 import './TimelineChart.css';
+import { Slider, Checkbox } from 'antd';
 
 const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [data, setData] = useState([]);
@@ -13,11 +14,15 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [arrayPercentOffline, setArrayPercentOffline] = useState([]);
   const [arrayPercentRun, setArrayPercentRun] = useState([]);
   const [arrayPercentStop, setArrayPercentStop] = useState([]);
+  const [arrayPercentIdle, setArrayPercentIdle] = useState([]);
+  const [showYAxis, setShowYAxis] = useState(true);
+
   const [currentIndex, setCurrentIndex] = useState(1);
   const [positionToTooltip, setPositionToTooltip] = useState(1);
   const [textToTooltip, setTextToTooltip] = useState('');
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  console.log(selectedMchine)
 
   const formatDateForAPI = (date) => moment(date).format('YYYY-MM-DD');
 
@@ -32,7 +37,7 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       const isoDate = utcDate.toISOString();
 
       const responsePercent = await axios.get(
-        `http://localhost:5001/api/machine-operations/${selectedMchine}/summary-status?startTime=2024-10-20T17:00:00Z&endTime=2024-10-30T16:59:59Z`
+        `${apiUrl}/machine-operations/${selectedMchine}/summary-status?startTime=${start}&endTime=${isoDate}`
       );
 
       let totalRun = [];
@@ -55,6 +60,7 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
 
       setArrayPercentRun(totalRun);
       setArrayPercentStop(totalStop);
+      setArrayPercentIdle(totalIdle)
       setArrayPercentOffline(totalOfflinePercentArray);
 
       const combinedArray = totalIdle.map((idle, index) => {
@@ -99,11 +105,14 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     const percentX = ((event.clientX - rect.left) / rect.width) * 100;
     const valueRun = Number(arrayPercentRun[index]);
     const valueStop = Number(arrayPercentStop[index]);
-    
+    const valueIdle = Number(arrayPercentIdle[index]);
+
     if (percentX < valueRun) {
       setTextToTooltip(`Chạy: ${valueRun}%`);
     } else if (percentX < valueRun + valueStop) {
       setTextToTooltip(`Dừng: ${arrayPercentStop[index]}%`);
+    } else if (percentX < valueRun + valueStop + valueIdle) {
+      setTextToTooltip(`Idle: ${arrayPercentIdle[index]}%`);
     } else {
       setTextToTooltip(`Offline: ${arrayPercentOffline[index]}%`);
     }
@@ -127,10 +136,13 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '500px' }}>
-      <div className="y-axis-arrow" style={{ position: 'absolute', top: 0, left: 31, height: '100%', borderLeft: '2px solid black' }}>
+      <div style={{ position: 'absolute', top: '-35px', right: '70px' }}>
+        <Checkbox checked={showYAxis} onChange={(e) => setShowYAxis(e.target.checked)}></Checkbox>
+      </div>
+      <div className="y-axis-arrow" style={{ position: 'absolute', top: 0, left: 31, height: '100%', borderLeft: '2px solid black' , display: showYAxis ? 'block' : 'none' }}>
         <span className="arrow up-arrow" onClick={handleUpArrowClick}>↑</span>
       </div>
-      <div className="x-axis-arrow" style={{ position: 'absolute', bottom: 0, left: 31, width: '95%', borderBottom: '2px solid black' }}>
+      <div className="x-axis-arrow" style={{ position: 'absolute', bottom: 0, left: 31, width: '95%', borderBottom: '2px solid black'  , display: showYAxis ? 'block' : 'none'}}>
         <div style={{ position: 'absolute', width: '100%', display: 'flex', justifyContent: 'space-between' }}>
           {hour.map(value => (
             <div key={value} style={{ display: 'inline-block', width: '4.16%', textAlign: 'center', fontSize: '10px', marginTop: '5px' }}>
@@ -141,34 +153,78 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         <span className="arrow right-arrow">→</span>
       </div>
       <div style={{ paddingLeft: '33px', position: 'relative', height: '100%' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '10px 0' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0' , display: showYAxis ? 'block' : 'none' }}>
           {dates.map((date, index) => (
-            <div key={index} style={{ textAlign: 'right', fontSize: '10px', display: 'flex' }}>
+            <div key={index} style={{ textAlign: 'right', fontSize: '10px', display: 'flex',  height: '70px' }}>
               {date}
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '99%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '99%' }}>
           {data.length > 0 ? data.map((entry, index) => (
-            <div key={index} style={{ height: `${(100 / data.length) - 5}%` }} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave}>
+            <div key={index}  onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave}>
               <div className='gradient-container gradient-section gradient' style={{
-                height: '100%',
+                height: '50px',
                 background: `linear-gradient(to right, ${listGradient[index]})`,
-                marginTop: '0',
                 width: '100%',
-                position: 'relative'
+                marginTop : '15px',
+                position: 'relative',
               }}>
                 <div style={{ display: 'flex', position: 'absolute', top: '10px', width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px', fontSize: '15px', fontWeight: '500', color: '#474747' }}>
-                    {arrayPercentRun[index]}%
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', marginLeft: `${arrayPercentRun[index]}%`, fontSize: '15px', fontWeight: '500', color: 'white' }}>
-                    <span>{(100 - arrayPercentRun[index] - arrayPercentOffline[index]).toFixed(2)}%</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', position: 'absolute', right: '0', fontSize: '15px', fontWeight: '500', color: '#474747' }}>
-                    <span>{arrayPercentOffline[index]}%</span>
-                  </div>
+                  {arrayPercentRun[index] > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: `${arrayPercentRun[index]}%`,
+                      fontSize: '15px',
+                      fontWeight: '500',
+                      color: '#474747'
+                    }}>
+                      {arrayPercentRun[index]}%
+                    </div>
+                  )}
+                  {arrayPercentStop[index] > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: `${arrayPercentStop[index]}%`,
+                      fontSize: '15px',
+                      fontWeight: '500',
+                      color: 'white'
+                    }}>
+                      <span>{arrayPercentStop[index]}%</span>
+                    </div>
+                  )}
+                  {arrayPercentIdle[index] > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: `${arrayPercentIdle[index]}%`,
+                      fontSize: '15px',
+                      fontWeight: '500',
+                      color: '#474747'
+                    }}>
+                      <span>{arrayPercentIdle[index]}%</span>
+                    </div>
+                  )}
+                  {arrayPercentOffline[index] > 0 && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      position: 'absolute',
+                      right: '0',
+                      fontSize: '15px',
+                      fontWeight: '500',
+                      color: '#474747'
+                    }}>
+                      <span>{arrayPercentOffline[index]}%</span>
+                    </div>
+                  )}
                 </div>
+
                 {currentIndex === index && (
                   <span style={{ display: 'flex', justifyContent: 'space-between', position: 'absolute', top: '0', marginLeft: `${positionToTooltip}%`, background: '#ffff95' }}>
                     {textToTooltip}

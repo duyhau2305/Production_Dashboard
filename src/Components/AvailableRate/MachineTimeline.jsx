@@ -14,49 +14,80 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
 
   const addOfflineIntervals = (data) => {
     const newData = [];
-    for (let i = 0; i < data.length; i++) {
-      const currentInterval = data[i];
-      newData.push(currentInterval);
+    const startOfDay = moment('00:00', 'HH:mm');
+    const endOfDay = moment('23:59', 'HH:mm');
+
+    if (data.length === 0) {
+      newData.push({ startTime: startOfDay.format('HH:mm'), endTime: endOfDay.format('HH:mm'), status: 'Offline' });
+      return newData;
+    }
+
+    const firstIntervalStart = moment(data[0].startTime, 'HH:mm');
+    if (firstIntervalStart.isAfter(startOfDay)) {
+      newData.push({ startTime: startOfDay.format('HH:mm'), endTime: firstIntervalStart.format('HH:mm'), status: 'Offline' });
+    }
+
+    data.forEach((interval, i) => {
+      newData.push(interval);
       if (i < data.length - 1) {
         const nextInterval = data[i + 1];
-        const currentEndTime = moment(currentInterval.endTime, 'HH:mm');
+        const currentEndTime = moment(interval.endTime, 'HH:mm');
         const nextStartTime = moment(nextInterval.startTime, 'HH:mm');
 
         if (currentEndTime.isBefore(nextStartTime)) {
-          newData.push({
-            startTime: currentEndTime.format('HH:mm'),
-            endTime: nextStartTime.format('HH:mm'),
-            status: 'Offline'
-          });
+          newData.push({ startTime: currentEndTime.format('HH:mm'), endTime: nextStartTime.format('HH:mm'), status: 'Offline' });
         }
       }
+    });
+
+    const lastIntervalEnd = moment(data[data.length - 1].endTime, 'HH:mm');
+    if (lastIntervalEnd.isBefore(endOfDay)) {
+      newData.push({ startTime: lastIntervalEnd.format('HH:mm'), endTime: endOfDay.format('HH:mm'), status: 'Offline' });
     }
+
     return newData;
+  };
+
+  const calculateTotalTimes = (data) => {
+    const totalTime = { 'Chạy': 0, 'Dừng': 0, 'Chờ': 0, 'Offline': 0 };
+
+    data.forEach((interval) => {
+      const start = moment(interval.startTime, 'HH:mm');
+      const end = moment(interval.endTime, 'HH:mm');
+      const duration = moment.duration(end.diff(start));
+      const minutes = duration.asMinutes();
+
+      totalTime[interval.status] += minutes;
+    });
+
+    return Object.fromEntries(Object.entries(totalTime).map(([status, minutes]) => [
+      status,
+      `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`
+    ]));
   };
 
   useEffect(() => {
     if (deviceId && selectedDate) {
-      fetchTelemetryData(deviceId); 
+      fetchTelemetryData(deviceId);
     }
   }, [deviceId, selectedDate]);
 
   const fetchTelemetryData = async (deviceId) => {
-    setLoading(true); 
+    setLoading(true);
     try {
       const startTime = selectedDate.clone().startOf('day').toISOString();
       const endTime = selectedDate.clone().endOf('day').toISOString();
       const apiEndpoint = `${apiUrl}/machine-operations/${deviceId}/timeline?startTime=${startTime}&endTime=${endTime}`;
       const response = await axios.get(apiEndpoint);
 
-      if (response.data && response.data.data && response.data.data.length > 0) {
+      if (response.data?.data?.length > 0) {
         const intervals = response.data.data[0].intervals;
         const flatData = intervals.map((interval) => ({
           startTime: moment(interval.startTime).format('HH:mm'),
           endTime: moment(interval.endTime).format('HH:mm'),
           status: interval.status === 'Run' ? 'Chạy' : interval.status === 'Stop' ? 'Dừng' : 'Chờ'
         }));
-        const processedData = addOfflineIntervals(flatData);
-        setDeviceData((prevData) => ({ ...prevData, [deviceId]: processedData }));
+        setDeviceData((prevData) => ({ ...prevData, [deviceId]: addOfflineIntervals(flatData) }));
       } else {
         console.warn(`No intervals found for deviceId ${deviceId}`);
         setDeviceData((prevData) => ({ ...prevData, [deviceId]: [] }));
@@ -65,12 +96,11 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
       console.error(`Error fetching telemetry data for deviceId ${deviceId}:`, error);
       setDeviceData((prevData) => ({ ...prevData, [deviceId]: [] }));
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Tạo tooltip chỉ một lần khi component mount
     const tooltip = d3.select('body')
       .append('div')
       .attr('class', 'tooltip')
@@ -112,85 +142,82 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
       }
 
       const data = deviceData[deviceId];
+      const totalTimes = calculateTotalTimes(data);
+
       const timeParse = d3.timeParse('%H:%M');
-      const xScale = d3
-        .scaleTime()
+      const xScale = d3.scaleTime()
         .domain([timeParse('00:00'), timeParse('23:59')])
         .range([margin.left, width - margin.right]);
 
-      const colorScale = d3
-        .scaleOrdinal()
+      const colorScale = d3.scaleOrdinal()
         .domain(['Chạy', 'Dừng', 'Chờ', 'Offline'])
         .range(['#00C8D7', '#f10401', '#FFC107', '#d3d3d3']);
 
-      // Tính tổng thời gian cho mỗi trạng thái
-      const totalTime = {
-        'Chạy': 0,
-        'Dừng': 0,
-        'Chờ': 0,
-        'Offline': 0
-      };
-
-      data.forEach(d => {
-        const start = moment(d.startTime, 'HH:mm');
-        const end = moment(d.endTime, 'HH:mm');
-        const duration = moment.duration(end.diff(start));
-        totalTime[d.status] += duration.asMinutes();
-      });
-
-      // Vẽ chú thích (legend) cho tổng thời gian
       const legendData = [
-        { status: 'Chạy', time: `${Math.floor(totalTime['Chạy'] / 60)} giờ ${totalTime['Chạy'] % 60} phút`, color: '#00C8D7' },
-        { status: 'Dừng', time: `${Math.floor(totalTime['Dừng'] / 60)} giờ ${totalTime['Dừng'] % 60} phút`, color: '#f10401' },
-        { status: 'Chờ', time: `${Math.floor(totalTime['Chờ'] / 60)} giờ ${totalTime['Chờ'] % 60} phút`, color: '#FFC107' },
+        { status: 'Chạy', time: totalTimes['Chạy'], color: '#00C8D7' },
+        { status: 'Dừng', time: totalTimes['Dừng'], color: '#f10401' },
+        { status: 'Chờ', time: totalTimes['Chờ'], color: '#FFC107' },
+        { status: 'Offline', time: totalTimes['Offline'], color: '#d3d3d3' }
       ];
 
-      const legend = svg
-        .selectAll('.legend')
+      const zoom = d3.zoom()
+        .scaleExtent([1, 24])
+        .translateExtent([[margin.left, 0], [width - margin.right, 0]])
+        .extent([[margin.left, 0], [width - margin.right, 0]])
+        .on('zoom', (event) => {
+          const newXScale = event.transform.rescaleX(xScale);
+          updateChart(newXScale);
+        });
+
+      svg.call(zoom);
+
+      const updateChart = (newXScale) => {
+        svg.selectAll('.status-rect')
+          .data(data)
+          .attr('x', d => newXScale(timeParse(d.startTime)) + 1)
+          .attr('width', d => Math.max(newXScale(timeParse(d.endTime)) - newXScale(timeParse(d.startTime)), 1));
+
+        svg.selectAll('.x-axis')
+          .call(d3.axisBottom(newXScale).ticks(d3.timeHour.every(2)).tickFormat(d3.timeFormat('%H:%M')));
+      };
+
+      const legend = svg.selectAll('.legend')
         .data(legendData)
         .enter()
         .append('g')
         .attr('class', 'legend')
         .attr('transform', (d, i) => `translate(${margin.left + i * 150},${height - margin.bottom + 45})`);
 
-      legend
-        .append('rect')
+      legend.append('rect')
         .attr('x', 0)
         .attr('y', -10)
         .attr('width', 20)
         .attr('height', 10)
         .style('fill', d => d.color);
 
-      legend
-        .append('text')
+      legend.append('text')
         .attr('x', 25)
         .attr('y', 0)
         .text(d => `${d.status}: ${d.time}`)
         .style('font-size', '12px')
         .style('text-anchor', 'start');
 
-      // Vẽ trục x
-      svg
-        .append('g')
+      svg.append('g')
+        .attr('class', 'x-axis')
         .attr('transform', `translate(0,${height - margin.bottom - 30})`)
         .call(d3.axisBottom(xScale).ticks(d3.timeHour.every(2)).tickFormat(d3.timeFormat('%H:%M')))
         .selectAll("text")
         .attr("transform", "translate(-10,0)rotate(-45)")
         .style("text-anchor", "end");
 
-      // Vẽ các hình chữ nhật biểu thị trạng thái
-      svg
-        .selectAll('.status-rect')
+      svg.selectAll('.status-rect')
         .data(data)
         .enter()
         .append('rect')
         .attr('class', 'status-rect')
         .attr('x', d => xScale(timeParse(d.startTime)) + 1)
         .attr('y', height - margin.bottom - 60)
-        .attr('width', d => {
-          const width = xScale(timeParse(d.endTime)) - xScale(timeParse(d.startTime));
-          return width > 0 ? width : 1;
-        })
+        .attr('width', d => Math.max(xScale(timeParse(d.endTime)) - xScale(timeParse(d.startTime)), 1))
         .attr('height', 30)
         .attr('fill', d => colorScale(d.status))
         .on('mouseover', (event, d) => {
@@ -211,7 +238,7 @@ const MachineTimeline = ({ deviceId, selectedDate }) => {
     drawChart();
     
     return () => {
-      tooltip.remove(); // Loại bỏ tooltip khi component unmount
+      tooltip.remove();
     };
   }, [deviceData, dimensions, deviceId, loading]);
 

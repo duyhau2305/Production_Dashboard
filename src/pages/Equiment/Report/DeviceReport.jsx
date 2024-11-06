@@ -3,12 +3,14 @@ import axios from 'axios';
 import Breadcrumb from '../../../Components/Breadcrumb/Breadcrumb';
 import DowntimePieChart from '../../../Components/Equiment/Analysis/DowntimePieChart';
 import TitleChart from '../../../Components/TitleChart/TitleChart';
-import { Select, DatePicker } from 'antd'; 
+import { Select, DatePicker, Button, Dropdown, Menu } from 'antd';
+import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import RuntimeTrendChart from '../../../Components/Equiment/Reports/RuntimeTrendChart';
 import RepairBarChart from '../../../Components/Equiment/Reports/RepairBarChart';
 import StackedBarChart from '../../../Components/Equiment/Reports/StackedBarChart';
 import TimelineChart from '../../../Components/Equiment/Reports/TimelineChart';
-import { datastatus } from '../../../data/status'; 
+import { datastatus } from '../../../data/status';
+import moment from 'moment';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -16,12 +18,26 @@ const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 function DeviceReport() {
   const [selectedMachines, setSelectedMachines] = useState([]);
+  const [selectedMachine, setSelectedMachine] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [startDate, setStartDate] = useState(null);
   const [machineOptions, setMachineOptions] = useState([]);
+  const [selectedRangeLabel, setSelectedRangeLabel] = useState('1 tuần');
   const runtimeTrendChartRef = useRef(null);
   const timelineChartRef = useRef(null);
   const stackedBarChartRef = useRef(null);
+  const [runtimeChartData, setRuntimeChartData] = useState({
+    labels: ['Run', 'Idle', 'Stop'],
+    values: []
+  });
+  const [taskChartData, setTaskChartData] = useState({
+    labels: [],
+    values: []
+  });
+  const [runtimeTrendData, setRuntimeTrendData] = useState({
+    labels: [],
+    datasets: []
+  });
 
   useEffect(() => {
     const fetchMachineOptions = async () => {
@@ -30,77 +46,215 @@ function DeviceReport() {
         const machines = response.data.data;
         const options = machines.map(machine => ({
           value: machine._id,
-          label: machine.operationStatusKey || `Machine ${machine.id}`
+          label: machine.deviceId || `Machine ${machine.id}`
         }));
+        setSelectedMachines(options[0]?.value || null);
+        setSelectedMachine(options[0]?.label || null);
         setMachineOptions(options);
       } catch (error) {
         console.error('Error fetching machine options:', error);
       }
     };
     fetchMachineOptions();
+    setDefaultDateRange();
   }, []);
 
-  const handleFullscreen = (chartRef) => {
-    if (chartRef.current) {
-      if (!document.fullscreenElement) {
-        chartRef.current.requestFullscreen().catch(err => {
-          console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-        });
-      } else {
-        document.exitFullscreen();
-      }
+  const setDefaultDateRange = () => {
+    const currentDate = new Date();
+    const endTime = currentDate;
+    const startTime = new Date(currentDate);
+    startTime.setDate(currentDate.getDate() - 8); // Lùi lại 1 ngày trước 7 ngày (tổng cộng là 8 ngày trước)
+    // Đặt giờ phút giây mặc định là 17:00:00.000Z
+    startTime.setUTCHours(17, 0, 0, 0);
+    setSelectedDate({ startDate: startTime, endDate: endTime });
+  };
+
+  const handleSelectCustomDays = (days, label) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days); // Lùi lại thêm 1 ngày
+    // Đặt giờ phút giây mặc định là 17:00:00.000Z
+    startDate.setUTCHours(17, 0, 0, 0);
+    setSelectedDate({ startDate, endDate });
+    setSelectedRangeLabel(label);
+  };
+
+  const handlePrevWeek = () => {
+    if (selectedDate) {
+      const startDate = moment(selectedDate.startDate).subtract(8, 'days').toDate(); // Lùi lại 8 ngày (1 tuần và thêm 1 ngày)
+      const endDate = moment(selectedDate.endDate).subtract(7, 'days').toDate();
+      // Đặt giờ phút giây mặc định là 17:00:00.000Z
+      startDate.setUTCHours(17, 0, 0, 0);
+      setSelectedDate({ startDate, endDate });
+      setSelectedRangeLabel('1 tuần');
+    }
+  };
+
+  const handleNextWeek = () => {
+    if (selectedDate) {
+      const startDate = moment(selectedDate.startDate).add(6, 'days').toDate(); // Tiến thêm 6 ngày (đi trước 1 ngày)
+      const endDate = moment(selectedDate.endDate).add(7, 'days').toDate();
+      // Đặt giờ phút giây mặc định là 17:00:00.000Z
+      startDate.setUTCHours(17, 0, 0, 0);
+      setSelectedDate({ startDate, endDate });
+      setSelectedRangeLabel('1 tuần');
     }
   };
 
   const handleDateChange = (dates) => {
-    setSelectedDate({ startDate: dates[0].$d, endDate: dates[1].$d });
+    if (dates) {
+      const newStartDate = new Date(dates[0]?.$d || null);
+      newStartDate.setDate(newStartDate.getDate() - 1); // Lùi lại 1 ngày
+      // Đặt giờ phút giây mặc định là 17:00:00.000Z
+      newStartDate.setUTCHours(17, 0, 0, 0);
+      setSelectedDate({ startDate: newStartDate, endDate: dates[1]?.$d || null });
+    }
   };
 
   const handleDateChangeChoose = (dates) => {
-    setStartDate(dates[0]);
+    if (dates[0]) {
+      const newStartDate = new Date(dates[0]);
+      newStartDate.setDate(newStartDate.getDate() - 1); // Lùi lại 1 ngày
+      // Đặt giờ phút giây mặc định là 17:00:00.000Z
+      newStartDate.setUTCHours(17, 0, 0, 0);
+      setStartDate(newStartDate);
+    }
   };
 
   const disabledDate = (current) => {
     if (!startDate) return false;
     return current < startDate || current > startDate.clone().add(6, 'days');
   };
+  useEffect(() => {
+    if (selectedMachines && selectedDate && selectedDate.startDate && selectedDate.endDate) {
+      const startDate = selectedDate.startDate.toISOString();
+      const endDate = selectedDate.endDate.toISOString();
+  
+      const fetchRuntimeChartData = async () => {
+        try {
+          const response = await axios.get(`${apiUrl}/machine-operations/${selectedMachines}/summary-status`, {
+            params: {
+              startTime: startDate,
+              endTime: endDate
+            }
+          });
+  
+          const data = response.data.data;
+  
+          // Calculate total runtime, idle, and stop times for pie chart
+          const totalIdleTime = data.reduce((acc, entry) => acc + entry.idleTime, 0);
+          const totalRunTime = data.reduce((acc, entry) => acc + entry.runTime, 0);
+          const totalStopTime = data.reduce((acc, entry) => acc + entry.stopTime, 0);
+  
+          setRuntimeChartData({
+            labels: ['Run', 'Idle', 'Stop'],
+            values: [totalRunTime, totalIdleTime, totalStopTime]
+          });
+          const totalSecondsInDay = 86400
+          // Prepare data for runtimeTrendData (daily runtime percentage)
+          const trendLabels = [];
+          const runtimePercentages = data.map(entry => {
+            const totalTime = entry.runTime + entry.idleTime + entry.stopTime;
+            const runtimePercentage = totalTime ? (entry.runTime / totalSecondsInDay) * 100 : 0;
+            trendLabels.push(moment(entry.date).format('DD/MM'));
+            return runtimePercentage;
+          });
+          console.log(trendLabels)
+  
+          setRuntimeTrendData({
+            labels: trendLabels,
+            datasets: [
+              {
+                label: "Daily Runtime Percentage (%)",
+                data: runtimePercentages,
+                fill: false,
+                borderColor: 'green',
+                borderWidth: 2,
+              }
+            ]
+          });
+        } catch (error) {
+          console.error('Error fetching runtime chart data:', error);
+        }
+      };
+  
+      fetchRuntimeChartData();
+    }
+  }, [selectedMachines, selectedDate]);
+  useEffect(() => {
+    if (selectedMachine && selectedDate && selectedDate.startDate && selectedDate.endDate) {
+      const startDate = moment(selectedDate.startDate).format('YYYY-MM-DD');
+      const endDate = moment(selectedDate.endDate).format('YYYY-MM-DD');
 
-  const runtimeChartData = {
-    labels: ['Dừng', 'Chờ', 'Cài đặt', 'Tắt máy'],
-    values: [50, 20, 20, 10],
-  };
+      const fetchTaskChartData = async () => {
+        try {
+          const response = await axios.get(`http://192.168.10.186:5000/api/downtime`, {
+            params: {
+              deviceId: selectedMachine,
+              startDate: startDate,
+              endDate: endDate
+            }
+          });
 
-  const taskChartData = {
-    labels: ['Lỗi kỹ thuật', 'Lỗi sensor', 'Lỗi chất lượng', 'Xước màn'],
-    values: [50, 20, 20, 10],
-  };
+          const data = response.data;
 
-  const runtimeTrendData = {
-    labels: ['22/09', '23/09', '24/09', '25/09'],
-    datasets: [
-      {
-        label: "Tỷ lệ máy chạy (%)",
-        data: [85, 90, 80, 75],
-        fill: false,
-        backgroundColor: 'green',
-        borderColor: 'green',
-        borderWidth: 2,
-      }
-    ],
-  };
+          if (!data || data.length === 0) {
+            console.warn("No data received from API");
+            return;
+          }
 
-  const repairDowntimeBarData = {
-    labels: ['22/09', '23/09', '24/09', '25/09'],
-    datasets: [
-      {
-        label: "",
-        data: [1, 2, 1, 2, 3, 4],
-        backgroundColor: 'rgba(5, 65, 151, 0.96)',
-        borderColor: 'rgba(5, 65, 151, 1)',
-        borderWidth: 1,
-      }
-    ],
-  };
+          const durationMap = {};
+
+          data.forEach(item => {
+            if (!item.reasonName || !item.interval || item.interval.length === 0) {
+              console.warn("Missing reasonName or interval data for item:", item);
+              return;
+            }
+
+            const reasonName = item.reasonName;
+            const totalDuration = item.interval.reduce((acc, interval) => {
+              if (!interval.startTime || !interval.endTime) {
+                console.warn("Missing startTime or endTime for interval:", interval);
+                return acc;
+              }
+
+              const start = new Date(interval.startTime);
+              const end = new Date(interval.endTime);
+              const duration = (end - start) / 1000;
+
+              return acc + duration;
+            }, 0);
+
+            if (durationMap[reasonName]) {
+              durationMap[reasonName] += totalDuration;
+            } else {
+              durationMap[reasonName] = totalDuration;
+            }
+          });
+
+          const labels = Object.keys(durationMap);
+          const values = Object.values(durationMap);
+
+          setTaskChartData({
+            labels: labels,
+            values: values
+          });
+        } catch (error) {
+          console.error('Error fetching task chart data:', error);
+        }
+      };
+
+      fetchTaskChartData();
+    }
+  }, [selectedMachine, selectedDate]);
+
+  const menu = (
+    <Menu>
+      <Menu.Item onClick={() => handleSelectCustomDays(3, '3 ngày')}>3 ngày</Menu.Item>
+      <Menu.Item onClick={() => handleSelectCustomDays(4, '4 ngày')}>4 ngày</Menu.Item>
+      <Menu.Item onClick={() => handleSelectCustomDays(7, '1 tuần')}>1 tuần</Menu.Item>
+    </Menu>
+  );
 
   return (
     <>
@@ -119,11 +273,18 @@ function DeviceReport() {
             ))}
           </Select>
           <RangePicker onChange={handleDateChange} disabledDate={disabledDate} onCalendarChange={handleDateChangeChoose} />
+          <div className="flex items-center space-x-2 bg-white rounded-md shadow-sm border">
+            <Button icon={<LeftOutlined />} onClick={handlePrevWeek} type="text" />
+            <Dropdown overlay={menu} trigger={['hover']}>
+              <Button type="text">{selectedRangeLabel}</Button>
+            </Dropdown>
+            <Button icon={<RightOutlined />} onClick={handleNextWeek} type="text" />
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-2 p-1">
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-2">
+      <div className="grid grid-cols-11 gap-2 p-1">
+        <div className="bg-white rounded-lg p-4 shadow-md col-span-3">
           <TitleChart
             title="Tỷ lệ máy chạy"
             timeWindow="Last 24 hours"
@@ -131,23 +292,23 @@ function DeviceReport() {
             onPrint={() => window.print()}
           />
           <div className="h-28">
-            {/* <DowntimePieChart data={runtimeChartData} /> */}
+            <DowntimePieChart data={runtimeChartData} />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-2">
+        <div className="bg-white rounded-lg p-4 shadow-md col-span-3">
           <TitleChart
-            title="Phân bố nhiệm vụ"
+            title="Phân bố nguyên nhân lỗi"
             timeWindow="Last 24 hours"
             onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
             onPrint={() => window.print()}
           />
           <div className="w-full h-full">
-            {/* <DowntimePieChart data={taskChartData} /> */}
+            <DowntimePieChart data={taskChartData} />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-4" ref={runtimeTrendChartRef}>
+        <div className="bg-white rounded-lg p-4 shadow-md col-span-5" ref={runtimeTrendChartRef}>
           <TitleChart
             title="Xu hướng máy chạy"
             timeWindow="Last 24 hours"
@@ -155,11 +316,11 @@ function DeviceReport() {
             onPrint={() => window.print()}
           />
           <div className="w-full h-full mt-1 ml-2 p-2">
-            {/* <RuntimeTrendChart data={runtimeTrendData} /> */}
+            <RuntimeTrendChart data={runtimeTrendData} />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-2 shadow-md col-span-4">
+        {/* <div className="bg-white rounded-lg p-2 shadow-md col-span-4">
           <TitleChart
             title="Thời gian dừng sửa chữa"
             timeWindow="Last 24 hours"
@@ -168,14 +329,14 @@ function DeviceReport() {
           />
           <div className="w-full h-full mt-12 ml-2 px-3">
             {/* <RepairBarChart data={repairDowntimeBarData} /> */}
-          </div>
-        </div>
+          {/* </div> */}
+        {/* </div> */} 
       </div>
 
       <div className="grid grid-cols-2 gap-2 p-1">
         <div className="bg-white p-3 col-span-1" ref={timelineChartRef}>
           <TitleChart
-            title="Ngăn xếp trạng thái" 
+            title="Ngăn xếp trạng thái"
             timeWindow="Last 24 hours"
             onFullscreen={() => handleFullscreen(timelineChartRef)}
             onPrint={() => window.print()}

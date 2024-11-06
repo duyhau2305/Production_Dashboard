@@ -6,6 +6,8 @@ import moment from 'moment';
 
 const Dashboard1 = () => {
   const [machines, setMachines] = useState([]);
+  const [machinesFilter, setMachinesFilter] = useState([]);
+
   const [areas, setAreas] = useState([]);
   const [selectedArea, setSelectedArea] = useState('All Areas');
   const [loading, setLoading] = useState(false);
@@ -15,7 +17,6 @@ const Dashboard1 = () => {
 
   const fixedDate = moment().format('YYYY-MM-DD');
 
-  // Hàm lấy thiết bị và khu vực
   const fetchDevicesAndAreas = async () => {
     try {
       const [devicesResponse, areasResponse] = await Promise.all([
@@ -29,11 +30,10 @@ const Dashboard1 = () => {
     }
   };
 
-  // Hàm lấy thông tin chi tiết về máy
   const fetchMachineDetails = async () => {
     try {
       const response = await axios.get(
-        `${apiUrl}/machine-operations/machine-information?startTime=2024-11-02T17:00:00Z&endTime=2024-11-04T16:59:59Z`
+        `${apiUrl}/machine-operations/machine-information`
       );
       return response.data.data;
     } catch (error) {
@@ -42,7 +42,6 @@ const Dashboard1 = () => {
     }
   };
 
-  // Hàm tổng hợp dữ liệu
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -54,7 +53,7 @@ const Dashboard1 = () => {
       const { devices, areas } = devicesAndAreas;
       setAreas(areas);
       setMachines(machinesWithDetails);
-
+      setMachinesFilter(machinesWithDetails)
       console.log('Dữ liệu thiết bị:', devices);
       console.log('Dữ liệu khu vực:', areas);
       console.log('Dữ liệu cho từng máy:', machinesWithDetails);
@@ -88,12 +87,33 @@ const Dashboard1 = () => {
     return { status, elapsedTime };
   };
 
-  const handleAreaChange = (e) => setSelectedArea(e.target.value);
+  const handleAreaChange = (e) => {
+    const area = e.target.value;
 
-  const filteredMachines = machines.filter(
-    (machine) =>
-      selectedArea === 'All Areas' || machine.areaName === selectedArea
-  );
+    if (area == 'PHAY') {
+      console.log(machines)
+      const machineData = machinesFilter.filter(value => {
+        console.log(value.deviceId)
+        return value.deviceId.startsWith("P")
+      })
+      setMachines(machineData)
+    } else{
+      console.log("TIện")
+      const machineData = machinesFilter.filter(value => {
+        console.log(value.deviceId)
+        return value.deviceId.startsWith("T")
+      })
+      setMachines(machineData)
+
+    }
+    setSelectedArea(area);
+    // console.log(area)
+    // else {
+    //   fetchData();
+    // }
+  };
+
+
 
   const toggleFullscreen = () => {
     if (!isFullscreen) {
@@ -113,7 +133,7 @@ const Dashboard1 = () => {
       <div className="flex justify-end items-center mb-4 px-1">
         <div className="relative flex justify-end items-center space-x-2">
           <button className="bg-white border border-gray-300 rounded-lg py-2 px-4 leading-tight text-gray-800">
-            Tổng số máy chạy: {filteredMachines.filter((m) => m.status === 'Chạy').length}/{machines.length} máy
+            Tổng số máy chạy: {machines.filter((m) => m.currentStatus === 'Run').length}/{machines.length} máy
           </button>
           <select
             value={selectedArea}
@@ -121,6 +141,7 @@ const Dashboard1 = () => {
             className="appearance-none bg-white border border-gray-300 rounded-lg py-2 px-8 leading-tight"
           >
             <option value="All Areas">Tất cả khu vực</option>
+
             {areas.map((area) => (
               <option key={area.areaName} value={area.areaName}>
                 {area.areaName}
@@ -136,7 +157,7 @@ const Dashboard1 = () => {
             Loading...
           </div>
         ) : (
-          <DashboardGrid machines={filteredMachines} />
+          <DashboardGrid machines={machines} />
         )}
       </div>
 

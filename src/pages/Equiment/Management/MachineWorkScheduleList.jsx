@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Select, DatePicker, Button ,Spin} from 'antd';
+import { Modal, Select, DatePicker, Button ,Spin ,Dropdown, Menu,message } from 'antd';
+import { DeleteOutlined ,EditOutlined,PlusOutlined,SettingOutlined} from '@ant-design/icons';
 import axios from 'axios'; // Import axios để gọi API
 import MachineWorkScheduleCard from '../../../Components/Equiment/MachineSchedule/MachineWorkScheduleCard';
 import CustomUpdateModal from '../../../Components/Modal/CustomUpdateModal'; // Import custom modal component
@@ -23,7 +24,13 @@ const MachineWorkScheduleList = () => {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false); // Custom modal visibility for the final confirmation
   const [isCalendarVisible, setIsCalendarVisible] = useState(false); // Track if calendar is visible
   const [isLoading, setIsLoading] = useState(false);
-
+  const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] = useState(false);
+  const [actionType, setActionType] = useState(null);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  
+  const showNoSelectionWarning = () => {
+    message.warning('Vui lòng chọn ít nhất một thiết bị trước khi thực hiện hành động này.');
+  };
   const refreshData = async () => {
     setIsLoading(true); // Bắt đầu loading
     try {
@@ -42,6 +49,43 @@ const MachineWorkScheduleList = () => {
       setIsLoading(false); // Kết thúc loading
     }
   };
+  const handleMenuClick = ({ key }) => {
+    if (selectedMachines.length === 0) {
+      showNoSelectionWarning();
+      return;
+    }
+
+    if (key === 'update') {
+      setActionType('update'); // Cập nhật loại hành động là cập nhật
+      setIsUpdateModalOpen(true); // Mở modal cập nhật nhiệm vụ
+    } else if (key === 'delete') {
+      setIsDeleteConfirmModalOpen(true); // Mở modal xác nhận xóa
+    } else if (key === 'add') {
+      setActionType('add'); // Cập nhật loại hành động là thêm mới
+      setIsUpdateModalOpen(true); // Mở modal thêm mới nhiệm vụ
+    }
+  };
+
+  // Nội dung tiêu đề và văn bản của Modal dựa trên `actionType`
+  const getModalContent = () => {
+    if (actionType === 'update') {
+      return {
+        title: "Xác nhận cập nhật",
+        content: "Bạn có muốn cập nhật nhiệm vụ sản xuất cho các thiết bị đã chọn?",
+        okText: "Xác nhận"
+      };
+    } else if (actionType === 'add') {
+      return {
+        title: "Xác nhận thêm mới",
+        content: "Bạn có muốn thêm mới nhiệm vụ cho các thiết bị đã chọn?",
+        okText: "Thêm mới"
+      };
+    }
+    return {};
+  };
+
+  const { title, content, okText } = getModalContent();
+
 
   useEffect(() => {
     refreshData(); // Gọi API khi component được mount
@@ -106,7 +150,6 @@ const MachineWorkScheduleList = () => {
     setIsCustomModalOpen(false); // Close modal after saving
   };
 
-  // Handle canceling the selected dates
  // Handle canceling the selected dates
 const handleCancelDates = () => {
   setSelectedDates([new Date().toISOString().split('T')[0]]); // Clear selected dates on cancel (set to today)
@@ -142,28 +185,70 @@ const handleCancelDates = () => {
 };
 
   // Handle machine click
-  const handleMachineClick = (machine) => {
-    // Kiểm tra xem thiết bị đã được chọn chưa
-    const isSelected = selectedMachines.some((m) => m._id === machine._id);
+// Xử lý khi nhấp vào thiết bị
+const handleRemoveAllTasks = async () => {
+  setIsLoading(true); // Bắt đầu loading khi xóa
 
-    if (isSelected) {
-        // Nếu đã được chọn, bỏ chọn thiết bị đó
-        const updatedMachines = selectedMachines.filter((m) => m._id !== machine._id);
-        setSelectedMachines(updatedMachines);
-
-        // Kiểm tra nếu không còn máy nào được chọn, thì chuyển lại trạng thái về "Chọn Thiết Bị"
-        if (updatedMachines.length === 0) {
-            setIsSelecting(false);
-        }
-    } else {
-        // Nếu chưa được chọn, thêm thiết bị vào danh sách
-        setSelectedMachines((prevMachines) => [...prevMachines, machine]);
-        setIsSelecting(true);
+  try {
+    // Lặp qua từng thiết bị và xóa các nhiệm vụ của nó
+    for (const machine of selectedMachines) {
+      for (const task of machine.tasks) {
+        await axios.delete(`${apiUrl}/productiontask/${task._id}`);
+      }
     }
+
+    console.log("All tasks removed successfully.");
+    
+    // Sau khi xóa thành công, cập nhật lại `selectedMachines` để loại bỏ nhiệm vụ
+    const updatedMachines = selectedMachines.map(machine => ({
+      ...machine,
+      tasks: [] // Loại bỏ tất cả nhiệm vụ của thiết bị trong state
+    }));
+    setSelectedMachines(updatedMachines);
+
+  } catch (error) {
+    console.error("Error removing tasks:", error);
+  } finally {
+    setIsLoading(false); // Kết thúc loading
+    await refreshData(); // Tải lại dữ liệu
+  }
 };
 
+// Hàm mở modal xác nhận xóa
+const openDeleteConfirmModal = () => {
+  setIsDeleteConfirmModalOpen(true);
+};
 
+// Hàm xử lý xác nhận xóa
+const confirmDelete = async () => {
+  setIsDeleteConfirmModalOpen(false); // Đóng modal trước khi xóa
+  await handleRemoveAllTasks(); // Thực hiện xóa
+};
 
+// Hàm hủy xóa (đóng modal)
+const cancelDelete = () => {
+  setIsDeleteConfirmModalOpen(false); // Đóng modal mà không xóa
+};
+
+// Hàm xử lý khi nhấp vào thiết bị
+const handleMachineClick = (machine) => {
+  const isSelected = selectedMachines.some((m) => m._id === machine._id);
+
+  if (isSelected) {
+    // Nếu thiết bị đã được chọn, bỏ chọn thiết bị đó
+    const updatedMachines = selectedMachines.filter((m) => m._id !== machine._id);
+    setSelectedMachines(updatedMachines);
+
+    if (updatedMachines.length === 0) {
+      setIsSelecting(false); // Chuyển lại trạng thái về "Chọn Thiết Bị" nếu không còn máy nào được chọn
+    }
+  } else {
+    // Nếu thiết bị chưa được chọn, thêm thiết bị vào danh sách cùng với nhiệm vụ của nó
+    const tasksForDevice = getTasksForDevice(machine.deviceName);
+    setSelectedMachines((prevMachines) => [...prevMachines, { ...machine, tasks: tasksForDevice }]);
+    setIsSelecting(true);
+  }
+};
   // Sử dụng useEffect để theo dõi thay đổi của selectedMachines
   useEffect(() => {
     console.log('Selected Machines Updated:', selectedMachines); // Log mỗi khi selectedMachines thay đổi
@@ -192,9 +277,17 @@ const handleCancelDates = () => {
   const handleCallMachine = () => {
     set
   }
-
+  const handleCancelAction = () => {
+    setSelectedMachines([]); // Loại bỏ tất cả thiết bị đã chọn
+    setIsActionModalOpen(false); // Đóng modal
+    setIsUpdateModalOpen(false)
+  };
   // Handle modal confirmation
   const handleConfirmUpdate = () => {
+    setIsUpdateModalOpen(false); // Close modal on confirm
+    setIsCustomModalOpen(true); // Show custom modal after confirmation
+  };
+  const handleAddNewTask = () => {
     setIsUpdateModalOpen(false); // Close modal on confirm
     setIsCustomModalOpen(true); // Show custom modal after confirmation
   };
@@ -276,10 +369,52 @@ const handleCancelUpdate = () => {
          defaultValue={dayjs()} // Đặt giá trị mặc định là hôm nay nếu chưa có gì được chọn
        />
  
-          
-             <Button type="primary" className="ml-2" onClick={handleUpdateClick}>
-               Cập nhật nhiệm vụ sản xuất
-             </Button>
+ <Dropdown overlay={
+        <Menu onClick={handleMenuClick}>
+          <Menu.Item key="update" icon={<EditOutlined />}>
+            Cập nhật nhiệm vụ
+          </Menu.Item>
+          <Menu.Item key="delete" icon={<DeleteOutlined />}>
+            Xóa nhiệm vụ
+          </Menu.Item>
+          <Menu.Item key="add" icon={<PlusOutlined />}>
+            Thêm mới nhiệm vụ
+          </Menu.Item>
+        </Menu>
+      } trigger={['click']}>
+        <Button type="primary" icon={<SettingOutlined />} className="ml-2">
+          Điều chỉnh kế hoạch
+        </Button>
+      </Dropdown>
+
+      {/* Modal xác nhận cho cập nhật hoặc thêm mới */}
+      <Modal
+        title={title}
+        open={isUpdateModalOpen}
+        onCancel={handleCancelAction}
+        onOk={() => {
+          actionType === 'update' ? handleConfirmUpdate() : handleAddNewTask(); // Gọi hàm đúng với hành động
+          setIsUpdateModalOpen(false); // Đóng modal
+        }}
+        okText={okText}
+        cancelText="Hủy"
+      >
+        <p>{content}</p>
+      </Modal>
+
+      {/* Modal Xác nhận Xóa */}
+      <Modal
+        title="Xác nhận xóa"
+        open={isDeleteConfirmModalOpen}
+        onOk={confirmDelete}
+        onCancel={cancelDelete}
+        okText="Xác nhận"
+        cancelText="Hủy"
+      >
+        <p>Bạn có chắc chắn muốn xóa tất cả nhiệm vụ của các thiết bị đã chọn không?</p>
+      </Modal>
+
+    
           
  
            {/* Button to toggle CustomCalendar */}
@@ -328,27 +463,13 @@ const handleCancelUpdate = () => {
            {isSelecting && selectedMachines.some((m) => m.id === machine.id) && (
              <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
            )}
+         
          </div>
        );
      }
    })}
  </div>
- 
- 
- 
-       {/* Update Confirmation Modal */}
-       <Modal
-         title="Xác nhận cập nhật"
-         open={isUpdateModalOpen}
-         onCancel={handleCancelUpdate}
-         onOk={handleConfirmUpdate}
-         okText="Xác nhận"
-         cancelText="Hủy"
-       >
-         <p>Bạn có muốn cập nhật nhiệm vụ sản xuất cho các thiết bị đã chọn?</p>
-       </Modal>
- 
-       {/* Custom Modal after Update Confirmation */}
+        {/* Custom Modal after Update Confirmation */}
        <CustomUpdateModal
          open={isCustomModalOpen}
          onClose={() => setIsCustomModalOpen(false)}

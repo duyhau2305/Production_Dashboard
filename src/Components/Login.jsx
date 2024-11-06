@@ -63,7 +63,7 @@ function Login() {
   
   
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen  flex flex-col lg:flex-row">
             <div 
                   className="lg:w-2/3 bg-cover bg-center  bg-no-repeat text-white flex flex-col bg-qcsLogin justify-center items-center p-16"
                   // style={{ backgroundImage: 'url(../src/assets/image/QCS.jpg)' }}  
@@ -71,7 +71,7 @@ function Login() {
                   
       </div>
       {/* Left section - Form */}
-      <div className="lg:w-1/3 bg-gradient-to-r from-blue-100 to-blue-200  flex flex-col justify-center items-center px-8 py-4 shadow-lg">
+      <div className="lg:w-1/3  bg-gradient-to-r from-blue-100 to-blue-200  flex flex-col justify-center items-center px-8 py-4 shadow-lg">
         {/* Logo */}
         <div className="flex flex-rows items-center ">
           <img src={logo} alt="Logo" className="w-[480px] h-auto object-contain " />

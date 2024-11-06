@@ -6,7 +6,7 @@ import ProductionTaskManagement from './ProductionTaskManagement';
 
 import { toast } from 'react-toastify';
 
-const CustomUpdateModal = ({ open, onClose, onCancel, selectedDates, setSelectedMachines, setSelectedDates, selectedMachines }) => {
+const CustomAddTaskModal = ({ open, onClose, onCancel, selectedDates, setSelectedMachines, setSelectedDates, selectedMachines }) => {
   const [taskData, setTaskData] = useState({}); // Dữ liệu nhiệm vụ sản xuất lưu theo ngày
   const [tasks, setTasks] = useState([]); // Quản lý trạng thái tasks
   const [isLoading, setIsLoading] = useState(false); 
@@ -172,4 +172,4 @@ const fetchTaskData = async () => {
   );
 };
 
-export default CustomUpdateModal;
+export default CustomAddTaskModal;

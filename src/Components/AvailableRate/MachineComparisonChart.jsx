@@ -11,40 +11,23 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
   const [error, setError] = useState(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const formatDateForAPI = (date, isEndOfDay = false) => {
-    const momentDate = moment.isMoment(date) ? date : moment(date);
-    if (!momentDate.isValid()) return '';
-
-    const adjustedDate = isEndOfDay
-      ? momentDate.tz('Asia/Ho_Chi_Minh').endOf('day').subtract(7.05, 'hours')
-      : momentDate.tz('Asia/Ho_Chi_Minh').startOf('day').subtract(7.05, 'hours');
-
-    return adjustedDate.format('YYYY-MM-DDTHH:mm:ss[Z]');
-  };
-
-  const fetchMachineData = async () => {
+  // Hàm gọi API
+  const fetchMachineData = async (startTime, endTime) => {
     setLoading(true);
     setError(null);
 
     try {
-      const formattedStartDate = formatDateForAPI(selectedDate.start);
-      const formattedEndDate = formatDateForAPI(selectedDate.end, true);
-
-      if (!formattedStartDate || !formattedEndDate) {
-        throw new Error('Invalid start or end date.');
-      }
-
       const fetchPromises = machineType.map(async (machine) => {
+        const startTime = selectedDate.clone().startOf('day').toISOString();
+        const endTime = selectedDate.clone().endOf('day').toISOString();
         const { _id, deviceName } = machine;
         const response = await axios.get(
-          `${apiUrl}/machine-operations/${_id}/summary-status?startTime=${formattedStartDate}&endTime=${formattedEndDate}`
+          `${apiUrl}/machine-operations/${_id}/summary-status?startTime=${startTime}&endTime=${endTime}`
         );
 
         if (response.status === 200 && response.data && response.data.data.length > 0) {
           const { runTime, idleTime, stopTime } = response.data.data[0];
-          const startMoment = moment(selectedDate.start).tz('Asia/Ho_Chi_Minh').startOf('day');
-          const endMoment = moment(selectedDate.end).tz('Asia/Ho_Chi_Minh').endOf('day');
-          const totalPossibleSeconds = endMoment.diff(startMoment, 'seconds');
+          const totalPossibleSeconds = moment(endTime).diff(moment(startTime), 'seconds');
           const runtimePercentage = ((runTime || 0) / totalPossibleSeconds) * 100;
 
           return {
@@ -70,8 +53,12 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
   };
 
   useEffect(() => {
+    // Cập nhật startTime và endTime mỗi khi selectedDate thay đổi
+    
+   
+    // Gọi API với thời gian được chuyển đổi từ selectedDate
     fetchMachineData();
-  }, [selectedDate, machineType]);
+  }, [selectedDate, machineType]); 
 
   useEffect(() => {
     const tooltip = d3.select('body')
@@ -144,7 +131,6 @@ const MachineComparisonChart = ({ selectedDate, machineType }) => {
 
     drawChart();
 
-    // Sử dụng ResizeObserver để lắng nghe thay đổi kích thước
     const resizeObserver = new ResizeObserver(() => {
       drawChart();
     });

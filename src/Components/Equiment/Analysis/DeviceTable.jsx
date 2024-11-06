@@ -114,7 +114,7 @@ const DeviceTable = ({ downtimeData, telemetryData, productionData, employeeData
   const sortedTelemetryData = [...telemetryData].sort(
     (a, b) => new Date(a.date) - new Date(b.date)
   );
-
+  console.log(productionData)
   return (
     <div>
       <h3 className="mt-6 font-semibold">Thống kê Downtime</h3>
@@ -132,38 +132,45 @@ const DeviceTable = ({ downtimeData, telemetryData, productionData, employeeData
 
 
 // Bảng thống kê sản xuất
-const TableProduction = ({ productionData }) => (
-  <table className="min-w-full bg-white border border-gray-200 mt-4">
-    <thead>
-      <tr className="bg-gray-100">
-        {['STT', 'Ngày', 'Thời gian bắt đầu', 'Thời gian kết thúc', 
-          'Thời gian công việc', 'Thời gian chạy theo kế hoạch', 
-          'Thời gian chạy thực tế', 'Thời gian chờ', 
-          'Thời gian tắt máy', 'Thời gian bảo trì', 'Tỉ lệ chạy'].map((header) => (
-          <th key={header} className="border px-4 py-2 text-xs">
-            {header}
-          </th>
-        ))}
-      </tr>
-    </thead>
-    <tbody>
-      {productionData.map((item, index) => (
-        <tr key={index}>
-          <td className="border px-4 py-2">{index + 1}</td>
-          <td className="border px-4 py-2">{formatDate(item.date)}</td>
-          <td className="border px-4 py-2">{item.startTime}</td>
-          <td className="border px-4 py-2">{item.endTime}</td>
-          <td className="border px-4 py-2">{item.workTime}</td>
-          <td className="border px-4 py-2">{item.planeTime}</td>
-          <td className="border px-4 py-2">{item.runTime}</td>
-          <td className="border px-4 py-2">{item.downTime}</td>
-          <td className="border px-4 py-2">{item.offTime}</td>
-          <td className="border px-4 py-2">{item.maintenanceTime}</td>
-          <td className="border px-4 py-2">{item.runRate}%</td>
+const TableProduction = ({ productionData }) => {
+  // Kiểm tra nếu productionData là undefined hoặc null
+  if (!productionData || !productionData.productionTasks) {
+    return null; // Không render gì nếu productionData không hợp lệ
+  }
+
+  return (
+    <table className="min-w-full bg-white border border-gray-200 mt-4">
+      <thead>
+        <tr className="bg-gray-100">
+          {['STT', 'Ngày', 'Thời gian bắt đầu', 'Thời gian kết thúc', 
+            'Thời gian công việc', 'Thời gian chạy theo kế hoạch', 
+            'Thời gian chạy thực tế', 'Thời gian chờ', 
+            'Thời gian tắt máy', 'Thời gian bảo trì', 'Tỉ lệ chạy'].map((header) => (
+            <th key={header} className="border px-4 py-2 text-xs">
+              {header}
+            </th>
+          ))}
         </tr>
-      ))}
-    </tbody>
-  </table>
-);
+      </thead>
+      <tbody>
+        {productionData.productionTasks.map((item, index) => (
+          <tr key={index}>
+            <td className="border px-4 py-2">{index + 1}</td>
+            <td className="border px-4 py-2">{new Date(item.date).toISOString().split('T')[0]}</td>
+            <td className="border px-4 py-2">{item.shift.startTime}</td>
+            <td className="border px-4 py-2">{item.shift.endTime}</td>
+            <td className="border px-4 py-2"></td>
+            <td className="border px-4 py-2"></td>
+            <td className="border px-4 py-2">{productionData.summaryStatus}</td>
+            <td className="border px-4 py-2">{productionData.summaryStatusIdle}</td>
+            <td className="border px-4 py-2">{productionData.summaryStatusStop}</td>
+            <td className="border px-4 py-2"></td>
+            <td className="border px-4 py-2"></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
 
 export default DeviceTable;

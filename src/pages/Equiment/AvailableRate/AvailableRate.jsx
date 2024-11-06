@@ -31,6 +31,8 @@ function AvailableRate() {
 
     fetchData();
   }, []);
+  console.log("Selected Date in Parent Component:", selectedDate); // Đảm bảo ngày thay đổi khi bạn chọn
+
 
   // Function to filter devices based on selected area
   const getFilteredDevices = (area) => {
