@@ -114,7 +114,7 @@ const toggleFullscreen = () => {
 
 
   return (
-    <div className="w-full h-full mx-auto relative bg-gray-100 p-6 overflow-hidden">
+    <div className="w-full h-full relative bg-gray-100 p-6 overflow-hidden">
       <div className="flex justify-end items-center mb-4 px-1">
         <div className="relative flex justify-end items-center space-x-2">
           <button className="bg-white border border-gray-300 rounded-lg py-2 px-4 leading-tight text-gray-800">

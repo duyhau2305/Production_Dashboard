@@ -33,7 +33,7 @@ const MachineCard = ({ machine }) => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
   function formatMinutesToTime(totalSeconds) {
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const minutes = Math.floor((totalSeconds /60) );
     const secs = totalSeconds % 60;
     return `${minutes.toString().padStart(2, '0')}`;
   }
@@ -57,7 +57,7 @@ const MachineCard = ({ machine }) => {
   const [callingDepartment, setCallingDepartment] = useState('');
 
   const displayInfo = isCalling
-  ? `Đang gọi  ${callingDepartment} ...`
+  ? `Đang gọi  ${callingDepartment}`
   : machine.productionTasks?.[0]?.shift?.employeeName?.[0] || '';
 
 useEffect(() => {
@@ -112,7 +112,7 @@ useEffect(() => {
         {/* OEE Circular Progress */}
         <div className="relative ml-2" style={{ width: 160, height: 160 }}>
           <CircularProgressbar
-            value={(machine.summaryStatus / 86400) * 100}
+            value={(machine.summaryStatus / 86400) *100}
             styles={buildStyles({
               pathColor: '#0782f4',
               textColor: '#122a35',
@@ -123,12 +123,12 @@ useEffect(() => {
 
           {/* OEE Value */}
           <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-center w-full h-full">
-          <span className="text-xl font-bold ">
-          Total Run </span>
-        <span className="text-xl font-bold ">
-        {formatMinutesToTime(machine.summaryStatus || 0)} phút
+          {/* <span className="text-xl font-bold ">
+          Total Run </span> */}
+        <span className="text-4xl font-bold ">
+        {formatMinutesToTime(machine.summaryStatus || 0)} m
         </span>
-            <span className="text-sm font-bold mt-2">{machine?.percentDiff || ''}Hôm qua</span>
+            <span className="text-sm font-bold mt-2">{machine?.percentDiff || ''} Hôm qua</span>
           </div>
           <div className={`absolute  font-bold text-xl -translate-x-1/6  ${isCalling ? 'calling-effect': ''}`} >
               {displayInfo}
