@@ -32,6 +32,11 @@ const MachineCard = ({ machine }) => {
     const secs = totalSeconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
+  function formatMinutesToTime(totalSeconds) {
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${minutes.toString().padStart(2, '0')}`;
+  }
   console.log(machine)
   const calculateDurationInHoursAndMinutes= (startTime, endTime) => {
     if (!startTime || !endTime) return '';
@@ -46,6 +51,8 @@ const MachineCard = ({ machine }) => {
   
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
+ 
+
   const [isCalling, setIsCalling] = useState(false);
   const [callingDepartment, setCallingDepartment] = useState('');
 
@@ -53,26 +60,26 @@ const MachineCard = ({ machine }) => {
   ? `Đang gọi  ${callingDepartment} ...`
   : machine.productionTasks?.[0]?.shift?.employeeName?.[0] || '';
 
-// useEffect(() => {
-//   socket.on('update_call_status', (data) => {
-//     if (data.deviceId === machine.deviceId) {
-//       setIsCalling(true);
-//       setCallingDepartment(data.department);
-//     }
-//   });
+useEffect(() => {
+  socket.on('update_call_status', (data) => {
+    if (data.deviceId === machine.deviceId) {
+      setIsCalling(true);
+      setCallingDepartment(data.department);
+    }
+  });
 
-//   socket.on('cancel_call_status', (data) => {
-//     if (data.deviceId === machine.deviceId) {
-//       setIsCalling(false);
-//       setCallingDepartment('');
-//     }
-//   });
+  socket.on('cancel_call_status', (data) => {
+    if (data.deviceId === machine.deviceId) {
+      setIsCalling(false);
+      setCallingDepartment('');
+    }
+  });
 
-//   return () => {
-//     socket.off('update_call_status');
-//     socket.off('cancel_call_status');
-//   };
-// }, [machine.deviceId]);
+  return () => {
+    socket.off('update_call_status');
+    socket.off('cancel_call_status');
+  };
+}, [machine.deviceId]);
   
   
 
@@ -116,7 +123,9 @@ const MachineCard = ({ machine }) => {
 
           {/* OEE Value */}
           <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-center w-full h-full">
-            <span className="text-4xl font-bold mb-2">{`${((machine.summaryStatus || 0) / 86400 * 100).toFixed(2)}%`}</span>
+          <span className="text-xl font-bold ">
+          Total Run: {formatMinutesToTime(machine.summaryStatus || 0)} phút
+        </span>
             <span className="text-sm font-bold">{machine?.percentDiff || ''}Hôm qua</span>
           </div>
           <div className={`absolute  font-bold text-xl -translate-x-1/6  ${isCalling ? 'calling-effect': ''}`} >
@@ -131,9 +140,8 @@ const MachineCard = ({ machine }) => {
         <span className="text-md font-bold">
           {machine.productionTasks?.[0]?.shift?.startTime || ''} - {machine.productionTasks?.[0]?.shift?.endTime || ''}
         </span>
-        <span className="text-md font-bold -ml-1">
-          Total Run: {formatSecondsToTime(machine.summaryStatus || 0)}
-        </span>
+        
+        <span className="text-md font-bold ">{`${((machine.summaryStatus || 0) / 86400 * 100).toFixed(2)}%`}</span>
       </div>
     </div>
   );
