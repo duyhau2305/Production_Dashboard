@@ -20,7 +20,7 @@ const getSignalLightColors = (status) => {
   if (status === 'Off') return { red: 'white', yellow: 'white', green: 'white' };
   return { red: 'white', yellow: 'white', green: 'white' }; // Default case
 };
-const socket = io('http://192.168.1.60:5001');
+const socket = io('http://192.168.10.186:5000/');
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.currentStatus || '');
   const signalLightColors = getSignalLightColors(machine.productionTasks?.[0]?.shift?.status || '');
@@ -124,9 +124,11 @@ useEffect(() => {
           {/* OEE Value */}
           <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-center w-full h-full">
           <span className="text-xl font-bold ">
-          Total Run: {formatMinutesToTime(machine.summaryStatus || 0)} phút
+          Total Run </span>
+        <span className="text-xl font-bold ">
+        {formatMinutesToTime(machine.summaryStatus || 0)} phút
         </span>
-            <span className="text-sm font-bold">{machine?.percentDiff || ''}Hôm qua</span>
+            <span className="text-sm font-bold mt-2">{machine?.percentDiff || ''}Hôm qua</span>
           </div>
           <div className={`absolute  font-bold text-xl -translate-x-1/6  ${isCalling ? 'calling-effect': ''}`} >
               {displayInfo}
@@ -141,7 +143,7 @@ useEffect(() => {
           {machine.productionTasks?.[0]?.shift?.startTime || ''} - {machine.productionTasks?.[0]?.shift?.endTime || ''}
         </span>
         
-        <span className="text-md font-bold ">{`${((machine.summaryStatus || 0) / 86400 * 100).toFixed(2)}%`}</span>
+        <span className="text-md font-bold ">Tỷ lệ chạy: {`${((machine.summaryStatus || 0) / 86400 * 100).toFixed(2)}%`}</span>
       </div>
     </div>
   );
