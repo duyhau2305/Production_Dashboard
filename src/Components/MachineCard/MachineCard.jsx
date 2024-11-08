@@ -3,7 +3,7 @@ import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
-// import io from "socket.io-client";
+import io from "socket.io-client";
 
 const getHeaderColor = (status) => {
   if (status === 'Run') return '#60ec60';  // Green for Active
@@ -20,7 +20,7 @@ const getSignalLightColors = (status) => {
   if (status === 'Off') return { red: 'white', yellow: 'white', green: 'white' };
   return { red: 'white', yellow: 'white', green: 'white' }; // Default case
 };
-// const socket = io('http://192.168.10.186:5000/');
+const socket = io('http://192.168.10.186:5000/');
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.currentStatus || '');
   const signalLightColors = getSignalLightColors(machine.productionTasks?.[0]?.shift?.status || '');
@@ -60,26 +60,26 @@ const MachineCard = ({ machine }) => {
   ? `Đang gọi  ${callingDepartment} ...`
   : machine.productionTasks?.[0]?.shift?.employeeName?.[0] || '';
 
-// useEffect(() => {
-//   socket.on('update_call_status', (data) => {
-//     if (data.deviceId === machine.deviceId) {
-//       setIsCalling(true);
-//       setCallingDepartment(data.department);
-//     }
-//   });
+useEffect(() => {
+  socket.on('update_call_status', (data) => {
+    if (data.deviceId === machine.deviceId) {
+      setIsCalling(true);
+      setCallingDepartment(data.department);
+    }
+  });
 
-//   socket.on('cancel_call_status', (data) => {
-//     if (data.deviceId === machine.deviceId) {
-//       setIsCalling(false);
-//       setCallingDepartment('');
-//     }
-//   });
+  socket.on('cancel_call_status', (data) => {
+    if (data.deviceId === machine.deviceId) {
+      setIsCalling(false);
+      setCallingDepartment('');
+    }
+  });
 
-//   return () => {
-//     socket.off('update_call_status');
-//     socket.off('cancel_call_status');
-//   };
-// }, [machine.deviceId]);
+  return () => {
+    socket.off('update_call_status');
+    socket.off('cancel_call_status');
+  };
+}, [machine.deviceId]);
   
   
 

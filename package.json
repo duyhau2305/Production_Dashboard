@@ -50,6 +50,7 @@
     "recharts": "^2.12.7",
     "rollup": "^4.24.0",
     "socket-client": "^1.0.0",
+    "socket.io-client": "^4.8.1",
     "xlsx": "^0.18.5",
     "yup": "^1.4.0"
   },

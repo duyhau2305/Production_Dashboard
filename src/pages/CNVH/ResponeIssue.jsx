@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import InfoCard from '../../Components/MachineCard/InfoCard';
-// import io from "socket.io-client";
+import io from "socket.io-client"
 import { message } from 'antd';
 import '../../index.css';
 import { FiChevronLeft } from 'react-icons/fi';
@@ -18,28 +18,28 @@ const ResponeIssue = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  // const [socket, setSocket] = useState(null); 
-  // useEffect(() => {
+  const [socket, setSocket] = useState(null); 
+  useEffect(() => {
     
-  //   const newSocket = io('http://192.168.10.186:5000', {
-  //     transports: ['websocket', 'polling'],
-  //   });
+    const newSocket = io('http://192.168.10.186:5000', {
+      transports: ['websocket', 'polling'],
+    });
     
-  //   setSocket(newSocket); 
+    setSocket(newSocket); 
 
-  //   newSocket.on('connect', () => {
-  //     console.log('Connected to server');
-  //   });
+    newSocket.on('connect', () => {
+      console.log('Connected to server');
+    });
     
-  //   newSocket.on('disconnect', () => {
-  //     console.log('Disconnected from server');
-  //   });
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
 
-  //   // Ngắt kết nối khi component bị unmount
-  //   return () => {
-  //     newSocket.disconnect();
-  //   };
-  // }, []);
+    // Ngắt kết nối khi component bị unmount
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
 
   // Lấy dữ liệu từ Redux Store
   const { selectedDate, selectedMachine, declaredIntervals } = useSelector(
@@ -171,35 +171,35 @@ useEffect(() => {
   const handleOpenModal = () => {
     setIsModalOpen(true);
    
-    // if (socket && !socket.connected) {
-    //   socket.connect();
-    // }
+    if (socket && !socket.connected) {
+      socket.connect();
+    }
   };
     
 
   const handleOpenHelpTimerModal = () => {
     setIsHelpTimerModalOpen(true)
-    // if (socket && !socket.connected) {
-    //   socket.connect();
-    // }
+    if (socket && !socket.connected) {
+      socket.connect();
+    }
   };
   const handleCallHelp = (team) => {
-    // if (socket) {
-    //   // Phát sự kiện `call_help` để hiển thị trạng thái gọi
-    //   // socket.emit('call_help', { department: team, deviceId: selectedMachine.deviceId });
-    //   message.success(`Đã gọi Đội ${team} thành công!`);
-    // }
+    if (socket) {
+      // Phát sự kiện `call_help` để hiển thị trạng thái gọi
+      socket.emit('call_help', { department: team, deviceId: selectedMachine.deviceId });
+      message.success(`Đã gọi Đội ${team} thành công!`);
+    }
 
     handleCloseModal();
     handleOpenHelpTimerModal();
   };
 
   const handleCloseHelpTimerModal = () => {
-    // if (socket) {
-    //   // Phát sự kiện `cancel_call` để cập nhật trạng thái
-    //   socket.emit('cancel_call', { deviceId: selectedMachine.deviceId });
-    //   socket.disconnect(); // Ngắt kết nối sau khi xác nhận hoàn thành
-    // }
+    if (socket) {
+      // Phát sự kiện `cancel_call` để cập nhật trạng thái
+      socket.emit('cancel_call', { deviceId: selectedMachine.deviceId });
+      socket.disconnect(); // Ngắt kết nối sau khi xác nhận hoàn thành
+    }
     setIsHelpTimerModalOpen(false);
     message.success("Trợ giúp đã hoàn thành!");
   };
@@ -207,8 +207,8 @@ useEffect(() => {
   const handleCloseModal = () => {
     if (socket) {
      
-      // socket.emit('cancel_call', { deviceId: selectedMachine.deviceId });
-      // socket.disconnect(); // Ngắt kết nối socket khi modal đóng
+      socket.emit('cancel_call', { deviceId: selectedMachine.deviceId });
+      socket.disconnect(); // Ngắt kết nối socket khi modal đóng
     }
     setIsModalOpen(false);
   };
