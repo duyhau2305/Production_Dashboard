@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import Breadcrumb from '../../../Components/Breadcrumb/Breadcrumb';
-import DowntimePieChart from '../../../Components/Equiment/Analysis/DowntimePieChart';
+import DowntimePieChart from '../../../Components/Equiment/Reports/DowntimePieChart';
 import TitleChart from '../../../Components/TitleChart/TitleChart';
 import { Select, DatePicker, Button, Dropdown, Menu } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
@@ -19,17 +19,24 @@ const apiUrl = import.meta.env.VITE_API_BASE_URL;
 function DeviceReport() {
   
   const [selectedMachines, setSelectedMachines] = useState([]);
-  const [selectedMachine, setSelectedMachine] = useState([]);
   const [selectedDate, setSelectedDate] = useState({
     startDate: moment().subtract(6, 'days').startOf('day').toDate(),
     endDate: moment().endOf('day').toDate(),
   });
+  const [selectedMachine, setSelectedMachine] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [machineOptions, setMachineOptions] = useState([]);
   const [selectedRangeLabel, setSelectedRangeLabel] = useState('1 tuần');
   const runtimeTrendChartRef = useRef(null);
+  const runtimePieChartRef = useRef(null);
   const timelineChartRef = useRef(null);
   const stackedBarChartRef = useRef(null);
+  const [defaultValue, setDefaultValue] = useState([moment().subtract(5, 'days').startOf('day'),
+  moment().endOf('day'),])
+  const [dateRangePickerValue, setDateRangePickerValue] = useState([
+    moment().subtract(5, 'days'),
+    moment()
+  ]);
   const [runtimeChartData, setRuntimeChartData] = useState({
     labels: ['Run', 'Idle', 'Stop'],
     values: []
@@ -42,13 +49,6 @@ function DeviceReport() {
     labels: [],
     datasets: []
   });
-  const [defaultValue, setDefaultValue] = useState([moment().subtract(6, 'days').startOf('day'),
-    
-  moment().endOf('day'),])
-  const [dateRangePickerValue, setDateRangePickerValue] = useState([
-    moment().subtract(6, 'days'),
-    moment()
-  ]);
   useEffect(() => {
     const fetchMachineOptions = async () => {
       try {
@@ -95,6 +95,22 @@ function DeviceReport() {
     const endDate = moment(selectedDate.endDate).add(6, 'days').toDate();
     setSelectedDate({ startDate, endDate });
     setSelectedRangeLabel('1 tuần');
+  };
+  const disabledDate = (current) => {
+    // Allow the selected start date and next 7 days
+    if (!startDate) return false; // If no start date selected, allow all dates
+    return current < startDate || current > startDate.clone().add(6, 'days');
+  };
+  const handleFullscreen = (chartRef) => {
+    if (chartRef.current) {
+      if (!document.fullscreenElement) {
+        chartRef.current.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
   };
   useEffect(() => {
     if (selectedMachines && selectedDate && selectedDate.startDate && selectedDate.endDate) {
@@ -224,7 +240,6 @@ function DeviceReport() {
       fetchTaskChartData();
     }
   }, [selectedMachine, selectedDate]);
-
   const menu = (
     <Menu>
       <Menu.Item onClick={() => handleSelectCustomDays(3, '3 ngày')}>3 ngày</Menu.Item>
@@ -235,6 +250,10 @@ function DeviceReport() {
   const handleOpen =()=> {
     setDateRangePickerValue('')
   }
+  const handleDateChangeChoose = (dates) => {
+    setStartDate(dates[0])
+    // setSelectedDate(dates);
+  };
   return (
     <>
       <div className="flex justify-end items-center mb-4">
@@ -255,6 +274,8 @@ function DeviceReport() {
             value={dateRangePickerValue} 
             onChange={handleDateChange}
             onOpenChange={handleOpen}
+            disabledDate={disabledDate}
+            onCalendarChange={handleDateChangeChoose}
           />
           <div className="flex items-center space-x-2 bg-white rounded-md shadow-sm border">
             <Button icon={<LeftOutlined />} onClick={handlePrevWeek} type="text" />
@@ -266,12 +287,12 @@ function DeviceReport() {
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-2 p-1">
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-3">
+      <div className="grid grid-cols-12 gap-2 p-1" >
+        <div className="bg-white rounded-lg p-4 shadow-md col-span-3" ref={runtimePieChartRef}>
           <TitleChart
             title="Tỷ lệ máy chạy"
             timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
+            onFullscreen={() => handleFullscreen(runtimePieChartRef)}
             onPrint={() => window.print()}
           />
           <div className="h-28">
@@ -303,6 +324,7 @@ function DeviceReport() {
           </div>
         </div>
 
+        
       </div>
 
       <div className="grid grid-cols-2 gap-2 p-1">

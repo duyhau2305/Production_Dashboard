@@ -152,23 +152,23 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         <span className="arrow right-arrow">→</span>
       </div>
       <div style={{ paddingLeft: '33px', position: 'relative', height: '100%' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0', display: showYAxis ? 'block' : 'none' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex',justifyContent: 'space-between',  padding: '10px 0', display: showYAxis ? 'flex' : 'none' ,flexDirection: 'column' }}>
           {dates.map((date, index) => (
             <div key={index} style={{
-              textAlign: 'right', fontSize: '10px', display: 'flex', marginTop: index > 0 ? '70px' : '0',
+              textAlign: 'right', fontSize: '10px', display: 'flex', 
             }}>
               {date}
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', height: '99%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '99%' }}>
           {data.length > 0 ? data.map((entry, index) => (
             <div key={index} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave}>
               <div className='gradient-container gradient-section gradient' style={{
                 height: '50px',
                 background: `linear-gradient(to right, ${listGradient[index]})`,
                 width: '100%',
-                marginTop: index > 0 ? '35px' : '0',
+                // marginTop: index > 0 ? '35px' : '0',
                 position: 'relative',
               }}>
                 <div style={{ display: 'flex', position: 'absolute', top: '10px', width: '100%' }}>
@@ -262,4 +262,3 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
 };
 
 export default StackedBarChart;
-

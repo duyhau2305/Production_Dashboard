@@ -161,28 +161,35 @@ const handleCancelDates = () => {
 
   
  // Toggle machine selection mode
- const toggleSelectDevicesByArea = () => {
+// Toggle machine selection mode with task inclusion
+const toggleSelectDevicesByArea = () => {
   const machinesInArea = filteredDevices; // Lấy tất cả thiết bị trong khu vực được chọn
 
   // Kiểm tra xem tất cả thiết bị trong khu vực đã được chọn chưa
   const allSelected = machinesInArea.every(machine => selectedMachines.some(selected => selected._id === machine._id));
 
   if (allSelected) {
-      // Nếu tất cả thiết bị đã được chọn, bỏ chọn các thiết bị trong khu vực
-      const updatedSelectedMachines = selectedMachines.filter(selected => !machinesInArea.some(machine => machine._id === selected._id));
-      setSelectedMachines(updatedSelectedMachines);
+    // Nếu tất cả thiết bị đã được chọn, bỏ chọn các thiết bị trong khu vực
+    const updatedSelectedMachines = selectedMachines.filter(selected => !machinesInArea.some(machine => machine._id === selected._id));
+    setSelectedMachines(updatedSelectedMachines);
   } else {
-      // Nếu chưa chọn hết, thêm tất cả thiết bị trong khu vực vào danh sách
-      const newSelectedMachines = [
-          ...selectedMachines,
-          ...machinesInArea.filter(machine => !selectedMachines.some(selected => selected._id === machine._id)) // Chỉ thêm các thiết bị chưa được chọn
-      ];
-      setSelectedMachines(newSelectedMachines);
+    // Nếu chưa chọn hết, thêm tất cả thiết bị trong khu vực vào danh sách
+    const newSelectedMachines = [
+      ...selectedMachines,
+      ...machinesInArea
+        .filter(machine => !selectedMachines.some(selected => selected._id === machine._id))
+        .map(machine => ({
+          ...machine,
+          tasks: getTasksForDevice(machine.deviceName) // Lấy danh sách nhiệm vụ cho từng thiết bị
+        })) // Chỉ thêm các thiết bị chưa được chọn và kèm theo nhiệm vụ
+    ];
+    setSelectedMachines(newSelectedMachines);
   }
 
   // Điều chỉnh trạng thái chọn thiết bị
   setIsSelecting(!allSelected);
 };
+
 
   // Handle machine click
 // Xử lý khi nhấp vào thiết bị
@@ -377,9 +384,7 @@ const handleCancelUpdate = () => {
           <Menu.Item key="delete" icon={<DeleteOutlined />}>
             Xóa nhiệm vụ
           </Menu.Item>
-          <Menu.Item key="add" icon={<PlusOutlined />}>
-            Thêm mới nhiệm vụ
-          </Menu.Item>
+         
         </Menu>
       } trigger={['click']}>
         <Button type="primary" icon={<SettingOutlined />} className="ml-2">

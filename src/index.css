@@ -2,18 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @keyframes blinkError {
     0%, 100% {
-      background-color: #fa2e0a; /* Red for Error */
+        background-color: #fa2e0a; /* Red for Error */
     }
     50% {
-      background-color: #fa592d; /* Lighter Red */
+        background-color: #fa592d; /* Lighter Red */
+    }
+}
+
+.animate-blinkError {
+    animation: blinkError 0.2s infinite;
+}
+
+@keyframes waveEffect {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+@keyframes callingBlink {
+    0%, 100% {
+      color: #0000ff; /* Xanh đậm cho nhấp nháy */
+    }
+    50% {
+      color: #00bfff; /* Xanh nhạt cho nhấp nháy */
     }
   }
   
-  .animate-blinkError {
-    animation: blinkError 0.2s infinite;
+  @keyframes waveEffect {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px); /* Dịch chuyển lên 4px */
+    }
   }
-   
- 
+  
+  .calling-effect {
+    animation: callingBlink 0.3s infinite, waveEffect 0.5s ease-in-out infinite;
+    
+  }

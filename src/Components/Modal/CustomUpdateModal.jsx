@@ -74,12 +74,29 @@ const handleSave = async () => {
           // Nếu nhiệm vụ đã có ID, dùng PUT để cập nhật
           await axios.put(`${apiUrl}/productiontask/${task.id}`, task);
           console.log('Updated Task:', task);
+          
         } else {
           // Nếu không có ID, dùng POST để tạo mới
           await axios.post(`${apiUrl}/productiontask`, task);
           console.log('Created New Task:', task);
         }
+        const statusMap = {
+          "Chạy": 1,
+          "Dừng": 3,
+          "Chờ": 2
+        };
+        const status = await statusMap[task.shifts[0].status] || 0;
+        console.log(selectedMachines[0].tbDeviceId)
+        const params = {
+          deviceId: selectedMachines[0].tbDeviceId,
+          controlKey: selectedMachines[0].controlKey,
+          value: status,
+        }
+        const rpcResponse = await axios.post(`${apiUrl}/machine-operations/call-rpc`, params);
+  
+        toast.success(rpcResponse.message)
       }
+      
      
       message.success('Kế hoạch đã được lưu hoặc cập nhật thành công!');
 
