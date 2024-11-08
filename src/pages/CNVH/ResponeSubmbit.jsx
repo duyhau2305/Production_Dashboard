@@ -17,21 +17,36 @@ const ResponeSubmit = () => {
   const [filteredReasons, setFilteredReasons] = useState([]);
   const [selectedReason, setSelectedReason] = useState(null);
   const [isResponseEnabled, setIsResponseEnabled] = useState(false);
-
+ 
   useEffect(() => {
+    if (!selectedIntervals || selectedIntervals.length === 0) return;
+  
+    // Kiểm tra trạng thái của interval đầu tiên trong danh sách
+    const intervalStatus = selectedIntervals[0].status;
+  
     axios
       .get(`${import.meta.env.VITE_API_BASE_URL}/issue`)
       .then((response) => {
-        
-        const reasons = response.data.filter(
-          (reason) =>
-            reason.deviceNames.includes(selectedMachine.deviceName) &&
-            reason.deviceStatus === 'DỪNG'
-        );
+        const reasons = response.data.filter((reason) => {
+          if (intervalStatus === 'Stop') {
+            return (
+              reason.deviceNames.includes(selectedMachine.deviceName) &&
+              reason.deviceStatus === 'DỪNG'
+            );
+          } else if (intervalStatus === 'Idle') {
+            return (
+              reason.deviceNames.includes(selectedMachine.deviceName) &&
+              reason.deviceStatus === 'CHỜ'
+            );
+          }
+          
+          return false;
+        });
         setFilteredReasons(reasons);
       })
       .catch(() => toast.error('Có lỗi xảy ra khi lấy dữ liệu.'));
-  }, [selectedMachine]);
+  }, [selectedMachine, selectedIntervals]);
+  
   
 
 
@@ -97,8 +112,7 @@ const ResponeSubmit = () => {
       toast.error('Có lỗi xảy ra khi gửi phản hồi.');
     }
   };
-
-  return (
+   return (
     <div className="">
       <div className="flex justify-between items-center bg-gradient-to-r from-blue-600 to-sky-500">
         <h1 className="text-5xl text-white font-bold py-8 flex-1 text-center">
@@ -112,26 +126,53 @@ const ResponeSubmit = () => {
         </h1>
       </div>
       <div className="flex justify-between items-center w-[93.5%]  ml-8">
-        <h1 className="text-4xl font-bold py-8 flex-1 text-center bg-white text-red-600 ">
-          DỪNG
-        </h1>
+      <h1
+        className={`text-4xl font-bold py-8 flex-1 text-center bg-white ${
+          selectedIntervals[0].status === 'Stop' ? 'text-red-600' : 'text-yellow-500'
+        }`}
+      >
+        {selectedIntervals[0].status === 'Stop' ? 'DỪNG' : 'CHỜ'}
+      </h1>
+
       </div>
      
       <div className="grid grid-cols-2 gap-4 p-8">
-        {filteredReasons.map((reason, index) => (
-          <button
-            key={index}
-            onClick={() => handleReasonClick(reason)}
-            className={`p-8 text-4xl font-bold ${
-              selectedReason === reason ? 'bg-red-400 text-white' : 'bg-gray-100'
-              
-            }` }
-            style={{ boxShadow: `inset 0px 5px 30px 5px rgba(255, 0, 0, 0.8)` }}
-          >
-            {reason.reasonName}
-          </button>
-        ))}
-      </div>
+  {filteredReasons.length > 0 ? (
+    filteredReasons.map((reason, index) => {
+      // Xác định kiểu box shadow và border dựa trên trạng thái của interval
+      const boxShadow =
+        selectedIntervals[0].status === 'Stop'
+          ? 'inset 0px 10px 40px 10px rgba(255, 0, 0, 0.8)' // Màu đỏ cho Stop
+          : selectedIntervals[0].status === 'Idle'
+          ? 'inset 0px 10px 40px 10px rgba(255, 255, 0, 0.8)' // Màu vàng cho Idle
+          : '';
+
+      const borderColor =
+        selectedIntervals[0].status === 'Stop'
+          ? 'border-red-600' // Màu đỏ cho Stop
+          : selectedIntervals[0].status === 'Idle'
+          ? 'border-yellow-500' // Màu vàng cho Idle
+          : '';
+
+      return (
+        <button
+          key={index}
+          onClick={() => handleReasonClick(reason)}
+          className={`p-8 text-4xl font-bold border-4 ${borderColor} ${
+            selectedReason === reason ? 'bg-red-400 text-white' : 'bg-gray-100'
+          }`}
+          style={{ boxShadow }}
+        >
+          {reason.reasonName}
+        </button>
+      );
+    })
+  ) : (
+    <p className="text-4xl text-center text-gray-500">
+      Máy này chưa nhập dữ liệu nguyên nhân cơ bản.
+    </p>
+  )}
+</div>
 
       <button
         onClick={handleResponse}

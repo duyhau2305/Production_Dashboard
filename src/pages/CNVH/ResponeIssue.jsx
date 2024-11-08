@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import InfoCard from '../../Components/MachineCard/InfoCard';
+import io from 'socket.io-client';
+import { message } from 'antd';
 import '../../index.css';
 import { FiChevronLeft } from 'react-icons/fi';
 import { IoMdClose } from "react-icons/io";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useDispatch, useSelector } from 'react-redux';
-import { setMachineData } from '../../redux/intervalSlice';
+import { setMachineData,startCallHelp, stopCallHelp } from '../../redux/intervalSlice';
 import moment from 'moment-timezone';
 
 
@@ -16,7 +18,28 @@ const ResponeIssue = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  
+  const [socket, setSocket] = useState(null); 
+  // useEffect(() => {
+    
+  //   const newSocket = io('http://192.168.10.186:5000', {
+  //     transports: ['websocket', 'polling'],
+  //   });
+    
+  //   setSocket(newSocket); 
+
+  //   newSocket.on('connect', () => {
+  //     console.log('Connected to server');
+  //   });
+    
+  //   newSocket.on('disconnect', () => {
+  //     console.log('Disconnected from server');
+  //   });
+
+  //   // Ngắt kết nối khi component bị unmount
+  //   return () => {
+  //     newSocket.disconnect();
+  //   };
+  // }, []);
 
   // Lấy dữ liệu từ Redux Store
   const { selectedDate, selectedMachine, declaredIntervals } = useSelector(
@@ -38,7 +61,6 @@ const ResponeIssue = () => {
     fetchDevices();
     
   }, []);
-
   const fetchAreas = async () => {
     try {
       const response = await axios.get(`${apiUrl}/areas`);
@@ -113,7 +135,7 @@ useEffect(() => {
         }
       } catch (error) {
         console.error('Error fetching telemetry data:', error);
-        toast.error('Có lỗi khi tải dữ liệu telemetry.');
+        message.error('Có lỗi khi tải dữ liệu telemetry.');
       } finally {
         setLoading(false); // Kết thúc tải
       }
@@ -146,29 +168,60 @@ useEffect(() => {
 
   const handleBackClick = () => navigate('/dashboard/mobile');
 
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
-
-  const handleOpenHelpTimerModal = () => setIsHelpTimerModalOpen(true);
-  const handleCloseHelpTimerModal = () => {
-    setIsHelpTimerModalOpen(false);
-    toast.success("Trợ giúp đã hoàn thành!");
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+    // Kết nối lại socket nếu cần
+    // if (socket && !socket.connected) {
+    //   socket.connect();
+    // }
   };
+    
 
+  const handleOpenHelpTimerModal = () => {
+    setIsHelpTimerModalOpen(true)
+    // if (socket && !socket.connected) {
+    //   socket.connect();
+    // }
+  };
   const handleCallHelp = (team) => {
-    toast.success(`Đã gọi Đội ${team} thành công!`);
+    // if (socket) {
+    //   // Phát sự kiện `call_help` để hiển thị trạng thái gọi
+    //   socket.emit('call_help', { department: team, deviceId: selectedMachine.deviceId });
+    //   message.success(`Đã gọi Đội ${team} thành công!`);
+    // }
+
     handleCloseModal();
     handleOpenHelpTimerModal();
   };
-  const handleCallQC = () => handleCallHelp('QC');
+
+  const handleCloseHelpTimerModal = () => {
+    // if (socket) {
+    //   // Phát sự kiện `cancel_call` để cập nhật trạng thái
+    //   socket.emit('cancel_call', { deviceId: selectedMachine.deviceId });
+    //   socket.disconnect(); // Ngắt kết nối sau khi xác nhận hoàn thành
+    // }
+    setIsHelpTimerModalOpen(false);
+    message.success("Trợ giúp đã hoàn thành!");
+  };
+
+  const handleCloseModal = () => {
+    if (socket) {
+      // Phát sự kiện `cancel_call` để cập nhật trạng thái khi đóng modal
+      // socket.emit('cancel_call', { deviceId: selectedMachine.deviceId });
+      // socket.disconnect(); // Ngắt kết nối socket khi modal đóng
+    }
+    setIsModalOpen(false);
+  };
+  
+  const handleCallQC = () => handleCallHelp('PQC');
   const handleCallMaintenance = () => handleCallHelp('Bảo Trì');
-  const handleCallTechnical = () => handleCallHelp('Đội kỹ thuật');
+  const handleCallTechnical = () => handleCallHelp('Kỹ thuật');
   const handleTimeClick = (interval, index) => {
     const isDeclared = isIntervalDeclared(interval); // Kiểm tra nếu khoảng thời gian đã khai báo
   
     // Nếu đã khai báo, hiển thị thông báo và không cho phép chọn
     if (isDeclared) {
-      toast.info('Khoảng thời gian này đã được khai báo!');
+        message.info('Khoảng thời gian này đã được khai báo!');
       return;
     }
   
@@ -179,7 +232,7 @@ useEffect(() => {
   
       // Nếu trạng thái không giống nhau, hiển thị thông báo và không cho phép chọn
       if (firstStatus !== interval.status) {
-        toast.warning('Chỉ có thể chọn các khoảng thời gian có cùng trạng thái!');
+        message.warning('Chỉ có thể chọn các khoảng thời gian có cùng trạng thái!');
         return;
       }
     }
@@ -200,7 +253,7 @@ useEffect(() => {
 
   const handleResponse = () => {
     if (!selectedMachine || selectedDiv.length === 0) {
-      toast.error('Vui lòng chọn thiết bị và ít nhất một khoảng thời gian.');
+      message.error('Vui lòng chọn thiết bị và ít nhất một khoảng thời gian.');
       return;
     }
   
@@ -255,7 +308,7 @@ useEffect(() => {
         setDeclaredDowntimes(response.data);
       } catch (error) {
         console.error('Error fetching declared downtimes:', error);
-        toast.error('Có lỗi xảy ra khi lấy dữ liệu downtime.');
+        message.error('Có lỗi xảy ra khi lấy dữ liệu downtime.');
       }
     };
   
@@ -477,7 +530,6 @@ useEffect(() => {
         </div>
       )}
 
-      <ToastContainer position="top-right" autoClose={1000} hideProgressBar />
     </div>
   );
 };

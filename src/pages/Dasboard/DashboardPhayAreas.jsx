@@ -91,9 +91,9 @@ const DashboardPhayAreas = () => {
   }, []);
 
   return (
-    <div className="w-full h-full mx-auto relative bg-[#35393c] p-6 overflow-hidden">
+    <div className="w-full h-screen  bg-[#35393c]  overflow-hidden">
       
-      {/* Dòng chứa tiêu đề và các nút */}
+      {/* Dòng chứa tiêu đề và các nút
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-white text-3xl text-center ml-10 flex-1">Nhà máy chuyển đổi số cơ khí Q.C.S</h2>
         <div className="flex items-center space-x-2">
@@ -108,9 +108,9 @@ const DashboardPhayAreas = () => {
             <option value="PHAY">Khu vực PHAY</option>
           </button>
         </div>
-      </div>
+      </div> */}
 
-      <div ref={cardsRef} className="overflow-auto [calc(100vh)]">
+      <div ref={cardsRef} >
         {loading ? (
           <div className="flex justify-center text-2xl items-center h-64">
             Loading...
@@ -120,12 +120,12 @@ const DashboardPhayAreas = () => {
         )}
       </div>
             {/* Nút bật/tắt fullscreen */}
-            <button
+            {/* <button
                     className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
                     onClick={toggleFullscreen}
                 >
                     {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
-                </button>
+                </button> */}
 
                 {/* Nút thu nhỏ màn hình */}
                 {isFullscreen && (

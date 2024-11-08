@@ -1,7 +1,6 @@
 // src/redux/intervalSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 
-// Lấy state từ LocalStorage
 const loadStateFromLocalStorage = () => {
   try {
     const serializedState = localStorage.getItem('intervalState');
@@ -15,10 +14,12 @@ const loadStateFromLocalStorage = () => {
 const initialState = loadStateFromLocalStorage() || {
   selectedDate: new Date().toISOString().split('T')[0],
   selectedMachine: null,
-  selectedIntervals: [], // Chứa các intervals đã chọn
-  declaredIntervals: {}, // Lưu các interval đã khai báo theo ngày
+  selectedIntervals: [],
+  declaredIntervals: {},
+  isCalling: false,
+  callingDepartment: '',
+  callingDeviceId: null,  // Lưu `deviceId` của máy đang gọi
 };
-
 
 const intervalSlice = createSlice({
   name: 'interval',
@@ -39,10 +40,19 @@ const intervalSlice = createSlice({
         state.declaredIntervals[date].push(intervalIndex);
       }
     },
+    startCallHelp: (state, action) => {
+      state.isCalling = true;
+      state.callingDepartment = action.payload.department;
+      state.callingDeviceId = action.payload.deviceId;  // Lưu `deviceId` của máy đang gọi
+    },
+    stopCallHelp: (state) => {
+      state.isCalling = false;
+      state.callingDepartment = '';
+      state.callingDeviceId = null;  // Xóa `deviceId` khi kết thúc cuộc gọi
+    },
   },
 });
 
-
-export const { setMachineData, declareInterval } = intervalSlice.actions;
+export const { setMachineData, declareInterval, startCallHelp, stopCallHelp } = intervalSlice.actions;
 
 export default intervalSlice.reducer;

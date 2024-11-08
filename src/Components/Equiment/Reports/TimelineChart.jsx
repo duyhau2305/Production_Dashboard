@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import moment from 'moment-timezone';
@@ -28,7 +29,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [showYAxis, setShowYAxis] = useState(true);
   const [showXAxis, setShowXAxis] = useState(true);
   const [viewMode, setViewMode] = useState('24h'); // State to track view mode
-  const [shift, setShift] = useState('morning'); // Default shift for shift-based view
+  const [shift, setShift] = useState(''); // Default shift for shift-based view
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -122,7 +123,6 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
 
     return gradientStops.join(', ');
   };
-
   const fetchData = async (startDate, endDate) => {
     setLoading(true);
     setError(null);
@@ -210,42 +210,36 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const percentX = ((event.clientX - rect.left) / rect.width) * 100;
 
-    let startHour;
-    let endHour;
+    let startMinute;
+    let endMinute;
 
-    if (shift === 'morning') {
-      startHour = 6;
-      endHour = 14;
-    } else if (shift === 'afternoon') {
-      startHour = 14;
-      endHour = 22;
-
+    if (shift === 'main') {
+      startMinute = 8 * 60;
+      endMinute = 17 * 60 + 20;
+    } else if (shift === 'sub1') {
+      startMinute = 17 * 60 + 20;
+      endMinute = 18 * 60 + 20; 
     } else {
-      startHour = hour[0];
-      endHour = hour[hour.length - 1];
+      startMinute = hour[0] * 60; 
+      endMinute = hour[hour.length - 1] * 60; 
     }
 
-    const totalHours = (percentX / 100) * (endHour - startHour); // Scale to 0-8 hours (for morning) or 0-8 hours (for afternoon)
-    const hours = Math.floor(totalHours) + startHour; // Convert to actual hour by adding startHour
-    const minutes = Math.round((totalHours - Math.floor(totalHours)) * 60);
-
-    // Calculate current time in minutes starting from the defined startHour
-    const currentTimeInMinutes = (hours * 60 + minutes);
-
-    console.log(data[index].intervals);
+    const totalMinutes = (percentX / 100) * (endMinute - startMinute);
+    const currentTimeInMinutes = Math.floor(totalMinutes) + startMinute;
     data[index].intervals.some(interval => {
       const startTimeInMinutes = timeToMinutes(interval.startTime);
       const endTimeInMinutes = timeToMinutes(interval.endTime);
 
       if (endTimeInMinutes > currentTimeInMinutes) {
         setTextToTooltip(`${interval.status} : ${interval.startTime}-${interval.endTime}`);
-        return true; // This stops the iteration
+        return true; // Dừng vòng lặp
       }
-      return false; // Continue iteration
+      return false; // Tiếp tục vòng lặp
     });
 
     setCurrentIndex(index);
     setPositionToTooltip(percentX);
+
   };
 
 
@@ -256,11 +250,22 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
 
   const handleSliderChange = (newValue) => {
     // setListGradient(data.map(value => createGradientStops(value.intervals, newValue[0] * 1440 / 100, newValue[1] * 1440 / 100)));
-    const newListHour = hourFil.filter((value, index) => {
-      if (index * 4.16 > newValue[0] && index * 4.16 < newValue[1]) {
-        return value;
-      }
-    });
+    let newListHour
+    if(shift == ''){
+       newListHour = hourFil.filter((value, index) => {
+        if (index * 4.16 > newValue[0] && index * 4.16 < newValue[1]) {
+          return value;
+        }
+      });
+    }else{
+      const hourFilSub = [8, 9, 10 , 11, 12, 13, 14 , 15, 16, 17]
+       newListHour = hourFilSub.filter((value, index) => {
+        if (index > newValue[0]/10 && index/10 < newValue[1]/10) {
+          return value;
+        }
+      });
+
+    }
     handleShift('', newListHour[0], newListHour[newListHour.length - 1], 'slider')
     setShift('slider')
     setHour(newListHour);
@@ -309,65 +314,64 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   }
   const handleShiftChange = ({ key }) => {
     setShift(key);
-    // Adjust displayed hours based on shift selection
+    // Điều chỉnh giờ hiển thị dựa trên lựa chọn ca làm việc
     switch (key) {
-      case 'morning':
-        setHour([6, 7, 8, 9, 10, 11, 12, 14]); // Morning shift hours
+      case 'main':
+        setHour(Array.from({ length: 10 }, (_, i) => 8 + i)); // Từ 8h đến 17h20 (8, 9, 10, 11, 12, 13, 14, 15, 16, 17)
         break;
-      case 'afternoon':
-        setHour([14, 15, 16, 17, 18, 19, 20, 21, 22]); // Afternoon shift hours
+      case 'sub1':
+        setHour([17, 18]); // Từ 17h20 đến 18h20
         break;
-      case 'evening':
-        setHour([20, 21, 22, 23, 0, 1, 2, 3, 4, 5]); // Evening shift hours
+      case 'sub2':
+        setHour([17, 18, 19]); // Từ 17h20 đến 19h20
         break;
       default:
-        setHour(Array.from({ length: 24 }, (_, i) => i)); // Default 24h mode
+        setHour(Array.from({ length: 24 }, (_, i) => i)); // Mặc định là 24h
     }
   };
-  const isTimeInRange = (time, startHour, endHour) => {
-    const [hours] = time.split(':').map(Number); // Lấy phần giờ từ thời gian
-    return hours >= startHour && hours < endHour;
-  };
 
-  const handleShift = (shift, startDateHour, endDateHour, type) => {
-    let startHour;
-    let endHour;
-    if (type != 'slider') {
-      if (shift === 'morning') {
-        startHour = 6;
-        endHour = 14;
-      } else if (shift === 'afternoon') {
-        startHour = 14;
-        endHour = 22;
+  const isTimeInRange = (time, startMinute, endMinute) => {
+    const [hours, minutes] = time.split(':').map(Number); // Lấy phần giờ và phút từ thời gian
+    const totalMinutes = hours * 60 + minutes; // Chuyển đổi thành phút
+    return totalMinutes >= startMinute && totalMinutes < endMinute; // So sánh với khoảng thời gian
+  };
+  const handleShift = async (shift, startDateHour, endDateHour, type) => {
+    let startMinute, endMinute;
+  
+    // Xác định khoảng thời gian (theo phút) dựa trên loại ca làm việc
+    if (type !== 'slider') {
+      if (shift === 'main') {
+        startMinute = 8 * 60; 
+        endMinute = 17 * 60 + 20; 
+      } else if (shift === 'sub1') {
+        startMinute = 17 * 60 + 20; 
+        endMinute = 18 * 60 + 20; 
+      } else if (shift === 'sub2') {
+        startMinute = 17 * 60 + 20; 
+        endMinute = 19 * 60 + 20; 
       }
     } else {
-      startHour = startDateHour;
-      endHour = endDateHour;
+      startMinute = startDateHour*60;
+      endMinute = endDateHour*60;
     }
-
-    console.log(startHour);
-
-    const filteredData = dataFilter.map(entry => {
+    const filteredData = await Promise.all(dataFilter.map(async (entry) => {
       const intervals = entry.intervals.filter(interval => {
-        const startInRange = isTimeInRange(interval.startTime, startHour, endHour);
-        const endInRange = isTimeInRange(interval.endTime, startHour, endHour);
+        const startInRange = isTimeInRange(interval.startTime, startMinute, endMinute);
+        const endInRange = isTimeInRange(interval.endTime, startMinute, endMinute);
         return startInRange && endInRange;
       });
-
+  
       const offlineIntervals = [];
-      const minutesInRange = endHour * 60 - startHour * 60; // Tổng số phút trong khoảng thời gian
-
-      for (let minute = 0; minute < minutesInRange; minute++) {
-        const currentMinute = moment().startOf('day').add(startHour * 60 + minute, 'minutes');
-        const currentStartTime = currentMinute.format('HH:mm');
-        const currentEndTime = currentMinute.clone().add(1, 'minute').format('HH:mm');
-
+      let currentMinute = startMinute;
+      while (currentMinute < endMinute) {
+        const currentStartTime = moment().startOf('day').add(currentMinute, 'minutes').format('HH:mm');
+        const currentEndTime = moment().startOf('day').add(currentMinute + 1, 'minutes').format('HH:mm');
         const isActive = intervals.some(interval => {
           const intervalStart = moment(interval.startTime, 'HH:mm');
           const intervalEnd = moment(interval.endTime, 'HH:mm');
-          return (intervalStart.isBefore(currentEndTime) && intervalEnd.isAfter(currentMinute)); // Kiểm tra xem có hoạt động không
+          return intervalStart.isBefore(currentEndTime) && intervalEnd.isAfter(currentStartTime);
         });
-
+  
         if (!isActive) {
           offlineIntervals.push({
             status: 'offline',
@@ -375,28 +379,27 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
             endTime: currentEndTime
           });
         }
+  
+        currentMinute++;
       }
-
-      // Kết hợp intervals với offlineIntervals
-      const allIntervals = [...intervals, ...offlineIntervals];
-
-      // Sort lại allIntervals theo startTime
-      allIntervals.sort((a, b) => {
-        const startA = moment(a.startTime, 'HH:mm');
-        const startB = moment(b.startTime, 'HH:mm');
-        return startA - startB; // Sắp xếp tăng dần theo startTime
+  
+      // Kết hợp intervals với offlineIntervals và sắp xếp
+      const allIntervals = [...intervals, ...offlineIntervals].sort((a, b) => {
+        return moment(a.startTime, 'HH:mm') - moment(b.startTime, 'HH:mm');
       });
-
+  
       return {
         date: entry.date,
-        intervals: allIntervals // Trả về intervals đã sắp xếp
+        intervals: allIntervals
       };
-    }).filter(entry => entry.intervals.length > 0); // Lọc ra những ngày có intervals phù hợp
-
-    console.log(filteredData);
+    }));
+    // Cập nhật state với dữ liệu đã lọc
     setData(filteredData);
-    setListGradient(filteredData.map(value => createGradientStops(value.intervals, startHour * 60, endHour * 60)));
+    setListGradient(filteredData.map(value => createGradientStops(value.intervals, startMinute, endMinute)));
   };
+  
+  
+
 
   const handleFilterByDay = () => {
     setHour(Array.from({ length: 24 }, (_, i) => i))
@@ -406,8 +409,10 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   }
   const shiftMenu = (
     <Menu onClick={handleShiftChange}>
-      <Menu.Item key="morning" onClick={() => handleShift("morning")}>Ca sáng</Menu.Item>
-      <Menu.Item key="afternoon" onClick={() => handleShift("afternoon")}>Ca chiều</Menu.Item>
+      <Menu.Item key="main" onClick={() => handleShift("main")}>Ca chính</Menu.Item>
+      <Menu.Item key="sub1" onClick={() => handleShift("sub1")}>Ca phụ 1h</Menu.Item>
+      <Menu.Item key="sub2" onClick={() => handleShift("sub2")}>Ca phụ 2h</Menu.Item>
+
     </Menu>
   );
   return (
@@ -420,7 +425,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         </Radio.Group>
         {viewMode === 'shift' && (
           <Dropdown overlay={shiftMenu} trigger={['click']}>
-            <Button>{shift === 'morning' ? 'Ca sáng' : shift === 'afternoon' ? 'Ca chiều' : 'Ca Sáng'}</Button>
+            <Button>{shift === 'main' ? 'Ca chính' : shift === 'sub1' ? 'Ca phụ 1h' : shift === 'sub2' ? 'Ca phụ 2h' : 'Ca chính'}</Button>
           </Dropdown>
         )}
       </div>
@@ -432,16 +437,15 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         <span className="arrow right-arrow">→</span>
       </div>
       <div style={{ paddingLeft: '33px', position: 'relative', height: '100%' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0', justifyContent: 'space-between' }}>
           {renderYAxisLabels}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', height: '99%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '99%', justifyContent: 'space-between' }}>
           {data.length > 0 ? data.map((entry, index) => (
             <div key={index} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave} style={{ overflow: 'hidden' }}>
               <div className="gradient-container gradient-section gradient" style={{
                 height: '50px',
                 background: `linear-gradient(to right, ${listGradient[index]})`,
-                marginTop: index > 0 ? '15px' : '0',
                 width: '100%',
                 position: 'relative',
                 zIndex: '1'
@@ -482,7 +486,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
           range={{ draggableTrack: true }}
           onChange={() => { }} // Optionally handle the change event if needed
           onAfterChange={handleSliderChange} // Call the function when the user releases the slider
-          defaultValue={[0, 100]} 
+          defaultValue={[0, 100]}
         />
       </div>
 

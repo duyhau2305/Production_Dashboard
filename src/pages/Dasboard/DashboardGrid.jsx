@@ -1,13 +1,14 @@
 import React from 'react';
-import MachineCard from '../../Components/MachineCard/MachineCard'; // Import MachineCard component
+import MachineCard from '../../Components/MachineCard/MachineCard';
 
-const DashboardGrid = ({ machines ,isFullscreen}) => {
-  console.log(machines)
+const DashboardGrid = ({ machines, isFullscreen }) => {
   return (
-    <div  className={`grid ${isFullscreen ? 'grid-cols-[repeat(auto-fit,minmax(200px,1fr))] h-full' : 'lg:grid-cols-4 2xl:grid-cols-5 md:grid-cols-3 sm:grid-cols-2'} gap-1`} >  
-      {machines.map((machines) => (
-        <div key={machines.id} className="flex flex-col h-full justify-center"> 
-          <MachineCard machine={machines} className="h-full" />
+    <div
+      className="grid lg:grid-cols-6 gap-1 h-screen sm:grid-cols-2" style={{ maxHeight: '100vh' }}
+    >
+      {machines.map((machine) => (
+        <div key={machine.id} className="flex flex-col justify-center">
+          <MachineCard machine={machine} className="h-full" />
         </div>
       ))}
     </div>
