@@ -20,7 +20,7 @@ const getSignalLightColors = (status) => {
   if (status === 'Off') return { red: 'white', yellow: 'white', green: 'white' };
   return { red: 'white', yellow: 'white', green: 'white' }; // Default case
 };
-const socket = io('http://192.168.10.186:5000/');
+const socket = io('http://192.168.10.186:5000');
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.currentStatus || '');
   const signalLightColors = getSignalLightColors(machine.productionTasks?.[0]?.shift?.status || '');
