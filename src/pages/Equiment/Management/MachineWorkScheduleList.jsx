@@ -328,38 +328,41 @@ const handleCancelUpdate = () => {
           <Spin size="large" /> {/* Spinner trong lúc loading */}
         </div>
       ) : (
-        <div>
+      <div >
           {/* Area Selection */}
-      <div className="flex justify-between items-center mb-4 ">
+      <div className="sticky -top-4 z-10 bg-gray-100 px-1 ">
+        
+        <div className="flex justify-between items-center mb-4 ">
        
-       <Button className="ml-2 bg-gray-400 text-white " onClick={handleOpenScheduleModal}>
-         Lịch Sản xuất
-       </Button>
+          <Button className="ml-2 bg-gray-400 text-white " onClick={handleOpenScheduleModal}>
+            Lịch Sản xuất
+          </Button>
        {/*nut giao nhiem vu den trang thai*/}
-        <MachineScheduleModal
-           open={isScheduleModalOpen}
-           onClose={handleCloseScheduleModal}
-           selectedMachines={selectedMachines}
-         />
-         <div className="flex items-center space-x-1">
-           {/* Select Dropdown for Area */}
-           <Select
-             value={selectedArea}
-             onChange={(value) => setSelectedArea(value)} // Update selected area
-             placeholder="Chọn khu vực"
-             style={{ width: 160 }}
-           >
-             {/* Area options */}
-             <Option key="all" value="all">Toàn nhà máy</Option>
-             {areas && areas.map((area) => (
-               // Đảm bảo key là giá trị duy nhất (ví dụ: id)
-               area._id ? (
-                 <Option key={area._id} value={area._id}>{area.areaName}</Option>
-               ) : null
-             ))}
-           </Select>
- 
- 
+        <div>
+        
+            </div>
+              <MachineScheduleModal
+                open={isScheduleModalOpen}
+                onClose={handleCloseScheduleModal}
+                selectedMachines={selectedMachines}
+              />
+              <div className="flex items-center space-x-1">
+                {/* Select Dropdown for Area */}
+                <Select
+                  value={selectedArea}
+                  onChange={(value) => setSelectedArea(value)} // Update selected area
+                  placeholder="Chọn khu vực"
+                  style={{ width: 160 }}
+                >
+                  {/* Area options */}
+                  <Option key="all" value="all">Toàn nhà máy</Option>
+                  {areas && areas.map((area) => (
+                    // Đảm bảo key là giá trị duy nhất (ví dụ: id)
+                    area._id ? (
+                      <Option key={area._id} value={area._id}>{area.areaName}</Option>
+                    ) : null
+                  ))}
+                </Select>
            {/* Toggle "Chọn Thiết Bị" or "Bỏ Chọn Thiết Bị" */}
            <Button onClick={toggleSelectDevicesByArea}>
              {isSelecting ?  'Bỏ Chọn Tất Cả' : 'Chọn Tất Cả'   }
@@ -370,21 +373,22 @@ const handleCancelUpdate = () => {
          defaultValue={dayjs()} // Đặt giá trị mặc định là hôm nay nếu chưa có gì được chọn
        />
  
-    <Dropdown overlay={
-        <Menu onClick={handleMenuClick}>
-          <Menu.Item key="update" icon={<EditOutlined />}>
-            Cập nhật nhiệm vụ
-          </Menu.Item>
-          <Menu.Item key="delete" icon={<DeleteOutlined />}>
-            Xóa nhiệm vụ
-          </Menu.Item>
-         
-        </Menu>
-      } trigger={['click']}>
-        <Button type="primary" icon={<SettingOutlined />} className="ml-2">
-          Điều chỉnh kế hoạch
-        </Button>
-      </Dropdown>
+          <Dropdown overlay={
+              <Menu onClick={handleMenuClick}>
+                <Menu.Item key="update" icon={<EditOutlined />}>
+                  Cập nhật nhiệm vụ
+                </Menu.Item>
+                <Menu.Item key="delete" icon={<DeleteOutlined />}>
+                  Xóa nhiệm vụ
+                </Menu.Item>
+              
+              </Menu>
+            } trigger={['click']}>
+              <Button type="primary" icon={<SettingOutlined />} className="ml-2">
+                Điều chỉnh kế hoạch
+              </Button>
+            </Dropdown></div>    
+      
 
       {/* Modal xác nhận cho cập nhật hoặc thêm mới */}
       <Modal
@@ -419,9 +423,10 @@ const handleCancelUpdate = () => {
            {/* Button to toggle CustomCalendar */}
            
          </div>
-       </div>
+      </div>
  
        {/* Machine List */}
+       <div className="mt-3">
        <div className="grid grid-cols-5 gap-1 sm:grid-cols-5 ">
             {filteredDevices.map((machine) => {
             const tasksForDevice = getTasksForDevice(machine.deviceName);
@@ -487,7 +492,11 @@ const handleCancelUpdate = () => {
            onClose={toggleCalendar} // Pass function to close the calendar
          />
        )}
-        </div>
+      
+      
+      </div> 
+       
+    </div>
       )}
       
     </>
