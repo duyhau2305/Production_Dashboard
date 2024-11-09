@@ -20,7 +20,8 @@ const getSignalLightColors = (status) => {
   if (status === 'Off') return { red: 'white', yellow: 'white', green: 'white' };
   return { red: 'white', yellow: 'white', green: 'white' }; // Default case
 };
-const socket = io('http://192.168.10.186:5000');
+const apiSocket = import.meta.env.VITE_API_BASE_SOCKET
+const socket = io(`${apiSocket}`);
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.currentStatus || '');
   const signalLightColors = getSignalLightColors(machine.productionTasks?.[0]?.shift?.status || '');
@@ -80,7 +81,12 @@ useEffect(() => {
     socket.off('cancel_call_status');
   };
 }, [machine.deviceId]);
-  
+  const percentDiff = machine?.percentDiff || '0%';
+  const numericPercentDiff = parseFloat(percentDiff);
+  const isIncrease = numericPercentDiff > 0;
+  const isDecrease = numericPercentDiff < 0;
+  const displayPercentDiff = Math.abs(numericPercentDiff).toFixed(2) + '%';
+  const arrowColor = headerColor === '#ff3333' ? 'text-white' : (isIncrease ? 'text-green-700' : 'text-red-500');
   
 
   return (
@@ -88,7 +94,7 @@ useEffect(() => {
       {/* 1. Header */}
       <div className=" flex flex-col items-center justify-center" style={{ backgroundColor: headerColor }}>
         <div className="text-[#122a35] bg-black-rgba w-full flex justify-center py-1"> 
-          <h2 className="text-5xl font-bold text-[#375BA9]">{machine.deviceId || ''}</h2>
+          <h2 className="text-4xl font-bold text-[#375BA9]">{machine.deviceId || ''}</h2>
         </div>
         {/* Machine Time and Status */}
         <div className="text-center mt-1"> 
@@ -99,10 +105,10 @@ useEffect(() => {
       </div>
 
       {/* 2. OEE Section */}
-      <div className="flex items-center ml-2 justify-center bg-transparent p-2 mb-6">
+      <div className="flex items-center ml-2 justify-center bg-transparent p-3 mb-5">
         {/* Signal Light */}
         <div className="flex flex-col justify-center items-center">
-        <div className="w-12 h-32 border border-black rounded-lg mr-2">
+        <div className="w-12 h-32 border border-black rounded-lg mr-4 -ml-3">
             <div style={{ backgroundColor: signalLightColors.red, height: '33.33%' }} className={`rounded-t-lg ${blinkClass} border-l-red-600 border-l-4 rounded-t-lg border-b-2 border-b-red-600`}></div>
             <div style={{ backgroundColor: signalLightColors.yellow, height: '33.33%' }} className="border-[#FCFC00] border-l-4 border-b-2"></div>
             <div style={{ backgroundColor: signalLightColors.green, height: '33.33%' }} className="border-[#13a113] border-l-4 rounded-b-lg"></div>
@@ -110,7 +116,7 @@ useEffect(() => {
         </div>
 
         {/* OEE Circular Progress */}
-        <div className="relative ml-2" style={{ width: 160, height: 160 }}>
+        <div className="relative ml-2" style={{ width: 165, height: 165 }}>
           <CircularProgressbar
             value={(machine.summaryStatus / 86400) *100}
             styles={buildStyles({
@@ -128,10 +134,15 @@ useEffect(() => {
         <span className="text-4xl font-bold ">
         {formatMinutesToTime(machine.summaryStatus || 0)} m
         </span>
-            <span className="text-sm font-bold mt-2">{machine?.percentDiff || ''} Hôm qua</span>
+          <span className=" font-bold  flex items-center">
+            {isIncrease && <FaArrowUp className={`${arrowColor} mr-1 text-xl `} />}
+            {isDecrease && <FaArrowDown className={`${arrowColor} mr-1 text-xl`} />}
+            <span className={`${arrowColor} mr-1 text-xl`}>{displayPercentDiff} </span>
+          </span>
+          <span className="text-md font-bold  flex items-center">Hôm qua</span>
           </div>
-          <div className={`absolute  font-bold text-xl -translate-x-1/6  ${isCalling ? 'calling-effect': ''}`} >
-              {displayInfo}
+          <div className={`absolute  font-bold text-[19px] -translate-x-1/6  ${isCalling ? 'calling-effect': ''}`} >
+              {displayInfo} 
           </div>
           
         </div>

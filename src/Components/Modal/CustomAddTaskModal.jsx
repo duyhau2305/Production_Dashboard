@@ -82,7 +82,7 @@ const handleSave = async () => {
       const refreshedTaskData = await fetchTaskData();
       setTaskData(refreshedTaskData);
       setIsLoading(false);
-      window.location.reload();
+      // window.location.reload();
       setSelectedDates([]);
       setSelectedMachines([]);
       

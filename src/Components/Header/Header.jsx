@@ -13,10 +13,10 @@ const Header = () => {
       <div className="flex items-center justify-center">
         {/* Hiển thị Logo */}
         <img src={logo} alt="Logo" className="w-[280px] h-auto object-contain lg:hidden " />
-        <h2 className="font-bold lg:hidden  lg:block sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-blue-500 dark:text-white">
+        <h2 className="font-bold lg:hidden  sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-blue-500 dark:text-white">
           DI.OEE
         </h2>
-        <h2 className="font-bold ml-72 lg:text-4xl sm:hidden lg:block sm:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-blue-500 dark:text-white">
+        <h2 className="font-bold ml-60 lg:text-3xl sm:hidden lg:block sm:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-blue-500 dark:text-white">
           NHÀ MÁY CHUYỂN ĐỔI SỐ CƠ KHÍ Q.C.S
         </h2>
       </div>

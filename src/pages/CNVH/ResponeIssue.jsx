@@ -18,10 +18,11 @@ const ResponeIssue = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const apiSocket = import.meta.env.VITE_API_BASE_SOCKET
   const [socket, setSocket] = useState(null); 
   useEffect(() => {
     
-    const newSocket = io('http://192.168.10.186:5000', {
+    const newSocket = io(`${apiSocket}`, {
       transports: ['websocket', 'polling'],
     });
     
@@ -494,7 +495,7 @@ useEffect(() => {
             </div>
             <div className="grid gap-4 mt-16 w-[80%] ml-20 items-center">
               <button onClick={handleCallQC} className="border-2 border-blue-600 text-blue-600 hover:bg-blue-500 text-5xl py-4 px-8 rounded-md">
-                Đội QC
+                Đội PQC
               </button>
               <button onClick={handleCallMaintenance} className="border-2 border-blue-600 text-blue-600 text-5xl py-4 px-8 rounded-md">
                 Đội Bảo Trì

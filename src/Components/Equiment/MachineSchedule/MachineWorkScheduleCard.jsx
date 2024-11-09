@@ -76,11 +76,11 @@ const MachineWorkScheduleCard = ({ machine, tasks, selectedDate }) => {
                               </div>
 
                               {/* Nhân viên */}
-                              <div className="bg-gray-100 rounded-md -mt-1">
+                              <div className="bg-gray-100 rounded-md -mt-1 ">
                                 <div className="mt-2">
                                   {shift.employeeName.length > 0 ? (
                                     shift.employeeName.map((employee, empIndex) => (
-                                      <div key={empIndex} className="text-sm ml-32">
+                                      <div key={empIndex} className="text-sm ">
                                         {typeof employee === 'string' ? employee : employee._id} {/* Hiển thị tên nhân viên hoặc _id */}
                                       </div>
                                     ))
@@ -101,7 +101,7 @@ const MachineWorkScheduleCard = ({ machine, tasks, selectedDate }) => {
           );
         })
       ) : (
-        <div className="shadow-md bg-gray-100 rounded-md w-full min-h-[300px] flex flex-col">
+        <div className="shadow-md bg-gray-100 rounded-md w-full min-h-[200px] flex flex-col">
           <div className="bg-gray-50 p-2 items-center justify-center flex">
             <h2 className="text-xl font-bold text-[#375BA9]">{machine.deviceName}</h2> {/* Hiển thị tên thiết bị */}
           </div>
@@ -117,7 +117,7 @@ const MachineWorkScheduleCard = ({ machine, tasks, selectedDate }) => {
             </div>
 
             {/* Thông báo không có nhiệm vụ */}
-            <div className="bg-white p-9 rounded-lg shadow-md mb-4 mr-2 mt-2 flex-grow">
+            <div className="bg-white p-7 rounded-lg shadow-md mb-4 mr-2 mt-2 flex-grow">
               <h3 className="font-semibold text-gray-700">Kế hoạch sản xuất</h3>
               <div className="text-gray-600 mt-4 p-4">Không có thông tin nhiệm vụ sản xuất cho ngày này</div>
             </div>

@@ -65,7 +65,7 @@ const Dashboard1 = () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
       setFilteredMachines(applyFilter(updatedMachines, selectedArea));
-    }, 70000); 
+    }, 10000); 
 
     return () => clearInterval(interval); // Xóa interval khi unmount
   }, [selectedArea]);

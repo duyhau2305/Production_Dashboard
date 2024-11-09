@@ -330,19 +330,13 @@ const handleCancelUpdate = () => {
       ) : (
         <div>
           {/* Area Selection */}
-      <div className="flex justify-between items-center mb-4 p-2">
+      <div className="flex justify-between items-center mb-4 ">
        
        <Button className="ml-2 bg-gray-400 text-white " onClick={handleOpenScheduleModal}>
          Lịch Sản xuất
        </Button>
        {/*nut giao nhiem vu den trang thai*/}
-       {selectedMachines.length > 0 && (
-             <Button type="primary" className="ml-2" onClick={handleUpdateClick}>
-               Giao nhiem vu
-             </Button>
-           )}
- 
-         <MachineScheduleModal
+        <MachineScheduleModal
            open={isScheduleModalOpen}
            onClose={handleCloseScheduleModal}
            selectedMachines={selectedMachines}
@@ -376,7 +370,7 @@ const handleCancelUpdate = () => {
          defaultValue={dayjs()} // Đặt giá trị mặc định là hôm nay nếu chưa có gì được chọn
        />
  
- <Dropdown overlay={
+    <Dropdown overlay={
         <Menu onClick={handleMenuClick}>
           <Menu.Item key="update" icon={<EditOutlined />}>
             Cập nhật nhiệm vụ
@@ -428,52 +422,52 @@ const handleCancelUpdate = () => {
        </div>
  
        {/* Machine List */}
-       <div className="grid grid-cols-3 gap-1 sm:grid-cols-4 ">
-    {filteredDevices.map((machine) => {
-     const tasksForDevice = getTasksForDevice(machine.deviceName);
-     
-     // Nếu máy có nhiệm vụ sản xuất, lặp qua từng nhiệm vụ và hiển thị card riêng cho mỗi nhiệm vụ
-     if (tasksForDevice.length > 0) {
-       return tasksForDevice.map((task, index) => (
-         <div
-           key={`${machine._id}-${index}`} // Đảm bảo key là duy nhất
-           onClick={() => handleMachineClick(machine)}
-           className={`relative cursor-pointer transition duration-300 ease-in-out h-full p-1
-             ${isSelecting && selectedMachines.some((m) => m.id === machine._id) ? 'border-2 border-blue-700 round-lg bg-gray-600 ' : ''}`}
-         >
-           <MachineWorkScheduleCard
-             machine={machine} // Truyền thông tin máy vào card
-             tasks={[task]} // Truyền nhiệm vụ vào thẻ
-             selectedDate={selectedDates[0]} // Truyền ngày đã chọn
-           />
-           {isSelecting && selectedMachines.some((m) => m.id === machine.id) && (
-             <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
-           )}
-         </div>
-       ));
-     } else {
-       // Nếu máy không có nhiệm vụ sản xuất, hiển thị thông báo "Không có thông tin sản xuất"
-       return (
-         <div
-           key={machine._id}
-           onClick={() => handleMachineClick(machine)}
-           className={`relative cursor-pointer transition duration-300 ease-in-out h-full p-1
-             ${isSelecting && selectedMachines.some((m) => m.id === machine._id) ? 'border-2 border-blue-700 round-lg bg-gray-600 ' : ''}`}
-         >
-           <MachineWorkScheduleCard
-             machine={machine} // Truyền thông tin máy vào card
-             tasks={[]} // Truyền một mảng rỗng nếu không có nhiệm vụ
-             selectedDate={selectedDates[0]} // Truyền ngày đã chọn
-           />
-           {isSelecting && selectedMachines.some((m) => m.id === machine.id) && (
-             <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
-           )}
-         
-         </div>
-       );
-     }
-   })}
- </div>
+       <div className="grid grid-cols-5 gap-1 sm:grid-cols-5 ">
+            {filteredDevices.map((machine) => {
+            const tasksForDevice = getTasksForDevice(machine.deviceName);
+            
+            // Nếu máy có nhiệm vụ sản xuất, lặp qua từng nhiệm vụ và hiển thị card riêng cho mỗi nhiệm vụ
+            if (tasksForDevice.length > 0) {
+              return tasksForDevice.map((task, index) => (
+                <div
+                  key={`${machine._id}-${index}`} // Đảm bảo key là duy nhất
+                  onClick={() => handleMachineClick(machine)}
+                  className={`relative cursor-pointer transition duration-300 ease-in-out h-full p-1
+                    ${isSelecting && selectedMachines.some((m) => m.id === machine._id) ? 'border-2 border-blue-700 round-lg bg-gray-600 ' : ''}`}
+                >
+                  <MachineWorkScheduleCard
+                    machine={machine} // Truyền thông tin máy vào card
+                    tasks={[task]} // Truyền nhiệm vụ vào thẻ
+                    selectedDate={selectedDates[0]} // Truyền ngày đã chọn
+                  />
+                  {isSelecting && selectedMachines.some((m) => m.id === machine.id) && (
+                    <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
+                  )}
+                </div>
+              ));
+            } else {
+              // Nếu máy không có nhiệm vụ sản xuất, hiển thị thông báo "Không có thông tin sản xuất"
+              return (
+                <div
+                  key={machine._id}
+                  onClick={() => handleMachineClick(machine)}
+                  className={`relative cursor-pointer transition duration-300 ease-in-out h-full p-1
+                    ${isSelecting && selectedMachines.some((m) => m.id === machine._id) ? 'border-2 border-blue-700 round-lg bg-gray-600 ' : ''}`}
+                >
+                  <MachineWorkScheduleCard
+                    machine={machine} // Truyền thông tin máy vào card
+                    tasks={[]} // Truyền một mảng rỗng nếu không có nhiệm vụ
+                    selectedDate={selectedDates[0]} // Truyền ngày đã chọn
+                  />
+                  {isSelecting && selectedMachines.some((m) => m.id === machine.id) && (
+                    <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
+                  )}
+                
+                </div>
+              );
+            }
+          })}
+        </div>
         {/* Custom Modal after Update Confirmation */}
        <CustomUpdateModal
          open={isCustomModalOpen}
