@@ -110,11 +110,9 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           )}
 
         </nav>
-      </div>
-
-      {/* Phần chứa các nút hỗ trợ và đăng xuất */}
-      <div className="p-4">
-        <nav className="flex flex-col space-y-4">
+        
+        <nav className="flex flex-col space-y-1">
+          
           {/* <Submenu
               title={<><FiHeadphones className="mr-4 dark:text-white hover:text-blue-500 text-lg text-gray-500" />{!isCollapsed && <span className="text-gray-500 hover:text-blue-500 dark:text-white">Hỗ trợ</span>}</>}
               items={supportItems}
@@ -138,7 +136,24 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             {!isCollapsed && <span className="text-gray-500 dark:text-white">Đăng xuất</span>}
           </button>
         </nav>
+  
       </div>
+      
+
+      {/* Phần chứa các nút hỗ trợ và đăng xuất */}
+      {!isCollapsed && <div className="p-3 ">
+        
+      <h3 className="text-white mb-2">Thông tin liên hệ</h3>
+          <hr />
+           <h4 className="text-white text-sm mt-4 ml-2 mb-3 items-center text-justify">CÔNG TY TNHH CÔNG NGHỆ DATA INSIGHT VIỆT NAM</h4>
+           <h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">-  Mã số thuế: 0110062048 </h4>
+           <h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">-  Phone: +84 916 84 86 38</h4>
+           <h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">- Email: info@datainsight.vn</h4>
+           <a href="https://datainsight.vn" target="_blank"><h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">- Website: datainsight.vn</h4></a>
+           <h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">- Adress: Số 6 Kim Đồng, phường Giáp Bát, Quận Hoàng Mai, Thành phố Hà Nội, Việt Nam</h4>
+       </div> }
+      
+     
     </div>
   );
 
