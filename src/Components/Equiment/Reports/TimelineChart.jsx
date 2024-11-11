@@ -1,4 +1,3 @@
-
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import moment from 'moment-timezone';
@@ -28,8 +27,8 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [scale, setScale] = useState('1');
   const [showYAxis, setShowYAxis] = useState(true);
   const [showXAxis, setShowXAxis] = useState(true);
-  const [viewMode, setViewMode] = useState('24h'); // State to track view mode
-  const [shift, setShift] = useState(''); // Default shift for shift-based view
+  const [viewMode, setViewMode] = useState('24h'); 
+  const [shift, setShift] = useState('');
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -131,31 +130,33 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       const end = new Date(endDate);
       const utcDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1, 16, 59, 59, 0));
       const isoDate = utcDate.toISOString();
-      const firstApiUrl = `${apiUrl}/machine-operations/${selectedMchine}/timeline?startTime=${startDate.toISOString()}&endTime=${new Date(new Date(endDate).setDate(new Date(endDate).getDate() + 1)).toISOString()}`;
+      const firstApiUrl = `${apiUrl}/machine-operations/${selectedMchine}/timeline?startTime=${start}&endTime=${new Date(endDate.setDate(endDate.getDate() + 1)).toISOString()}`;
       const secondApiUrl = `${apiUrl}/machine-operations/${selectedMchine}/summary-status?startTime=${start}&endTime=${isoDate}`;
       const [response, responsePercent] = await Promise.all([
         axios.get(firstApiUrl),
         axios.get(secondApiUrl)
       ]);
-      let totalRun = [];
-      let totalStop = [];
-      let totalIdle = [];
-      const dataReverse = responsePercent.data.data.reverse();
-      dataReverse.slice(0, response.data.data.length).forEach(entry => {
+      let totalRun = [], totalStop = [], totalIdle = [];
+      const dataReverse = responsePercent.data.data;
+      const formattedData = formatDateAndTime(response.data.data);
+      const allDates = response.data.data.map(entry => entry.date);
+      const filteredLogTimes = dataReverse.filter(entry => {
+        console.log(entry.logTime)
+        return allDates.includes(entry.logTime);
+      });
+      filteredLogTimes.slice(0, formattedData.length).forEach(entry => {
         totalRun.push(entry.runTime.toFixed(2));
         totalIdle.push(entry.idleTime.toFixed(2));
         totalStop.push(entry.stopTime.toFixed(2));
       });
-      setArrayPercentRun(totalRun)
-      setArrayPercentIdle(totalStop)
-      setArrayPercentStop(totalIdle)
-      const formattedData = formatDateAndTime(response.data.data).reverse();
       const processedData = formattedData.map(entry => {
         const gaps = findGaps(entry.intervals);
         return { ...entry, intervals: [...entry.intervals, ...gaps].sort((a, b) => moment(a.startTime, 'HH:mm') - moment(b.startTime, 'HH:mm')) };
       });
-
-      setDates(response.data.data.map(value => moment(value.date).format('DD/MM')));
+      setArrayPercentRun(totalRun);
+      setArrayPercentIdle(totalIdle);
+      setArrayPercentStop(totalStop);
+      setDates(formattedData.map(value => moment(value.date).format('DD/MM')));
       setListGradient(processedData.map(value => createGradientStops(value.intervals, 0, 1440)));
       setData(processedData);
       setDataFilter(processedData);
@@ -165,7 +166,8 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     } finally {
       setLoading(false);
     }
-  };
+};
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -331,14 +333,13 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   };
 
   const isTimeInRange = (time, startMinute, endMinute) => {
-    const [hours, minutes] = time.split(':').map(Number); // Lấy phần giờ và phút từ thời gian
-    const totalMinutes = hours * 60 + minutes; // Chuyển đổi thành phút
-    return totalMinutes >= startMinute && totalMinutes < endMinute; // So sánh với khoảng thời gian
+    const [hours, minutes] = time.split(':').map(Number); 
+    const totalMinutes = hours * 60 + minutes;
+    return totalMinutes >= startMinute && totalMinutes < endMinute; 
   };
   const handleShift = async (shift, startDateHour, endDateHour, type) => {
     let startMinute, endMinute;
   
-    // Xác định khoảng thời gian (theo phút) dựa trên loại ca làm việc
     if (type !== 'slider') {
       if (shift === 'main') {
         startMinute = 8 * 60; 
@@ -382,25 +383,17 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   
         currentMinute++;
       }
-  
-      // Kết hợp intervals với offlineIntervals và sắp xếp
       const allIntervals = [...intervals, ...offlineIntervals].sort((a, b) => {
         return moment(a.startTime, 'HH:mm') - moment(b.startTime, 'HH:mm');
       });
-  
       return {
         date: entry.date,
         intervals: allIntervals
       };
     }));
-    // Cập nhật state với dữ liệu đã lọc
     setData(filteredData);
     setListGradient(filteredData.map(value => createGradientStops(value.intervals, startMinute, endMinute)));
   };
-  
-  
-
-
   const handleFilterByDay = () => {
     setHour(Array.from({ length: 24 }, (_, i) => i))
     setData(dataFilter)

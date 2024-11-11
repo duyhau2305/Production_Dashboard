@@ -7,6 +7,7 @@ import ParetoTimeChart from '../../../../Components/Equiment/Analysis/ParetoTime
 import ParetoFrequencyChart from '../../../../Components/Equiment/Analysis/ParetoFrequencyChart'; 
 import Breadcrumb from '../../../../Components/Breadcrumb/Breadcrumb'; 
 import axios from 'axios';
+import TopTenChart from '../../../../Components/TopTenChart/TopTenChart';
 
 
 const { RangePicker } = DatePicker;
@@ -277,7 +278,9 @@ const aggregateDowntimeHoursByReason = (data) => {
           <div className="bg-white p-3 mt-2">
             <DeviceTable downtimeData={downtimeData} employeeData={employeeData} telemetryData={telemetryData} productionData={productionData} />
           </div>
-          
+          <div className="bg-white p-3 mt-2">
+            <TopTenChart></TopTenChart>
+          </div>
       </div>)}
       
       

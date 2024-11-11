@@ -239,7 +239,7 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '25px' }}>
         <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
           <div style={{ width: '15px', height: '15px', backgroundColor: '#00C8D7', marginRight: '5px' }}></div>
           <span>Chạy</span>
