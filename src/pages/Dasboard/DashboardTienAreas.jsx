@@ -48,7 +48,7 @@ const DashboardTienAreas = () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
       setFilteredMachines(applyFilter(updatedMachines));
-    }, 10000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, []);

@@ -128,18 +128,18 @@ useEffect(() => {
           />
 
           {/* OEE Value */}
-          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-center w-full h-full">
+          <div className="absolute mb-1 -top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-center w-full h-full">
           {/* <span className="text-xl font-bold ">
           Total Run </span> */}
-        <span className="text-4xl font-bold ">
-        {formatMinutesToTime(machine.summaryStatus || 0)} m
+        <span className="text-4xl font-bold mt-8  ">
+        {formatMinutesToTime(machine.summaryStatus || 0)}p
         </span>
-          <span className=" font-bold  flex items-center">
-            {isIncrease && <FaArrowUp className={`${arrowColor} mr-1 text-xl `} />}
-            {isDecrease && <FaArrowDown className={`${arrowColor} mr-1 text-xl`} />}
+          <span className=" font-bold  flex items-center mt-4">
+            {isIncrease && <FaArrowUp className={`${arrowColor} mr-1 text-xl  `} />}
+            {isDecrease && <FaArrowDown className={`${arrowColor} mr-1 text-xl `} />}
             <span className={`${arrowColor} mr-1 text-xl`}>{displayPercentDiff} </span>
           </span>
-          <span className="text-md font-bold  flex items-center">Hôm qua</span>
+          <span className="text-md font-bold  flex items-center ">Hôm qua</span>
           </div>
           <div className={`absolute  font-bold text-[19px] -translate-x-1/6  ${isCalling ? 'calling-effect': ''}`} >
               {displayInfo} 
@@ -154,7 +154,7 @@ useEffect(() => {
           {machine.productionTasks?.[0]?.shift?.startTime || ''} - {machine.productionTasks?.[0]?.shift?.endTime || ''}
         </span>
         
-        <span className="text-md font-bold ">Tỷ lệ chạy: {`${((machine.summaryStatus || 0) / 86400 * 100).toFixed(2)}%`}</span>
+        <span className="text-md font-bold ">Tỷ lệ chạy: {`${(machine.machinePercent || 0).toFixed(2)}%`}</span>
       </div>
     </div>
   );

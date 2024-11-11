@@ -16,24 +16,36 @@ const formatTimeToGMT7 = (isoString) => {
   const seconds = String(date.getSeconds()).padStart(2, '0');
   return `${formatDate(isoString)} ${hours}:${minutes}:${seconds}`;
 };
+const formatTimeToHours = (isoString) => {
+  const date = new Date(isoString);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+};
 
 const calculateDuration = (startTime, endTime) => {
-  const [startHour, startMinute] = startTime.split(':').map(Number);
-  const [endHour, endMinute] = endTime.split(':').map(Number);
+  // Convert ISO strings to Date objects
+  const startDate = new Date(startTime);
+  const endDate = new Date(endTime);
 
-  let startTotalMinutes = startHour * 60 + startMinute;
-  let endTotalMinutes = endHour * 60 + endMinute;
+  // Calculate the difference in milliseconds
+  let durationMs = endDate - startDate;
 
-  if (endTotalMinutes < startTotalMinutes) {
-    endTotalMinutes += 24 * 60;
+  // If end time is before start time (crosses midnight), add 24 hours in milliseconds
+  if (durationMs < 0) {
+    durationMs += 24 * 60 * 60 * 1000;
   }
 
-  const totalMinutes = endTotalMinutes - startTotalMinutes;
+  // Convert milliseconds to hours and minutes
+  const totalMinutes = Math.floor(durationMs / (1000 * 60));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
+  // Return formatted duration as "HH:mm"
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
+
 
 const getEmployeeName = (date, employeeData) => {
   const formattedDate = formatDate(date);
@@ -103,7 +115,27 @@ function calculateActualRunTime(shift) {
 
   return `${hours} giờ ${minutes} phút`;
 }
+const getDowntimeInfoByInterval = (startTime, endTime, downtimeData) => {
+  const matchingDowntime = downtimeData.find((item) =>
+    item.interval.some(
+      (downtimeInterval) =>
+        downtimeInterval.startTime === startTime && downtimeInterval.endTime === endTime
+    )
+  );
 
+  if (matchingDowntime) {
+    const matchedInterval = matchingDowntime.interval.find(
+      (downtimeInterval) =>
+        downtimeInterval.startTime === startTime && downtimeInterval.endTime === endTime
+    );
+    return {
+      reason: matchingDowntime.reasonName || 'De nghi khai bao',
+      reportedAt: formatTimeToGMT7(matchingDowntime.createdAt),
+    };
+  }
+
+  return { reason: 'Chưa khai báo', reportedAt: 'De nghi khai bao' };
+};
 function convertSecondsToTime(seconds) {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -149,14 +181,14 @@ const TableDowntime = ({ telemetryData, downtimeData, employeeData }) => (
     </thead>
     <tbody>
       {telemetryData.map((interval, index) => {
-        const { reason, reportedAt } = getDowntimeInfoById(interval._id, downtimeData);
-
+        const { reason, reportedAt } = getDowntimeInfoByInterval(interval.startTime, interval.endTime, downtimeData);
+        console.log(reason)
         return (
           <tr key={interval._id}>
             <td className="border px-4 py-2">{index + 1}</td>
             <td className="border px-4 py-2">{formatDate(interval.date)}</td>
-            <td className="border px-4 py-2">{interval.startTime}</td>
-            <td className="border px-4 py-2">{interval.endTime}</td>
+            <td className="border px-4 py-2">{formatTimeToHours(interval.startTime)}</td>
+            <td className="border px-4 py-2">{formatTimeToHours(interval.endTime)}</td>
             <td className="border px-4 py-2">
               {calculateDuration(interval.startTime, interval.endTime)}
             </td>

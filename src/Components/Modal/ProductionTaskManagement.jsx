@@ -187,6 +187,7 @@ const ProductionTaskManagement = ({ selectedMachines, setTaskData, taskData, sel
               placeholder="Chọn nhân viên"
               value={task.selectedEmployee}
               onChange={(value) => updateEmployee(index, value)}
+              onClick={() => addEmployee(index)}
               style={{ width: '100%', marginRight: '8px' }}
             >
               {employees.map((employee) => (
@@ -195,7 +196,7 @@ const ProductionTaskManagement = ({ selectedMachines, setTaskData, taskData, sel
                 </Select.Option>
               ))}
             </Select>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => addEmployee(index)} />
+           
           </div>
 
           {/* Hiển thị danh sách nhân viên đã chọn */}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaEdit, FaTrash, FaLock, FaEye, FaUnlock, FaPlus } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaLock, FaEye, FaUnlock, FaPlus ,FaEyeSlash} from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import DynamicFormModal from '../../Components/Modal/DynamicFormModal';
@@ -11,6 +11,9 @@ const UserManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordMap, setShowPasswordMap] = useState({});
+  const [plainTextPasswords, setPlainTextPasswords] = useState({});
+
   const currentRole = localStorage.getItem('role'); // Lấy role hiện tại từ localStorage
   const apiUrl = import.meta.env.VITE_API_BASE_URL
   // Fetch users from API
@@ -39,19 +42,25 @@ const UserManagement = () => {
   // Save user (Create or Update)
   const handleSave = async (data) => {
     try {
+      const { password, ...userData } = data;
+  
+      // Lưu mật khẩu dạng plaintext trong state
+      setPlainTextPasswords(prev => ({
+        ...prev,
+        [selectedUser ? selectedUser._id : 'new']: password,
+      }));
+  
       if (selectedUser) {
-        await axios.put(`${apiUrl}/users/${selectedUser._id}`, data, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
+        // Gửi bản sao không có mật khẩu plaintext để cập nhật
+        await axios.put(`${apiUrl}/users/${selectedUser._id}`, userData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
-        setUsers(users.map(user => (user._id === selectedUser._id ? { ...user, ...data } : user)));
+        setUsers(users.map(user => user._id === selectedUser._id ? { ...user, ...userData } : user));
         toast.success('User updated successfully');
       } else {
-        const response = await axios.post(`${apiUrl}/users`, data, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
+        // Gửi bản sao không có mật khẩu plaintext để tạo mới
+        const response = await axios.post(`${apiUrl}/users`, userData, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         setUsers([...users, response.data]);
         toast.success('User created successfully');
@@ -61,8 +70,9 @@ const UserManagement = () => {
     }
     setIsModalOpen(false);
     setSelectedUser(null);
-    setShowPassword(false);
   };
+  
+  
 
   // Delete user
   const handleDeleteUser = async (id) => {
@@ -99,8 +109,11 @@ const UserManagement = () => {
     setIsModalOpen(true);
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const togglePasswordVisibility = (userId) => {
+    setShowPasswordMap((prevMap) => ({
+      ...prevMap,
+      [userId]: !prevMap[userId], // Đảo ngược trạng thái hiện tại của user đó
+    }));
   };
 
   return (
@@ -120,6 +133,7 @@ const UserManagement = () => {
           <tr className="bg-gray-100 border-b border-gray-300">
             <th className="py-3 px-4 text-left">Mã Nhân Viên</th>
             <th className="py-3 px-4 text-left">Tên đăng nhập</th>
+            <th className="py-3 px-4 text-left">Mật khẩu</th>
             <th className="py-3 px-4 text-left">Tên</th>
             <th className="py-3 px-4 text-left">Email</th>
             <th className="py-3 px-4 text-left">Vai trò</th>
@@ -132,6 +146,18 @@ const UserManagement = () => {
               <tr key={user._id} className="border-b border-gray-200 hover:bg-gray-50 transition duration-150 ease-in-out">
                 <td className="py-3 px-4">{user.employeeId}</td>
                 <td className="py-3 px-4">{user.username}</td>
+                <td className="py-3 px-4 relative">
+                  {showPasswordMap[user._id] ? user.password : '*****'}
+                  <button
+                    type="button"
+                    onClick={() => togglePasswordVisibility(user._id)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
+                    title="Hiển thị/Mật khẩu"
+                  >
+                    {showPasswordMap[user._id] ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </td>
+
                 <td className="py-3 px-4">{user.name}</td>
                 <td className="py-3 px-4">{user.email}</td>
                 <td className="py-3 px-4">{user.role}</td>
@@ -198,7 +224,7 @@ const UserManagement = () => {
                 onClick={togglePasswordVisibility}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
               >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                {showPassword ?<FaEyeSlash /> : <FaEye />   }
               </button>
             )
           },
