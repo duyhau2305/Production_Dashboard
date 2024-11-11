@@ -21,6 +21,8 @@ import Profile  from '../pages/Profile/Profile'
 import { useAuth } from '../context/AuthContext';  // Import AuthContext
 import DashboardTienAreas from '../pages/Dasboard/DashboardTienAreas';
 import DashboardPhayAreas from '../pages/Dasboard/DashboardPhayAreas';
+import MachineActionAnalysis from '../pages/Equiment/Management/Analysis/MachineActionAnalysis';
+import OEEAnalysis from '../pages/Equiment/Management/Analysis/OEEAnalysis';
 
 // Protected Route component sử dụng AuthContext để xác thực
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -197,6 +199,26 @@ const AppRouter = () => {
 
         <Route
           path="/QCS/analysis"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <MachineActionAnalysis />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/QCS/analysis/oee"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <OEEAnalysis />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/QCS/analysis/downtime"
           element={
             <ProtectedRoute>
               <MainLayout>

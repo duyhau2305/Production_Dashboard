@@ -1,22 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import Breadcrumb from '../../../Components/Breadcrumb/Breadcrumb';
-import DowntimePieChart from '../../../Components/Equiment/Reports/DowntimePieChart';
-import TitleChart from '../../../Components/TitleChart/TitleChart';
 import { Select, DatePicker, Button, Dropdown, Menu } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import RuntimeTrendChart from '../../../Components/Equiment/Reports/RuntimeTrendChart';
-import RepairBarChart from '../../../Components/Equiment/Reports/RepairBarChart';
-import StackedBarChart from '../../../Components/Equiment/Reports/StackedBarChart';
-import TimelineChart from '../../../Components/Equiment/Reports/TimelineChart';
-import { datastatus } from '../../../data/status';
+
 import moment from 'moment';
+import StackedBarChart from '../../../../Components/Equiment/Reports/StackedBarChart';
+import TimelineChart from '../../../../Components/Equiment/Reports/TimelineChart';
+import { datastatus } from '../../../../data/status';
+import TitleChart from '../../../../Components/TitleChart/TitleChart';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-function DeviceReport() {
+function MachineActionAnalysis() {
   
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [selectedDate, setSelectedDate] = useState({
@@ -286,47 +283,6 @@ function DeviceReport() {
           </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-12 gap-2 p-1" >
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-3" ref={runtimePieChartRef}>
-          <TitleChart
-            title="Tỷ lệ máy chạy"
-            timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(runtimePieChartRef)}
-            onPrint={() => window.print()}
-          />
-          <div className="h-28">
-            <DowntimePieChart data={runtimeChartData} />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-3">
-          <TitleChart
-            title="Phân bố nhiệm vụ"
-            timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
-            onPrint={() => window.print()}
-          />
-          <div className="w-full h-full">
-            <DowntimePieChart data={taskChartData} />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-6" ref={runtimeTrendChartRef}>
-          <TitleChart
-            title="Xu hướng máy chạy"
-            timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
-            onPrint={() => window.print()}
-          />
-          <div className="w-full h-full mt-1 ml-2 p-2">
-            <RuntimeTrendChart data={runtimeTrendData} />
-          </div>
-        </div>
-
-        
-      </div>
-{/* 
       <div className="grid grid-cols-2 gap-2 p-1">
         <div className="bg-white p-3 col-span-1" ref={timelineChartRef}>
           <TitleChart
@@ -355,9 +311,9 @@ function DeviceReport() {
           />
           <StackedBarChart selectedDate={selectedDate} selectedMchine={selectedMachines} onDateChange={handleDateChange} />
         </div>
-      </div> */}
+      </div>
     </>
   );
 }
 
-export default DeviceReport;
+export default MachineActionAnalysis;
