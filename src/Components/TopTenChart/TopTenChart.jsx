@@ -2,29 +2,23 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Radio } from 'antd';
 
-// Đăng ký các thành phần của Chart.js
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const TopTenChart = () => {
-  const [chartData, setChartData] = useState(null);
+const TopTenChart = ({ machineSerial }) => {
   const [chartLabels, setChartLabels] = useState([]);
   const [chartValues, setChartValues] = useState([]);
   const [chartTitle, setChartTitle] = useState('Run Time');
-  const [chartColor, setChartColor] = useState('rgba(255, 0, 0, 0.6)'); // Màu đỏ mặc định
+  const [chartColor, setChartColor] = useState('#00C8D7');
+  const [selectedType, setSelectedType] = useState(1);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
-  function convertSecondsToTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-  
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-  }
 
   const fetchData = async (type) => {
     try {
-      const response = await axios.get(`${apiUrl}/machine-operations/top-ten?startTime=2024-11-01T17:00:00Z&endTime=2024-11-10T16:59:59Z&type=1`);
+      const response = await axios.get(
+        `${apiUrl}/machine-operations/top-ten?startTime=2024-11-01T17:00:00Z&endTime=2024-11-10T16:59:59Z&type=${type}&machineSerial=${machineSerial}`
+      );
       const data = response.data.data.data;
 
       const labels = data.map(record => record.machineSerialNum); 
@@ -33,7 +27,7 @@ const TopTenChart = () => {
       setChartLabels(labels);
       setChartValues(values);
       setChartTitle(type === 1 ? 'Run Time' : type === 2 ? 'Idle Time' : 'Stop Time');
-      setChartColor(type === 1 ? '#00C8D7' : type === 2 ? '#FFC107' : 'red');
+      setChartColor(type === 1 ? '#00C8D7' : type === 2 ? '#FFC107' : '#FF5733');
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -41,18 +35,17 @@ const TopTenChart = () => {
   };
 
   useEffect(() => {
-    fetchData(1); 
-  }, []);
+    fetchData(selectedType);
+  }, [machineSerial, selectedType]);
 
-  // Dữ liệu cho biểu đồ
   const data = {
     labels: chartLabels, 
     datasets: [
       {
         label: chartTitle,
         data: chartValues,
-        backgroundColor: chartColor, // Màu nền biểu đồ
-        borderColor: 'rgba(54, 162, 235, 1)', // Màu đường viền
+        backgroundColor: chartColor,
+        borderColor: 'rgba(54, 162, 235, 1)',
         borderWidth: 1
       }
     ]
@@ -60,14 +53,17 @@ const TopTenChart = () => {
 
   const options = {
     responsive: true,
-    indexAxis: 'y', // Biểu đồ ngang
+    indexAxis: 'y',
     scales: {
       x: { 
         beginAtZero: true,
         ticks: {
           stepSize: 10,
           callback: function(value) {
-            return convertSecondsToTime(value); // Chuyển giá trị sang giờ:phút:giây
+            const hours = Math.floor(value / 3600);
+            const minutes = Math.floor((value % 3600) / 60);
+            const secs = value % 60;
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
           }
         }
       },
@@ -86,47 +82,22 @@ const TopTenChart = () => {
   };
 
   return (
-    <div style={{ width: '80%', margin: '0 auto', paddingTop: '30px' }}>
-      <h1 style={styles.heading}>Top 10 {chartTitle}</h1>
-
-      <div style={styles.buttonContainer}>
-        <button style={styles.button} onClick={() => fetchData(1)}>Run Time</button>
-        <button style={styles.button} onClick={() => fetchData(2)}>Idle Time</button>
-        <button style={styles.button} onClick={() => fetchData(3)}>Stop Time</button>
+    <div style={{ width: '100%' }}>
+      <h2 className="text-center font-bold">{`Top 10 ${chartTitle} - ${machineSerial === 'P' ? 'Phay' : 'Tiện'}`}</h2>
+      <div className="text-center mb-4">
+        <Radio.Group
+          value={selectedType}
+          onChange={(e) => setSelectedType(e.target.value)}
+          buttonStyle="solid"
+        >
+          <Radio.Button value={1}>Run Time</Radio.Button>
+          <Radio.Button value={2}>Idle Time</Radio.Button>
+          <Radio.Button value={3}>Stop Time</Radio.Button>
+        </Radio.Group>
       </div>
-
-      {/* Biểu đồ cột */}
-      <div style={styles.chartContainer}>
-        {chartLabels.length > 0 && <Bar data={data} options={options} />}
-      </div>
+      {chartLabels.length > 0 && <Bar data={data} options={options} />}
     </div>
   );
-};
-
-const styles = {
-  heading: {
-    textAlign: 'center',
-    fontSize: '2rem',
-    color: '#333',
-    marginBottom: '20px',
-    fontWeight: 'bold',
-  },
-  buttonContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    marginBottom: '30px',
-  },
-  button: {
-    padding: '10px 20px',
-    fontSize: '16px',
-    margin: '0 10px',
-    cursor: 'pointer',
-    border: 'none',
-    borderRadius: '5px',
-    backgroundColor: '#36A2EB',
-    color: 'white',
-    transition: 'background-color 0.3s ease, transform 0.3s ease',
-  },
 };
 
 export default TopTenChart;

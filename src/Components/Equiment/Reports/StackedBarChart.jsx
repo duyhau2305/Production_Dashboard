@@ -44,7 +44,7 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       let totalIdle = [];
       let totalOfflinePercentArray = [];
 
-      const dataReverse = responsePercent.data.data.reverse();
+      const dataReverse = responsePercent.data.data;
       dataReverse.forEach(entry => {
         const runPercent = (entry.runTime / 86400) * 100;
         const idlePercent = (entry.idleTime / 86400) * 100;

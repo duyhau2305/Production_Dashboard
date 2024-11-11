@@ -276,11 +276,11 @@ const aggregateDowntimeHoursByReason = (data) => {
           </div>
 
           <div className="bg-white p-3 mt-2">
-            <DeviceTable downtimeData={downtimeData} employeeData={employeeData} telemetryData={telemetryData} productionData={productionData} />
+            <DeviceTable downtimeData={downtimeData} employeeData={employeeData} telemetryData={telemetryData} productionData={productionData} type={'downtimeAnalysis'}/>
           </div>
-          <div className="bg-white p-3 mt-2">
+          {/* <div className="bg-white p-3 mt-2">
             <TopTenChart></TopTenChart>
-          </div>
+          </div> */}
       </div>)}
       
       
