@@ -55,7 +55,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </div>
       </div>
 
-      <hr className="border-gray-400"/>
+      <hr />
 
       {/* Phần chứa các menu */}
       <div className="flex-grow flex flex-col space-y-4 p-2  mt-4 text-gray-500">
@@ -143,7 +143,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       {/* Phần chứa các nút hỗ trợ và đăng xuất */}
       {!isCollapsed && (
   <div className="p-4 text-white">
-    <h3 className="font-semibold  ml-1">Thông tin liên hệ</h3>
+    <h3 className="font-bold  ml-1">Thông tin liên hệ</h3>
     <hr className="border-gray-400" />
     <p className="text-sm font-bold ml-2 text-justify mt-2">CÔNG TY TNHH CÔNG NGHỆ DATA INSIGHT VIỆT NAM</p>
     <div className="mt-3 space-y-2 text-sm font-medium ml-8 text-justify">

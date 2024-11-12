@@ -23,7 +23,7 @@ const DashboardGrid = ({ machines, isFullscreen }) => {
       style={{ maxHeight: '100vh' }}
     >
       {sortedMachines.map((machine) => (
-        <div key={machine.id} className="flex flex-col justify-center">
+        <div className="flex flex-col justify-center">
           <MachineCard machine={machine} className="h-full" />
         </div>
       ))}

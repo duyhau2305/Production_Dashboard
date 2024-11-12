@@ -240,10 +240,10 @@ function DeviceReport() {
       fetchTaskChartData();
     }
   }, [selectedMachine, selectedDate]);
-  const menu = (
+  const menu = ( 
     <Menu>
-      <Menu.Item onClick={() => handleSelectCustomDays(3, '3 ngày')}>3 ngày</Menu.Item>
-      <Menu.Item onClick={() => handleSelectCustomDays(4, '4 ngày')}>4 ngày</Menu.Item>
+      <Menu.Item onClick={() => handleSelectCustomDays(4, '3 ngày')}>3 ngày</Menu.Item>
+      <Menu.Item onClick={() => handleSelectCustomDays(3, '4 ngày')}>4 ngày</Menu.Item>
       <Menu.Item onClick={() => handleSelectCustomDays(6, '1 tuần')}>1 tuần</Menu.Item>
     </Menu>
   );

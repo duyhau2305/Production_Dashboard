@@ -17,12 +17,16 @@ const TopTenChart = ({ machineSerial }) => {
   const fetchData = async (type) => {
     try {
       const response = await axios.get(
-        `${apiUrl}/machine-operations/top-ten?startTime=2024-11-01T17:00:00Z&endTime=2024-11-10T16:59:59Z&type=${type}&machineSerial=${machineSerial}`
-      );
-      const data = response.data.data.data;
+        `${apiUrl}/machine-operations/top-ten?startTime=2024-11-01T17:00:00Z&endTime=2024-11-10T16:59:59Z&machineSerial=${machineSerial}&type=${type}`
+      ); 
 
-      const labels = data.map(record => record.machineSerialNum); 
-      const values = data.map(record => record[type === 1 ? 'runTime' : type === 2 ? 'idleTime' : 'stopTime']);
+      const data = response.data.data.data;
+      const labels = data.map(record => record.machineSerialNum);
+      const values = data.map(record => 
+        type === 1 ? record.totalRunTime : 
+        type === 2 ? record.totalIdleTime : 
+        record.totalStopTime
+      );
       
       setChartLabels(labels);
       setChartValues(values);
@@ -37,6 +41,17 @@ const TopTenChart = ({ machineSerial }) => {
   useEffect(() => {
     fetchData(selectedType);
   }, [machineSerial, selectedType]);
+
+  const formatTimeForX = (value) => {
+    const hours = Math.floor(value / 3600);  // Only show hours for X-axis
+    return `${String(hours).padStart(2, '0')} giờ`;
+  };
+
+  const formatTimeForTooltip = (value) => {
+    const hours = Math.floor(value / 3600);
+    const minutes = Math.floor((value % 3600) / 60);
+    return `${String(hours).padStart(2, '0')} giờ ${String(minutes).padStart(2, '0')} phút`;
+  };
 
   const data = {
     labels: chartLabels, 
@@ -58,12 +73,9 @@ const TopTenChart = ({ machineSerial }) => {
       x: { 
         beginAtZero: true,
         ticks: {
-          stepSize: 10,
+          stepSize: 10,  // Adjust the step size based on your data range
           callback: function(value) {
-            const hours = Math.floor(value / 3600);
-            const minutes = Math.floor((value % 3600) / 60);
-            const secs = value % 60;
-            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            return formatTimeForX(value);  // Use the formatTimeForX function to display hours only
           }
         }
       },
@@ -76,7 +88,13 @@ const TopTenChart = ({ machineSerial }) => {
         enabled: true,
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         titleColor: 'white',
-        bodyColor: 'white'
+        bodyColor: 'white',
+        callbacks: {
+          label: function(tooltipItem) {
+            const formattedValue = formatTimeForTooltip(tooltipItem.raw);  // Format time for tooltip (hours and minutes)
+            return `${tooltipItem.label}: ${formattedValue}`;  // Custom tooltip format
+          }
+        }
       }
     }
   };
@@ -87,7 +105,7 @@ const TopTenChart = ({ machineSerial }) => {
       <div className="text-center mb-4">
         <Radio.Group
           value={selectedType}
-          onChange={(e) => setSelectedType(e.target.value)}
+          onChange={(e) => setSelectedType(e.target.value)} // Update selectedType
           buttonStyle="solid"
         >
           <Radio.Button value={1}>Run Time</Radio.Button>

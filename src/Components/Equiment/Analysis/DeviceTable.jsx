@@ -108,7 +108,7 @@ function calculateActualRunTime(shift) {
     const breakEnd = timeToMinutes(breakPeriod.endTime);
     return total + (breakEnd - breakStart);
   }, 0);
-
+  console.log(scheduledRunTime)
   const actualRunTimeInMinutes = scheduledRunTime - totalBreakTime;
   const hours = Math.floor(actualRunTimeInMinutes / 60);
   const minutes = actualRunTimeInMinutes % 60;
@@ -151,14 +151,14 @@ const DeviceTable = ({ downtimeData, telemetryData, productionData, employeeData
 
   return (
     <div>
-      {type === 'oeeAnalysis' ? (
-        productionData?.productionTasks?.length > 0 && (
-          <div>
-            <h3 className="mt-6 font-semibold">Thống kê sản xuất</h3>
-            <TableProduction productionData={productionData} />
-          </div>
-        )
-      ) : type === 'downtimeAnalysis' ? (
+      {type === 'oeeAnalysis' && productionData?.productionTasks?.length > 0 ? (
+        <div>
+          <h3 className="mt-6 font-semibold">Thống kê sản xuất</h3>
+          <TableProduction productionData={productionData} />
+        </div>
+      ) : null}
+
+      {type === 'downtimeAnalysis' && downtimeData && telemetryData && employeeData ? (
         <>
           <h3 className="mt-6 font-semibold">Thống kê Downtime</h3>
           <TableDowntime
@@ -167,7 +167,9 @@ const DeviceTable = ({ downtimeData, telemetryData, productionData, employeeData
             employeeData={employeeData}
           />
         </>
-      ) : (
+      ) : null}
+
+      {type !== 'oeeAnalysis' && type !== 'downtimeAnalysis' ? (
         <>
           <h3 className="mt-6 font-semibold">Thống kê Downtime</h3>
           <TableDowntime
@@ -182,7 +184,7 @@ const DeviceTable = ({ downtimeData, telemetryData, productionData, employeeData
             </div>
           )}
         </>
-      )}
+      ) : null}
     </div>
   );
 };
@@ -250,14 +252,14 @@ const TableProduction = ({ productionData }) => (
           <tr key={index}>
             <td className="border px-4 py-2">{index + 1}</td>
             <td className="border px-4 py-2">{new Date(item.date).toISOString().split('T')[0]}</td>
-            <td className="border px-4 py-2">{item.shift.startTime}</td>
-            <td className="border px-4 py-2">{item.shift.endTime}</td>
-            <td className="border px-4 py-2">{getTimeDifference(item.shift.startTime, item.shift.endTime)}</td>
+            <td className="border px-4 py-2">{item.shifts[0]?.shiftDetails?.startTime || ''}</td>
+            <td className="border px-4 py-2">{item.shifts[item.shifts.length-1]?.shiftDetails?.endTime || ''}</td>
+            <td className="border px-4 py-2">{getTimeDifference(item.shifts[0]?.shiftDetails?.startTime, item.shifts[item.shifts.length-1]?.shiftDetails?.endTime)}</td>
             <td className="border px-4 py-2">
               {calculateActualRunTime({
-                startTime: item.shift.startTime,
-                endTime: item.shift.endTime,
-                breakTime: item.shift.breakTime,
+                startTime: item.shifts[0]?.shiftDetails?.startTime,
+                endTime: item.shifts[item.shifts.length-1]?.shiftDetails?.endTime,
+                breakTime: item.shifts[0]?.shiftDetails?.breakTime,
               })}
             </td>
             <td className="border px-4 py-2">{convertSecondsToTime(summaryStatus.runTime || 0)}</td>
