@@ -6,17 +6,19 @@ export const imprtDataItems = [
     { name: 'Nguyên nhân dừng máy', link: '/importdata/issue' },
     { name: 'Ca làm việc', link: '/importdata/shift' },
     { name: 'Nhân viên', link: '/importdata/employee' },
-    
-    
+
+
 ];
 
 export const QCStItems = [
-    
+
     { name: 'Tỷ lệ máy chạy', link: '/QCS/availablerate' },
-    { name: 'Phân Tích', link: '/QCS/analysis' },
+    { name: 'Phân tích hoạt động máy', link: '/QCS/analysis' },
+    { name: 'Phân tích OEE/A', link: '/QCS/analysis/oee' },
+    { name: 'Phân tích dừng máy', link: '/QCS/analysis/downtime' },
     { name: 'Báo cáo ', link: '/QCS/reports' },
-   
-    
+
+
 ];
 
 
@@ -28,12 +30,12 @@ export const supportItems = [
 export const settingItems = [
     { name: 'Profile', link: '/settings/profile' },
     { name: ' Cấu hình', link: '/settings/configure' },
-  
+
 ];
 
 export const adminItems = [
     { name: 'Tài khoản', link: '/admin/userlist' },
-   
+
 ];
 export const logoutItems = [
     { name: 'Logout', link: '/logout' }

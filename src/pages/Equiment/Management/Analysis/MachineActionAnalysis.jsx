@@ -1,23 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import Breadcrumb from '../../../Components/Breadcrumb/Breadcrumb';
-import DowntimePieChart from '../../../Components/Equiment/Reports/DowntimePieChart';
-import TitleChart from '../../../Components/TitleChart/TitleChart';
 import { Select, DatePicker, Button, Dropdown, Menu } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
-import RuntimeTrendChart from '../../../Components/Equiment/Reports/RuntimeTrendChart';
-import RepairBarChart from '../../../Components/Equiment/Reports/RepairBarChart';
-import StackedBarChart from '../../../Components/Equiment/Reports/StackedBarChart';
-import TimelineChart from '../../../Components/Equiment/Reports/TimelineChart';
-import { datastatus } from '../../../data/status';
 import moment from 'moment';
+import StackedBarChart from '../../../../Components/Equiment/Reports/StackedBarChart';
+import TimelineChart from '../../../../Components/Equiment/Reports/TimelineChart';
+import { datastatus } from '../../../../data/status';
+import TitleChart from '../../../../Components/TitleChart/TitleChart';
+import DeviceTable from '../../../../Components/Equiment/Analysis/DeviceTable';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-function DeviceReport() {
-  
+function MachineActionAnalysis() {
+
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [selectedDate, setSelectedDate] = useState({
     startDate: moment().subtract(6, 'days').startOf('day').toDate(),
@@ -33,10 +30,12 @@ function DeviceReport() {
   const stackedBarChartRef = useRef(null);
   const [defaultValue, setDefaultValue] = useState([moment().subtract(5, 'days').startOf('day'),
   moment().endOf('day'),])
-  const [dateRangePickerValue, setDateRangePickerValue] = useState([
-    moment().subtract(5, 'days'),
+  const [dateRangePickerValue, setDateRangePickerValue] = useState([ 
+    moment().subtract(6, 'days'), 
     moment()
   ]);
+
+  console.log(selectedDate)
   const [runtimeChartData, setRuntimeChartData] = useState({
     labels: ['Run', 'Idle', 'Stop'],
     values: []
@@ -49,12 +48,14 @@ function DeviceReport() {
     labels: [],
     datasets: []
   });
+  const [productionData, setProductionData] = useState([]); // State for production data
+
   useEffect(() => {
     const fetchMachineOptions = async () => {
       try {
         const response = await axios.get(`${apiUrl}/machine-operations/machineOperations`);
         const machines = response.data.data;
-        const options = machines.map(machine => ({
+        const options = await machines.map(machine => ({
           value: machine._id,
           label: machine.deviceId || `Machine ${machine.id}`
         }));
@@ -66,13 +67,13 @@ function DeviceReport() {
       }
     };
     fetchMachineOptions();
-
   }, []);
 
   const handleDateChange = (dates) => {
     if (dates) {
       console.log(dates)
       setSelectedDate({ startDate: dates[0]?.toDate() || null, endDate: dates[1]?.toDate() || null });
+      setDateRangePickerValue(dates);  // Update state to reflect selected date range
     }
   };
 
@@ -81,13 +82,15 @@ function DeviceReport() {
     const startDate = moment().subtract(days, 'days').startOf('day').toDate();
     setSelectedDate({ startDate, endDate });
     setSelectedRangeLabel(label);
+    setDateRangePickerValue([moment(startDate), moment(endDate)]);  // Update the RangePicker value
   };
 
   const handlePrevWeek = () => {
     const startDate = moment(selectedDate.startDate).subtract(6, 'days').toDate();
-    const endDate = moment(selectedDate.endDate).subtract(6, 'days').toDate();
+    const endDate = moment(selectedDate.endDate).subtract(10, 'days').toDate();
     setSelectedDate({ startDate, endDate });
     setSelectedRangeLabel('1 tuần');
+    setDateRangePickerValue([moment(startDate), moment(endDate)]);  // Update the RangePicker value
   };
 
   const handleNextWeek = () => {
@@ -95,12 +98,14 @@ function DeviceReport() {
     const endDate = moment(selectedDate.endDate).add(6, 'days').toDate();
     setSelectedDate({ startDate, endDate });
     setSelectedRangeLabel('1 tuần');
+    setDateRangePickerValue([moment(startDate), moment(endDate)]);  // Update the RangePicker value
   };
+
   const disabledDate = (current) => {
-    // Allow the selected start date and next 7 days
-    if (!startDate) return false; // If no start date selected, allow all dates
+    if (!startDate) return false;
     return current < startDate || current > startDate.clone().add(6, 'days');
   };
+
   const handleFullscreen = (chartRef) => {
     if (chartRef.current) {
       if (!document.fullscreenElement) {
@@ -112,11 +117,12 @@ function DeviceReport() {
       }
     }
   };
+
   useEffect(() => {
     if (selectedMachines && selectedDate && selectedDate.startDate && selectedDate.endDate) {
       const startDate = selectedDate.startDate.toISOString();
       const endDate = selectedDate.endDate.toISOString();
-  
+
       const fetchRuntimeChartData = async () => {
         try {
           const response = await axios.get(`${apiUrl}/machine-operations/${selectedMachines}/summary-status`, {
@@ -125,26 +131,26 @@ function DeviceReport() {
               endTime: endDate
             }
           });
-  
+
           const data = response.data.data;
-  
+
           // Tính tổng thời gian idle, run, và stop cho biểu đồ pie chart
           const totalIdleTime = data.reduce((acc, entry) => acc + entry.idleTime, 0);
           const totalRunTime = data.reduce((acc, entry) => acc + entry.runTime, 0);
           const totalStopTime = data.reduce((acc, entry) => acc + entry.stopTime, 0);
-  
+
           setRuntimeChartData({
             labels: ['Run', 'Idle', 'Stop'],
             values: [totalRunTime, totalIdleTime, totalStopTime]
           });
-  
+
           // Hàm chuyển đổi giây thành định dạng hh:mm
           const formatSecondsToHHMM = (seconds) => {
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           };
-  
+
           // Chuẩn bị dữ liệu cho biểu đồ xu hướng thời gian runtime
           const trendLabels = [];
           const runtimeHours = data.map(entry => {
@@ -168,11 +174,32 @@ function DeviceReport() {
           console.error('Error fetching runtime chart data:', error);
         }
       };
-  
-      fetchRuntimeChartData();
+
+      fetchRuntimeChartData(); 
     }
   }, [selectedMachines, selectedDate]);
-  
+
+  const fetchProductionData = async () => {
+    if (selectedMachines && selectedDate.startDate && selectedDate.endDate) {
+      const startDateISO = moment(selectedDate.startDate).add(1, 'days').toISOString();
+      const endDateISO = moment(selectedDate.endDate).toISOString();
+      console.log(endDateISO)
+      try {
+        const response = await axios.get(`${apiUrl}/machine-operations/machine-analysis?startTime=${startDateISO}&endTime=${endDateISO}`);
+        const machineAnalysis =await response.data.data.find(value => value._id === selectedMachines);
+        console.log(machineAnalysis)
+        // const machineArraySlice =a machineAnalysis.slice(1)
+        setProductionData(machineAnalysis);   
+      } catch (error) {
+        console.error('Error fetching production data:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    console.log(selectedMachines)
+    fetchProductionData(); // Fetch production data when selected machine or date range changes
+  }, [selectedMachines, selectedDate]);
 
   useEffect(() => {
     if (selectedMachine && selectedDate && selectedDate.startDate && selectedDate.endDate) {
@@ -240,20 +267,23 @@ function DeviceReport() {
       fetchTaskChartData();
     }
   }, [selectedMachine, selectedDate]);
-  const menu = ( 
+
+  const menu = (
     <Menu>
-      <Menu.Item onClick={() => handleSelectCustomDays(4, '3 ngày')}>3 ngày</Menu.Item>
+      <Menu.Item onClick={() => handleSelectCustomDays(2, '3 ngày')}>3 ngày</Menu.Item>
       <Menu.Item onClick={() => handleSelectCustomDays(3, '4 ngày')}>4 ngày</Menu.Item>
       <Menu.Item onClick={() => handleSelectCustomDays(6, '1 tuần')}>1 tuần</Menu.Item>
     </Menu>
   );
-  const handleOpen =()=> {
+
+  const handleOpen = () => {
     setDateRangePickerValue('')
   }
+
   const handleDateChangeChoose = (dates) => {
     setStartDate(dates[0])
-    // setSelectedDate(dates);
   };
+
   return (
     <>
       <div className="flex justify-end items-center mb-4">
@@ -271,7 +301,7 @@ function DeviceReport() {
             ))}
           </Select>
           <RangePicker
-            value={dateRangePickerValue} 
+            value={dateRangePickerValue} // This will now reflect the selected date range
             onChange={handleDateChange}
             onOpenChange={handleOpen}
             disabledDate={disabledDate}
@@ -286,47 +316,6 @@ function DeviceReport() {
           </div>
         </div>
       </div>
-
-      <div className="grid grid-cols-12 gap-2 p-1" >
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-3" ref={runtimePieChartRef}>
-          <TitleChart
-            title="Tỷ lệ máy chạy"
-            timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(runtimePieChartRef)}
-            onPrint={() => window.print()}
-          />
-          <div className="h-28">
-            <DowntimePieChart data={runtimeChartData} />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-3">
-          <TitleChart
-            title="Phân bố nhiệm vụ"
-            timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
-            onPrint={() => window.print()}
-          />
-          <div className="w-full h-full">
-            <DowntimePieChart data={taskChartData} />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-4 shadow-md col-span-6" ref={runtimeTrendChartRef}>
-          <TitleChart
-            title="Xu hướng máy chạy"
-            timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(runtimeTrendChartRef)}
-            onPrint={() => window.print()}
-          />
-          <div className="w-full h-full mt-1 ml-2 p-2">
-            <RuntimeTrendChart data={runtimeTrendData} />
-          </div>
-        </div>
-
-        
-      </div>
-{/* 
       <div className="grid grid-cols-2 gap-2 p-1">
         <div className="bg-white p-3 col-span-1" ref={timelineChartRef}>
           <TitleChart
@@ -355,9 +344,13 @@ function DeviceReport() {
           />
           <StackedBarChart selectedDate={selectedDate} selectedMchine={selectedMachines} onDateChange={handleDateChange} />
         </div>
-      </div> */}
+        
+      </div>
+      <div className="">
+          <DeviceTable downtimeData={[]} employeeData={[]} telemetryData={[]} productionData={productionData} type={'oeeAnalysis'} />
+        </div>
     </>
   );
 }
 
-export default DeviceReport;
+export default MachineActionAnalysis;
