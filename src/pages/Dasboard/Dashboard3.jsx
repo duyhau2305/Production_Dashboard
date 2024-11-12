@@ -3,8 +3,9 @@ import { AiOutlineFullscreen, AiOutlineFullscreenExit } from 'react-icons/ai';
 import DashboardGrid from './DashboardGrid';
 import axios from 'axios';
 import moment from 'moment';
+import DashboardGrid3 from './DashboardGrid3';
 
-const Dashboard1 = () => {
+const Dashboard3 = () => {
   const [machines, setMachines] = useState([]);
   const [filteredMachines, setFilteredMachines] = useState([]);
   const [areas, setAreas] = useState([]);
@@ -65,7 +66,7 @@ const Dashboard1 = () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
       setFilteredMachines(applyFilter(updatedMachines, selectedArea));
-    }, 3000); 
+    }, 3000000); 
 
     return () => clearInterval(interval); // Xóa interval khi unmount
   }, [selectedArea]);
@@ -114,53 +115,21 @@ const toggleFullscreen = () => {
 
 
   return (
-    <div className="w-full h-full relative bg-gray-100 p-6 overflow-">
-      <div className="flex justify-end items-center mb-4 px-1">
-        <div className="relative flex justify-end items-center space-x-2">
-          <button className="bg-white border border-gray-300 rounded-lg py-2 px-4 leading-tight text-gray-800">
-            Tổng số máy chạy: {filteredMachines.filter(m => m.currentStatus === 'Run').length}/{filteredMachines.length} máy
-          </button>
-          <select
-            value={selectedArea}
-            onChange={handleAreaChange}
-            className="appearance-none bg-white border border-gray-300 rounded-lg py-2 px-8 leading-tight"
-          >
-            <option value="All Areas">Tất cả khu vực</option>
-            <option value="PHAY">Khu vực Phay</option>
-            <option value="TIEN">Khu vực Tiện</option>
-           
-          </select>
-        </div>
-      </div>
-
+    <div className="w-full h-screen relative overflow-hidden ">
       <div ref={cardsRef} className="">
         {loading ? (
-          <div className="flex justify-center text-2xl items-center h-64">
+          <div className="flex justify-center text-2xl items-center h-full">
             Loading...
           </div>
         ) : (
-          <DashboardGrid machines={filteredMachines} />
+         <div
+         >  <DashboardGrid3 machines={filteredMachines} /> </div>
+         
         )}
       </div>
-      {/* Nút bật/tắt fullscreen */}
-      <button
-              className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
-              onClick={toggleFullscreen}
-            >
-              {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
-            </button>
-
-            {/* Nút thu nhỏ màn hình */}
-            {isFullscreen && (
-              <button
-                className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
-                onClick={toggleFullscreen} // Sử dụng lại hàm toggleFullscreen để thoát chế độ toàn màn hình
-              >
-                <span className="text-white">&#8722;</span> {/* Dấu trừ để thu nhỏ */}
-              </button>
-            )}    
-          </div>
+     
+    </div>
   );
 };
 
-export default Dashboard1;
+export default Dashboard3;

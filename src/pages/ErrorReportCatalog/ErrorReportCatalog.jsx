@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrash } from 'react-icons/fa';
-import { Modal, Form, Input, Button ,Select,Checkbox,Divider} from 'antd';  // Import các thành phần cần thiết từ Ant Design
+import { Modal, Form, Input, Button ,Select,Checkbox,Divider, message} from 'antd';  // Import các thành phần cần thiết từ Ant Design
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import SearchButton from '../../Components/Button/SearchButton';
@@ -29,7 +29,7 @@ const ErrorReportCatalog = () => {
       const response = await axios.get(`${apiUrl}/issue`);
       setErrorReports(response.data);
     } catch (error) {
-      toast.error('Lỗi khi tải nguyên nhân');
+      message.error('Lỗi khi tải nguyên nhân');
     }
   };
 
@@ -47,18 +47,18 @@ const ErrorReportCatalog = () => {
       if (selectedReport) {
         // Cập nhật issue
         await axios.put(`${apiUrl}/issue/${selectedReport._id}`, values);
-        toast.success('Cập nhật nguyên nhân  thành công!');
+        message.success('Cập nhật nguyên nhân  thành công!');
       } else {
         // Thêm mới issue
         await axios.post(`${apiUrl}/issue`, values);
-        toast.success('Thêm mới nguyên nhân  thành công!');
+        message.success('Thêm mới nguyên nhân  thành công!');
       }
       fetchErrorReports();  // Tải lại dữ liệu sau khi thêm/cập nhật
       setIsModalOpen(false);
       setSelectedReport(null);
       form.resetFields(); // Reset form sau khi lưu
     } catch (error) {
-      toast.error('Lỗi khi lưu nguyên nhân');
+      message.error('Lỗi khi lưu nguyên nhân');
     }
   };
   const openDeleteModal = (error) => {
@@ -70,11 +70,11 @@ const ErrorReportCatalog = () => {
   const handleDelete = async (id) => {
     try {
       await axios.delete(`${apiUrl}/issue/${errorToDelete._id}`);
-      toast.success('Xóa nguyên nhân thành công!');
+      message.success('Xóa nguyên nhân thành công!');
       fetchErrorReports();  // Tải lại dữ liệu sau khi xóa
       setIsDeleteModalOpen(false);
     } catch (error) {
-      toast.error('Lỗi khi xóa nguyên nhân');
+      message.error('Lỗi khi xóa nguyên nhân');
     }
   };
   const handleImport = (file) => {
@@ -97,75 +97,46 @@ const ErrorReportCatalog = () => {
   
         // Chuyển đổi dữ liệu từ Excel sang định dạng cần thiết
         const formattedData = jsonData.map((item) => {
-          const breakTimeRanges = item['Thời Gian Nghỉ Ngơi']
-            ? item['Thời Gian Nghỉ Ngơi'].split(',').map((range) => {
-                const [start, end] = range.split('-').map((t) => t.trim());
-                return {
-                  startTime: moment(start, ['H:mm', 'HH:mm'], true).isValid()
-                    ? start
-                    : convertExcelTimeToHHmm(parseFloat(start)),
-                  endTime: moment(end, ['H:mm', 'HH:mm'], true).isValid()
-                    ? end
-                    : convertExcelTimeToHHmm(parseFloat(end)),
-                };
-              })
-            : [];
-  
-          return {
-            shiftCode: item['Mã Ca Làm Việc'] || '',
-            shiftName: item['Tên Ca Làm Việc'] || '',
-            startTime: moment(item['Thời Gian Vào Ca'], ['H:mm', 'HH:mm'], true).isValid()
-              ? moment(item['Thời Gian Vào Ca'], 'HH:mm').format('HH:mm')
-              : convertExcelTimeToHHmm(parseFloat(item['Thời Gian Vào Ca'])),
-            endTime: moment(item['Thời Gian Tan Ca'], ['H:mm', 'HH:mm'], true).isValid()
-              ? moment(item['Thời Gian Tan Ca'], 'HH:mm').format('HH:mm')
-              : convertExcelTimeToHHmm(parseFloat(item['Thời Gian Tan Ca'])),
-            breakTime: breakTimeRanges,
+            return {
+              reasonCode: item['Mã nguyên nhân dừng máy'] || '',
+              reasonName: item['Tên nguyên nhân dừng máy'] || '',
+              deviceStatus: item['Trạng thái thiết bị'] || '',
+              deviceNames: item['Thiết bị']
           };
         });
   
         console.log('Imported Data:', formattedData); // Kiểm tra dữ liệu đã nhập
-  
-        // Kiểm tra dữ liệu hợp lệ
-        const validData = formattedData.filter(
-          (shift) => shift.startTime !== null && shift.endTime !== null
-        );
-  
-        if (validData.length === 0) {
-          toast.error('Không có dữ liệu hợp lệ để thêm.');
-          return;
-        }
-  
+           
         // Gửi dữ liệu hợp lệ lên API
-        const promises = validData.map(async (shift) => {
+        const promises = formattedData.map(async (issue) => {
           try {
-            const response = await axios.post(`${apiUrl}/workShifts`, shift);
+            const response = await axios.post(`${apiUrl}/issue`, issue);
             return response.data;
           } catch (error) {
             console.error('Error saving shift:', error);
-            toast.error(`Lỗi khi lưu ca làm việc: ${error.message}`);
+            message.error(`Lỗi khi lưu ca làm việc: ${error.message}`);
             return null;
           }
         });
   
         const results = await Promise.all(promises);
-        const addedShifts = results.filter((shift) => shift !== null);
+        const addedIssue = results.filter((issue) => issue !== null);
   
-        if (addedShifts.length) {
-          setWorkShifts((prevShifts) => [...prevShifts, ...addedShifts]);
-          toast.success('Thêm ca làm việc thành công!');
+        if (addedIssue.length) {
+          setWorkShifts((prevIssue) => [...prevIssue, ...addedIssue]);
+          message.success('Thêm nguyên nhân thành công!');
         } else {
-          toast.info('Không có ca làm việc nào được thêm.');
+          message.info('Không có nguyên nhân nào được thêm.');
         }
       } catch (error) {
         console.error('Error reading file:', error);
-        toast.error('Lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng.');
+        message.error('Lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng hoặc đã tồn tại mã nguyên nhân.');
       }
     };
   
     reader.onerror = (error) => {
       console.error('File reading error:', error);
-      toast.error('Lỗi khi đọc file. Vui lòng thử lại.');
+      message.error('Lỗi khi đọc file. Vui lòng thử lại.');
     };
   
     reader.readAsArrayBuffer(file);
@@ -205,30 +176,40 @@ const ErrorReportCatalog = () => {
       const response = await axios.get(`${apiUrl}/device`);
       setDeviceSuggestions(response.data);
     } catch (error) {
-      toast.error('Lỗi khi tải danh sách thiết bị');
+      message.error('Lỗi khi tải danh sách thiết bị');
     }
   };
 
   // Hàm xử lý khi chọn toàn bộ thiết bị
-  const handleSelectAll = (checked) => {
-    if (checked) {
-      const allDeviceNames = deviceSuggestions.map((device) => device.deviceName);
-      setSelectedDevices(allDeviceNames);
-    } else {
-      setSelectedDevices([]);
-    }
-  };
+ // Hàm xử lý khi chọn toàn bộ thiết bị
+const handleSelectAll = (checked) => {
+  if (checked) {
+    // Set tất cả tên thiết bị vào state selectedDevices
+    const allDeviceNames = deviceSuggestions.map((device) => device.deviceName);
+    setSelectedDevices(allDeviceNames);
+    form.setFieldsValue({ deviceNames: allDeviceNames }); // Cập nhật giá trị trong form
+  } else {
+    // Bỏ chọn toàn bộ thiết bị
+    setSelectedDevices([]);
+    form.setFieldsValue({ deviceNames: [] }); // Cập nhật giá trị trong form
+  }
+};
+
 
   // Hàm xử lý khi chọn theo khu vực
-  const handleSelectByArea = (area) => {
-    const areaDevices = deviceSuggestions
-      .filter((device) => device.area === area)
-      .map((device) => device.deviceName);
-    setSelectedDevices((prevDevices) => [...new Set([...prevDevices, ...areaDevices])]);
-  };
+  // Hàm xử lý khi chọn theo khu vực
+  // Hàm xử lý khi chọn theo khu vực
+const handleSelectByArea = (area) => {
+  // Lấy tất cả thiết bị thuộc khu vực được chọn
+  const areaDevices = deviceSuggestions
+    .filter((device) => device.areaName === area)  // Sử dụng areaName để lọc thiết bị
+    .map((device) => device.deviceName);
 
-  
-
+  // Cập nhật danh sách thiết bị đã chọn (không trùng lặp)
+  const updatedDevices = [...new Set([...selectedDevices, ...areaDevices])];
+  setSelectedDevices(updatedDevices);
+  form.setFieldsValue({ deviceNames: updatedDevices }); // Cập nhật giá trị trong form
+};
   return (
     <div className="p-4 bg-white shadow-md rounded-md">
       <Breadcrumb />
@@ -336,39 +317,45 @@ const ErrorReportCatalog = () => {
             name="deviceNames"
             rules={[{ required: true, message: 'Thiết Bị là bắt buộc' }]}
           >
-             <Select
-        mode="multiple"
-        placeholder="Chọn thiết bị"
-        allowClear
-        value={selectedDevices}
-        onChange={(values) => setSelectedDevices(values)}
-        dropdownRender={(menu) => (
-          <>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px' }}>
-              <Checkbox onChange={(e) => handleSelectAll(e.target.checked)}>Chọn toàn bộ</Checkbox>
-              <Select
-                style={{ width: '50%' }}
-                placeholder="Chọn khu vực"
-                onSelect={(value) => handleSelectByArea(value)}
-              >
-                {[...new Set(deviceSuggestions.map((device) => device.area))].map((area) => (
-                  <Option key={area} value={area}>
-                    {area}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-            <Divider style={{ margin: '8px 0' }} />
-            {menu}
-          </>
-        )}
-      >
-        {deviceSuggestions.map((device) => (
-          <Option key={device.deviceName} value={device.deviceName}>
-            {device.deviceName}
-          </Option>
-        ))}
-      </Select>
+       <Select
+  mode="multiple"
+  placeholder="Chọn thiết bị"
+  allowClear
+  value={selectedDevices}  // Giá trị từ selectedDevices
+  onChange={(values) => {
+    setSelectedDevices(values); 
+    form.setFieldsValue({ deviceNames: values }); // Cập nhật giá trị trong form khi chọn thủ công
+  }}
+  dropdownRender={(menu) => (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px' }}>
+        <Checkbox onChange={(e) => handleSelectAll(e.target.checked)}>Chọn toàn bộ</Checkbox>
+        <Select
+          style={{ width: '50%' }}
+          placeholder="Chọn khu vực"
+          onSelect={(value) => handleSelectByArea(value)}
+        >
+          {[...new Set(deviceSuggestions.map((device) => device.areaName))].map((area) => (
+            <Option key={area} value={area}>
+              {area}
+            </Option>
+          ))}
+        </Select>
+      </div>
+      <Divider style={{ margin: '8px 0' }} />
+      {menu}
+    </>
+  )}
+>
+  {deviceSuggestions.map((device) => (
+    <Option key={device.deviceName} value={device.deviceName}>
+      {device.deviceName}
+    </Option>
+  ))}
+</Select>
+
+
+
           </Form.Item>
           {/* Trường nhập deviceStatus */}
           <Form.Item

@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiHome, FiBarChart2, FiGrid, FiClipboard, FiDatabase, FiHeadphones, FiSettings, FiCalendar, FiLogOut, FiChevronLeft, FiFolder, FiChevronRight, FiPercent } from 'react-icons/fi';
+import { FiHome, FiBarChart2, FiGrid, FiClipboard, FiDatabase, FiHeadphones,FiPhone, FiMail, FiGlobe, FiMapPin, FiSettings, FiCalendar, FiLogOut, FiChevronLeft, FiFolder, FiChevronRight, FiPercent } from 'react-icons/fi';
 import Submenu from '../Submenu/Submenu';
 import { AuthContext } from '../../context/AuthContext';
 import { supportItems, settingItems, imprtDataItems,QCStItems } from '../../libs/menuItems';
@@ -55,7 +55,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </div>
       </div>
 
-      <hr />
+      <hr className="border-gray-400"/>
 
       {/* Phần chứa các menu */}
       <div className="flex-grow flex flex-col space-y-4 p-2  mt-4 text-gray-500">
@@ -141,17 +141,36 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       
 
       {/* Phần chứa các nút hỗ trợ và đăng xuất */}
-      {!isCollapsed && <div className="p-3 ">
-        
-      <h3 className="text-white mb-2">Thông tin liên hệ</h3>
-          <hr />
-           <h4 className="text-white text-sm mt-4 ml-2 mb-3 items-center text-justify">CÔNG TY TNHH CÔNG NGHỆ DATA INSIGHT VIỆT NAM</h4>
-           <h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">-  Mã số thuế: 0110062048 </h4>
-           <h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">-  Phone: +84 916 84 86 38</h4>
-           <h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">- Email: info@datainsight.vn</h4>
-           <a href="https://datainsight.vn" target="_blank"><h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">- Website: datainsight.vn</h4></a>
-           <h4 className="text-white text-sm mt-1 ml-4 items-center text-justify">- Adress: Số 6 Kim Đồng, phường Giáp Bát, Quận Hoàng Mai, Thành phố Hà Nội, Việt Nam</h4>
-       </div> }
+      {!isCollapsed && (
+  <div className="p-4 text-white">
+    <h3 className="font-semibold  ml-1">Thông tin liên hệ</h3>
+    <hr className="border-gray-400" />
+    <p className="text-sm font-bold ml-2 text-justify mt-2">CÔNG TY TNHH CÔNG NGHỆ DATA INSIGHT VIỆT NAM</p>
+    <div className="mt-3 space-y-2 text-sm font-medium ml-8 text-justify">
+      <p className="flex items-center">
+        <FiPhone className="mr-2" /> +84 916 84 86 38
+      </p>
+      <p className="flex items-center">
+        <FiMail className="mr-2" /> info@datainsight.vn
+      </p>
+      <p className="flex items-center">
+        <FiGlobe className="mr-2" />
+        <a
+          href="https://datainsight.vn"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          datainsight.vn
+        </a>
+      </p>
+      <p className="flex items-center ">
+        <FiMapPin className="mr-2 text-xl" /> Số 6 Kim Đồng, Giáp Bát, Hoàng Mai, Hà Nội
+      </p>
+    </div>
+  </div>
+)}
+
       
      
     </div>

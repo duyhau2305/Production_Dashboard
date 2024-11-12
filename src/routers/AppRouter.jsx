@@ -23,6 +23,7 @@ import DashboardTienAreas from '../pages/Dasboard/DashboardTienAreas';
 import DashboardPhayAreas from '../pages/Dasboard/DashboardPhayAreas';
 import MachineActionAnalysis from '../pages/Equiment/Management/Analysis/MachineActionAnalysis';
 import OEEAnalysis from '../pages/Equiment/Management/Analysis/OEEAnalysis';
+import Dashboard3 from '../pages/Dasboard/Dashboard3';
 
 // Protected Route component sử dụng AuthContext để xác thực
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -58,6 +59,7 @@ const AppRouter = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/display1" element={<DashboardTienAreas />} />
         <Route path="/display2" element={<DashboardPhayAreas />} />
+        <Route path="/display3" element={<Dashboard3 />} />
         
         {/* Route dành riêng cho CNVH */}
         <Route
