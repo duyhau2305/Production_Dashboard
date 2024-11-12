@@ -108,14 +108,14 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               {!isCollapsed && <span className="text-gray-500 dark:text-white hover:text-blue-500">Quản lý tài khoản</span>}
             </Link>
           )}
-
-        </nav>
-      </div>
-
-      {/* Phần chứa các nút hỗ trợ và đăng xuất */}
-      <div className="p-4">
-        <nav className="flex flex-col space-y-4">
-          {/* <Submenu
+                
+          </nav>
+        </div>
+    
+        {/* Phần chứa các nút hỗ trợ và đăng xuất */}
+        <div className="p-4">
+          <nav className="flex flex-col space-y-4">
+            {/* <Submenu
               title={<><FiHeadphones className="mr-4 dark:text-white hover:text-blue-500 text-lg text-gray-500" />{!isCollapsed && <span className="text-gray-500 hover:text-blue-500 dark:text-white">Hỗ trợ</span>}</>}
               items={supportItems}
               mainLink="/support/faq"
@@ -132,16 +132,16 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               onSubmenuClick={handleSubmenuClick}
               setIsCollapsed={setIsCollapsed}
             /> */}
-
-          <button onClick={handleLogout} className="flex items-center text-gray-700 hover:text-black focus:outline-none">
-            <FiLogOut className="mr-4 dark:text-white text-lg text-gray-500" />
-            {!isCollapsed && <span className="text-gray-500 dark:text-white">Đăng xuất</span>}
-          </button>
-        </nav>
+    
+            <button onClick={handleLogout} className="flex items-center text-gray-700 hover:text-black focus:outline-none">
+              <FiLogOut className="mr-4 dark:text-white text-lg text-gray-500" />
+              {!isCollapsed && <span className="text-gray-500 dark:text-white">Đăng xuất</span>}
+            </button>
+          </nav>
+        </div>
       </div>
-    </div>
-  );
-
-};
+    );
+    
+  };
 
 export default Sidebar;

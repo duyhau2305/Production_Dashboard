@@ -14,7 +14,6 @@ const { Option } = Select;
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 function MachineActionAnalysis() {
-
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [selectedDate, setSelectedDate] = useState({
     startDate: moment().subtract(6, 'days').startOf('day').toDate(),
@@ -117,12 +116,10 @@ function MachineActionAnalysis() {
       }
     }
   };
-
   useEffect(() => {
     if (selectedMachines && selectedDate && selectedDate.startDate && selectedDate.endDate) {
       const startDate = selectedDate.startDate.toISOString();
       const endDate = selectedDate.endDate.toISOString();
-
       const fetchRuntimeChartData = async () => {
         try {
           const response = await axios.get(`${apiUrl}/machine-operations/${selectedMachines}/summary-status`, {
@@ -138,19 +135,16 @@ function MachineActionAnalysis() {
           const totalIdleTime = data.reduce((acc, entry) => acc + entry.idleTime, 0);
           const totalRunTime = data.reduce((acc, entry) => acc + entry.runTime, 0);
           const totalStopTime = data.reduce((acc, entry) => acc + entry.stopTime, 0);
-
           setRuntimeChartData({
             labels: ['Run', 'Idle', 'Stop'],
             values: [totalRunTime, totalIdleTime, totalStopTime]
           });
-
           // Hàm chuyển đổi giây thành định dạng hh:mm
           const formatSecondsToHHMM = (seconds) => {
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           };
-
           // Chuẩn bị dữ liệu cho biểu đồ xu hướng thời gian runtime
           const trendLabels = [];
           const runtimeHours = data.map(entry => {

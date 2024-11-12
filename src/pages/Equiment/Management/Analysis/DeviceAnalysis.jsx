@@ -145,7 +145,7 @@ const handleDeviceSelect = (objectId) => {
     }
   };
   
-  
+  console.log(downtimeData)
   const fetchEmployeeData = async (deviceId, [startDate, endDate]) => {
     const formattedStartDate = moment(startDate).format('YYYY-MM-DD');
     const formattedEndDate = moment(endDate).format('YYYY-MM-DD');

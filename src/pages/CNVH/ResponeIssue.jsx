@@ -213,10 +213,34 @@ useEffect(() => {
     }
     setIsModalOpen(false);
   };
+  const sendTelegramMessage = async (team,deviceID) => {
+    const logTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    try {
+        await axios.post(`${apiSocket}/send-telegram`, {
+            message: `Cần trợ giúp từ đội ${team} tới máy ${deviceID}!! Thời gian: ${logTime}`,
+        });
+        message.success(`Đã gửi thông báo đến Telegram cho đội ${team}`);
+    } catch (error) {
+        console.error('Error sending message:', error);
+        message.error(`Không thể gửi thông báo đến Telegram cho đội ${team}`);
+    }
+};
+
   
-  const handleCallQC = () => handleCallHelp('PQC');
-  const handleCallMaintenance = () => handleCallHelp('Bảo Trì');
-  const handleCallTechnical = () => handleCallHelp('Kỹ thuật');
+const handleCallQC = () => {
+  sendTelegramMessage('PQC',selectedMachine.deviceId);
+  handleCallHelp('PQC',);
+};
+
+const handleCallMaintenance = () => {
+  sendTelegramMessage('Bảo Trì',selectedMachine.deviceId);
+  handleCallHelp('Bảo Trì');
+};
+
+const handleCallTechnical = () => {
+  sendTelegramMessage('Kỹ thuật',selectedMachine.deviceId);
+  handleCallHelp('Kỹ thuật');
+};
   const handleTimeClick = (interval, index) => {
     const isDeclared = isIntervalDeclared(interval); // Kiểm tra nếu khoảng thời gian đã khai báo
   
@@ -494,7 +518,7 @@ useEffect(() => {
               <p className="text-5xl text-center mt-6 mb-22 ml-20">Cần gọi trợ giúp từ</p>
             </div>
             <div className="grid gap-4 mt-16 w-[80%] ml-20 items-center">
-              <button onClick={handleCallQC} className="border-2 border-blue-600 text-blue-600 hover:bg-blue-500 text-5xl py-4 px-8 rounded-md">
+              <button onClick={handleCallQC} className="border-2 border-blue-600 text-blue-600  text-5xl py-4 px-8 rounded-md">
                 Đội PQC
               </button>
               <button onClick={handleCallMaintenance} className="border-2 border-blue-600 text-blue-600 text-5xl py-4 px-8 rounded-md">

@@ -92,6 +92,7 @@ const CustomUpdateModal = ({ open, onClose, onCancel, selectedDates, setSelected
         setSelectedDates([]);
         setSelectedMachines([]);
         onClose();
+        window.location.reload();
       } catch (error) {
         message.error('Có lỗi xảy ra khi lưu kế hoạch. Vui lòng thử lại.');
         console.error('Error saving production task:', error);
