@@ -1,7 +1,7 @@
 import React from 'react';
-import MachineCard from '../../Components/MachineCard/MachineCard';
+import MachineCard3 from '../../Components/MachineCard/MachineCard3';
 
-const DashboardGrid = ({ machines, isFullscreen }) => {
+const DashboardGrid3 = ({ machines, isFullscreen }) => {
   // Sắp xếp machines theo chữ cái và số
   const sortedMachines = [...machines].sort((a, b) => {
     // Tách chữ cái và số từ deviceName
@@ -19,16 +19,16 @@ const DashboardGrid = ({ machines, isFullscreen }) => {
 
   return (
     <div
-      className="grid lg:grid-cols-6 md:grid-cols-5 gap-0.5 h-screen sm:grid-cols-2"
+      className="grid lg:grid-cols-9 md:grid-cols-5 gap-0.5 h-screen sm:grid-cols-2"
       style={{ maxHeight: '100vh' }}
     >
       {sortedMachines.map((machine) => (
         <div className="flex flex-col justify-center">
-          <MachineCard machine={machine} className="h-full" />
+          <MachineCard3 machine={machine} className="h-full" />
         </div>
       ))}
     </div>
   );
 };
 
-export default DashboardGrid;
+export default DashboardGrid3;

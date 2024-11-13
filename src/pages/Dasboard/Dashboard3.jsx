@@ -2,27 +2,43 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AiOutlineFullscreen, AiOutlineFullscreenExit } from 'react-icons/ai';
 import DashboardGrid from './DashboardGrid';
 import axios from 'axios';
+import moment from 'moment';
+import DashboardGrid3 from './DashboardGrid3';
 
-const DashboardTienAreas = () => {
+const Dashboard3 = () => {
   const [machines, setMachines] = useState([]);
   const [filteredMachines, setFilteredMachines] = useState([]);
+  const [areas, setAreas] = useState([]);
+  const [selectedArea, setSelectedArea] = useState('All Areas');
   const [loading, setLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const cardsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const applyFilter = (machinesData) => {
-    // Chỉ lọc máy TIEN (deviceId bắt đầu với "P")
-    return machinesData.filter(machine => machine.deviceId.startsWith("T"));
+  const applyFilter = (machinesData, area) => {
+    if (area === 'PHAY') {
+      return machinesData.filter(machine => machine.deviceId.startsWith("P"));
+    } else if (area === 'TIEN') {
+      return machinesData.filter(machine => machine.deviceId.startsWith("T"));
+    } else {
+      return machinesData; // Tất cả máy
+    }
   };
 
+  // Lấy danh sách thiết bị và khu vực khi component mount lần đầu
   useEffect(() => {
     const fetchDevicesAndAreas = async () => {
       setLoading(true);
       try {
+        const [devicesResponse, areasResponse] = await Promise.all([
+          axios.get(`${apiUrl}/device`),
+          axios.get(`${apiUrl}/areas`),
+        ]);
+        setAreas(areasResponse.data);
+
         const initialMachines = await fetchMachineDetails();
         setMachines(initialMachines);
-        setFilteredMachines(applyFilter(initialMachines));
+        setFilteredMachines(applyFilter(initialMachines, selectedArea));
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
       } finally {
@@ -33,6 +49,7 @@ const DashboardTienAreas = () => {
     fetchDevicesAndAreas();
   }, [apiUrl]);
 
+  // Hàm gọi API lấy thông tin chi tiết máy
   const fetchMachineDetails = async () => {
     try {
       const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
@@ -43,17 +60,23 @@ const DashboardTienAreas = () => {
     }
   };
 
+  // Cập nhật danh sách máy liên tục với `setInterval`
   useEffect(() => {
     const interval = setInterval(async () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
-      setFilteredMachines(applyFilter(updatedMachines));
-    }, 300000);
+      setFilteredMachines(applyFilter(updatedMachines, selectedArea));
+    }, 3000000); 
 
-    return () => clearInterval(interval);
-  }, []);
+    return () => clearInterval(interval); // Xóa interval khi unmount
+  }, [selectedArea]);
 
-  const toggleFullscreen = () => {
+  const handleAreaChange = (e) => {
+    const area = e.target.value;
+    setSelectedArea(area);
+    setFilteredMachines(applyFilter(machines, area));
+  };
+const toggleFullscreen = () => {
     if (!isFullscreen) {
       if (cardsRef.current.requestFullscreen) {
         cardsRef.current.requestFullscreen();
@@ -90,54 +113,23 @@ const DashboardTienAreas = () => {
     };
   }, []);
 
-  return (
-    <div className="w-full h-screen  bg-[#35393c]  overflow-hidden">
-      
-      {/* Dòng chứa tiêu đề và các nút */}
-      {/* <div className="flex justify-between items-center mb-4">
-        <h2 className="text-white text-3xl text-center ml-10 flex-1">Nhà máy chuyển đổi số cơ khí Q.C.S</h2>
-        <div className="flex items-center space-x-2">
-          <button className="bg-white border border-gray-300 rounded-lg py-2 px-4 leading-tight text-gray-800">
-            Tổng số máy chạy: {filteredMachines.filter(m => m.currentStatus === 'Run').length}/{filteredMachines.length} máy
-          </button>
-          <button
-            value="TIEN"
-            className="appearance-none bg-white border border-gray-100 rounded-lg py-2 px-8 leading-tight"
-            disabled // Vô hiệu hóa dropdown để người dùng không thể thay đổi
-          >
-            <option value="TIEN">Khu vực TIỆN</option>
-          </button>
-        </div>
-      </div> */}
 
-      <div ref={cardsRef} >
+  return (
+    <div className="w-full h-screen relative overflow-hidden ">
+      <div ref={cardsRef} className="">
         {loading ? (
-          <div className="flex justify-center text-2xl items-center h-64">
+          <div className="flex justify-center text-2xl items-center h-full">
             Loading...
           </div>
         ) : (
-          <DashboardGrid machines={filteredMachines} />
+         <div
+         >  <DashboardGrid3 machines={filteredMachines} /> </div>
+         
         )}
       </div>
-            
-            {/* <button
-                    className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
-                    onClick={toggleFullscreen}
-                >
-                    {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
-                </button> */}
-
-                {/* Nút thu nhỏ màn hình */}
-                {isFullscreen && (
-                    <button
-                    className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
-                    onClick={toggleFullscreen} // Sử dụng lại hàm toggleFullscreen để thoát chế độ toàn màn hình
-                    >
-                    <span className="text-white">&#8722;</span> {/* Dấu trừ để thu nhỏ */}
-                    </button>
-                )}
+     
     </div>
   );
 };
 
-export default DashboardTienAreas;
+export default Dashboard3;

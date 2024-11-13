@@ -123,6 +123,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     return gradientStops.join(', ');
   };
   const fetchData = async (startDate, endDate) => {
+ 
     setLoading(true);
     setError(null);
     try {
@@ -141,7 +142,6 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       const formattedData = formatDateAndTime(response.data.data);
       const allDates = response.data.data.map(entry => entry.date);
       const filteredLogTimes = dataReverse.filter(entry => {
-        console.log(entry.logTime)
         return allDates.includes(entry.logTime);
       });
       filteredLogTimes.slice(0, formattedData.length).forEach(entry => {
@@ -289,7 +289,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
 
   const renderYAxisLabels = useMemo(() => (
     showYAxis && dates.map((date, index) => (
-      <div key={index} style={{ textAlign: 'right', fontSize: '10px', display: 'flex', height: '70px' }}>
+      <div key={index} style={{ textAlign: 'right', fontSize: '10px', display: 'flex', height: '15px', marginTop: index > 0 ? '58px' : '0' }}>
         {date}
       </div>
     ))
@@ -430,16 +430,17 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         <span className="arrow right-arrow">→</span>
       </div>
       <div style={{ paddingLeft: '33px', position: 'relative', height: '100%' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0', justifyContent: 'space-between' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0' }}>
           {renderYAxisLabels}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', height: '99%', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '99%'}}>
           {data.length > 0 ? data.map((entry, index) => (
             <div key={index} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave} style={{ overflow: 'hidden' }}>
               <div className="gradient-container gradient-section gradient" style={{
                 height: '50px',
                 background: `linear-gradient(to right, ${listGradient[index]})`,
                 width: '100%',
+                marginTop: index > 0 ? '1px' : '0',
                 position: 'relative',
                 zIndex: '1'
               }}>

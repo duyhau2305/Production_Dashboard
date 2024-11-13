@@ -23,7 +23,7 @@ const ResponeIssue = () => {
   useEffect(() => {
     
     const newSocket = io(`${apiSocket}`, {
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'],
     });
     
     setSocket(newSocket); 
@@ -170,11 +170,12 @@ useEffect(() => {
   const handleBackClick = () => navigate('/dashboard/mobile');
 
   const handleOpenModal = () => {
-    setIsModalOpen(true);
-   
+    
     if (socket && !socket.connected) {
       socket.connect();
     }
+    setIsModalOpen(true);
+   
   };
     
 
@@ -518,13 +519,13 @@ const handleCallTechnical = () => {
               <p className="text-5xl text-center mt-6 mb-22 ml-20">Cần gọi trợ giúp từ</p>
             </div>
             <div className="grid gap-4 mt-16 w-[80%] ml-20 items-center">
-              <button onClick={handleCallQC} className="border-2 border-blue-600 text-blue-600  text-5xl py-4 px-8 rounded-md">
+              <button onClick={handleCallQC} onFocus={(e) => e.target.classList.add('focus-ring')} onBlur={(e) => e.target.classList.remove('focus-ring')}  className="border-2 border-blue-600 text-blue-600  text-5xl py-4 px-8 rounded-md">
                 Đội PQC
               </button>
-              <button onClick={handleCallMaintenance} className="border-2 border-blue-600 text-blue-600 text-5xl py-4 px-8 rounded-md">
+              <button onClick={handleCallMaintenance} onFocus={(e) => e.target.classList.add('focus-ring')} onBlur={(e) => e.target.classList.remove('focus-ring')} className="border-2 border-blue-600 text-blue-600 text-5xl py-4 px-8 rounded-md">
                 Đội Bảo Trì
               </button>
-              <button onClick={handleCallTechnical} className="border-2 border-blue-600 text-blue-600 text-5xl py-4 px-8 rounded-md">
+              <button onClick={handleCallTechnical} onFocus={(e) => e.target.classList.add('focus-ring')} onBlur={(e) => e.target.classList.remove('focus-ring')} className="border-2 border-blue-600 text-blue-600 text-5xl py-4 px-8 rounded-md">
                 Đội Kỹ Thuật
               </button>
             </div>

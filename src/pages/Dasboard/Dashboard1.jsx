@@ -3,6 +3,7 @@ import { AiOutlineFullscreen, AiOutlineFullscreenExit } from 'react-icons/ai';
 import DashboardGrid from './DashboardGrid';
 import axios from 'axios';
 import moment from 'moment';
+import { Modal, Button, Row, Col, Select } from 'antd';
 
 const Dashboard1 = () => {
   const [machines, setMachines] = useState([]);
@@ -11,6 +12,8 @@ const Dashboard1 = () => {
   const [selectedArea, setSelectedArea] = useState('All Areas');
   const [loading, setLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [machineOrder, setMachineOrder] = useState([]); // Holds the selected machine order
   const cardsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -24,12 +27,11 @@ const Dashboard1 = () => {
     }
   };
 
-  // Lấy danh sách thiết bị và khu vực khi component mount lần đầu
   useEffect(() => {
     const fetchDevicesAndAreas = async () => {
       setLoading(true);
       try {
-        const [devicesResponse, areasResponse] = await Promise.all([
+        const [devicesResponse, areasResponse] = await Promise.all([  
           axios.get(`${apiUrl}/device`),
           axios.get(`${apiUrl}/areas`),
         ]);
@@ -48,7 +50,6 @@ const Dashboard1 = () => {
     fetchDevicesAndAreas();
   }, [apiUrl]);
 
-  // Hàm gọi API lấy thông tin chi tiết máy
   const fetchMachineDetails = async () => {
     try {
       const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
@@ -59,13 +60,12 @@ const Dashboard1 = () => {
     }
   };
 
-  // Cập nhật danh sách máy liên tục với `setInterval`
   useEffect(() => {
     const interval = setInterval(async () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
       setFilteredMachines(applyFilter(updatedMachines, selectedArea));
-    }, 3000); 
+    }, 10000); 
 
     return () => clearInterval(interval); // Xóa interval khi unmount
   }, [selectedArea]);
@@ -75,7 +75,8 @@ const Dashboard1 = () => {
     setSelectedArea(area);
     setFilteredMachines(applyFilter(machines, area));
   };
-const toggleFullscreen = () => {
+
+  const toggleFullscreen = () => {
     if (!isFullscreen) {
       if (cardsRef.current.requestFullscreen) {
         cardsRef.current.requestFullscreen();
@@ -112,9 +113,71 @@ const toggleFullscreen = () => {
     };
   }, []);
 
+  const handleMachineOrderChange = (slotIndex, machineId) => {
+    setMachineOrder(prevOrder => {
+      const updatedOrder = Array.isArray(prevOrder) ? prevOrder : [];
+      return [...updatedOrder, { slotIndex, machineId }];
+    });
+  };
+
+  const handleSort = () => {
+    
+
+    // const sortedMachines = machineOrder.map(machineId =>
+    //   filteredMachines.find(machine => machine.deviceId === machineId)
+    // );
+    // setFilteredMachines(sortedMachines);
+    console.log(machineOrder)
+
+    // const dataUpdate = filteredMachines.reverse()
+    // setFilteredMachines(dataUpdate);
+
+  };
+
+  const showSortModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+  };
+
+  // Render sort modal with a dropdown to select machines for each slot
+  const sortModal = (
+    <Modal
+      title="Chọn thứ tự sắp xếp"
+      visible={isModalVisible}
+      onOk={() => { handleSort(); setIsModalVisible(false); }}
+      onCancel={handleCancel}
+    >
+      <div>
+        <p>Select the order of machines:</p>
+        <Row gutter={16}>
+          {filteredMachines.map((machine, index) => (
+            <Col span={8} key={index}>
+              <div className="mb-2">
+                <label>{`Machine ${index + 1}: ${machine.deviceId}`}</label>
+                <Select
+                  defaultValue={machine.deviceId}
+                  onChange={(value) => handleMachineOrderChange(index, value)}
+                  style={{ width: '100%' }}
+                >
+                  {filteredMachines.map((option) => (
+                    <Select.Option key={option.deviceId} value={option.deviceId}>
+                      {option.deviceId}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            </Col>
+          ))}
+        </Row>
+      </div>
+    </Modal>
+  );
 
   return (
-    <div className="w-full h-full relative bg-gray-100 p-6 overflow-hidden">
+    <div className="w-full h-full relative bg-gray-100 p-6 overflow-">
       <div className="flex justify-end items-center mb-4 px-1">
         <div className="relative flex justify-end items-center space-x-2">
           <button className="bg-white border border-gray-300 rounded-lg py-2 px-4 leading-tight text-gray-800">
@@ -128,12 +191,17 @@ const toggleFullscreen = () => {
             <option value="All Areas">Tất cả khu vực</option>
             <option value="PHAY">Khu vực Phay</option>
             <option value="TIEN">Khu vực Tiện</option>
-           
           </select>
+          <button
+            className="bg-blue-500 text-white py-2 px-4 rounded-lg"
+            onClick={showSortModal}
+          >
+            Sắp xếp
+          </button>
         </div>
       </div>
 
-      <div ref={cardsRef} className="overflow-auto h-[calc(100vh)]">
+      <div ref={cardsRef} className="">
         {loading ? (
           <div className="flex justify-center text-2xl items-center h-64">
             Loading...
@@ -142,24 +210,26 @@ const toggleFullscreen = () => {
           <DashboardGrid machines={filteredMachines} />
         )}
       </div>
-      {/* Nút bật/tắt fullscreen */}
-      <button
-              className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
-              onClick={toggleFullscreen}
-            >
-              {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
-            </button>
 
-            {/* Nút thu nhỏ màn hình */}
-            {isFullscreen && (
-              <button
-                className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
-                onClick={toggleFullscreen} // Sử dụng lại hàm toggleFullscreen để thoát chế độ toàn màn hình
-              >
-                <span className="text-white">&#8722;</span> {/* Dấu trừ để thu nhỏ */}
-              </button>
-            )}    
-          </div>
+      <button
+        className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
+        onClick={toggleFullscreen}
+      >
+        {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
+      </button>
+
+      {isFullscreen && (
+        <button
+          className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
+          onClick={toggleFullscreen} // Sử dụng lại hàm toggleFullscreen để thoát chế độ toàn màn hình
+        >
+          <span className="text-white">&#8722;</span> {/* Dấu trừ để thu nhỏ */}
+        </button>
+      )}
+
+      {/* Sort Modal */}
+      {sortModal}
+    </div>
   );
 };
 
