@@ -1,44 +1,40 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { AiOutlineFullscreen, AiOutlineFullscreenExit } from 'react-icons/ai';
-import DashboardGrid from './DashboardGrid';
-import axios from 'axios';
-import moment from 'moment';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import DashboardGrid3 from './DashboardGrid3';
+import axios from 'axios';
+import { OrderedListContext } from '../../context/OrderedListContext';
 
 const Dashboard3 = () => {
   const [machines, setMachines] = useState([]);
-  const [filteredMachines, setFilteredMachines] = useState([]);
-  const [areas, setAreas] = useState([]);
-  const [selectedArea, setSelectedArea] = useState('All Areas');
   const [loading, setLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const cardsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const applyFilter = (machinesData, area) => {
-    if (area === 'PHAY') {
-      return machinesData.filter(machine => machine.deviceId.startsWith("P"));
-    } else if (area === 'TIEN') {
-      return machinesData.filter(machine => machine.deviceId.startsWith("T"));
-    } else {
-      return machinesData; // Tất cả máy
-    }
+  // Truy cập orderedList từ OrderedListContext
+  const { orderedList } = useContext(OrderedListContext);
+
+  // Hàm sắp xếp machines theo orderedList
+  const applyOrder = (machinesData) => {
+    if (!orderedList || orderedList.length === 0) return machinesData;
+
+    return machinesData.sort((a, b) => {
+      const indexA = orderedList.indexOf(a.deviceId);
+      const indexB = orderedList.indexOf(b.deviceId);
+
+      // Đặt máy không có trong orderedList xuống cuối
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
+    });
   };
 
-  // Lấy danh sách thiết bị và khu vực khi component mount lần đầu
   useEffect(() => {
-    const fetchDevicesAndAreas = async () => {
+    const fetchMachines = async () => {
       setLoading(true);
       try {
-        const [devicesResponse, areasResponse] = await Promise.all([
-          axios.get(`${apiUrl}/device`),
-          axios.get(`${apiUrl}/areas`),
-        ]);
-        setAreas(areasResponse.data);
-
-        const initialMachines = await fetchMachineDetails();
-        setMachines(initialMachines);
-        setFilteredMachines(applyFilter(initialMachines, selectedArea));
+        const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
+        const initialMachines = response.data.data;
+        setMachines(applyOrder(initialMachines));
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
       } finally {
@@ -46,57 +42,20 @@ const Dashboard3 = () => {
       }
     };
 
-    fetchDevicesAndAreas();
-  }, [apiUrl]);
+    fetchMachines();
+  }, [apiUrl, orderedList]); // Chạy lại khi orderedList thay đổi
 
-  // Hàm gọi API lấy thông tin chi tiết máy
-  const fetchMachineDetails = async () => {
-    try {
-      const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
-      return response.data.data;
-    } catch (error) {
-      console.error('Lỗi khi lấy thông tin chi tiết máy:', error);
-      return [];
-    }
-  };
-
-  // Cập nhật danh sách máy liên tục với `setInterval`
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const updatedMachines = await fetchMachineDetails();
-      setMachines(updatedMachines);
-      setFilteredMachines(applyFilter(updatedMachines, selectedArea));
-    }, 3000000); 
-
-    return () => clearInterval(interval); // Xóa interval khi unmount
-  }, [selectedArea]);
-
-  const handleAreaChange = (e) => {
-    const area = e.target.value;
-    setSelectedArea(area);
-    setFilteredMachines(applyFilter(machines, area));
-  };
-const toggleFullscreen = () => {
+  const toggleFullscreen = () => {
     if (!isFullscreen) {
-      if (cardsRef.current.requestFullscreen) {
-        cardsRef.current.requestFullscreen();
-      } else if (cardsRef.current.mozRequestFullScreen) { /* Firefox */
-        cardsRef.current.mozRequestFullScreen();
-      } else if (cardsRef.current.webkitRequestFullscreen) { /* Chrome, Safari, and Opera */
-        cardsRef.current.webkitRequestFullscreen();
-      } else if (cardsRef.current.msRequestFullscreen) { /* IE/Edge */
-        cardsRef.current.msRequestFullscreen();
-      }
+      cardsRef.current.requestFullscreen?.();
+      cardsRef.current.mozRequestFullScreen?.();
+      cardsRef.current.webkitRequestFullscreen?.();
+      cardsRef.current.msRequestFullscreen?.();
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.mozCancelFullScreen) { /* Firefox */
-        document.mozCancelFullScreen();
-      } else if (document.webkitExitFullscreen) { /* Chrome, Safari, and Opera */
-        document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) { /* IE/Edge */
-        document.msExitFullscreen();
-      }
+      document.exitFullscreen?.();
+      document.mozCancelFullScreen?.();
+      document.webkitExitFullscreen?.();
+      document.msExitFullscreen?.();
     }
     setIsFullscreen(!isFullscreen);
   };
@@ -113,21 +72,26 @@ const toggleFullscreen = () => {
     };
   }, []);
 
-
   return (
-    <div className="w-full h-screen relative overflow-hidden ">
-      <div ref={cardsRef} className="">
+    <div className="w-full h-screen relative overflow-hidden">
+      <div ref={cardsRef}>
         {loading ? (
           <div className="flex justify-center text-2xl items-center h-full">
             Loading...
           </div>
         ) : (
-         <div
-         >  <DashboardGrid3 machines={filteredMachines} /> </div>
-         
+          <DashboardGrid3 machines={machines} orderedList={orderedList} />
         )}
       </div>
-     
+
+      {isFullscreen && (
+        <button
+          className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
+          onClick={toggleFullscreen}
+        >
+          <span className="text-white">&#8722;</span>
+        </button>
+      )}
     </div>
   );
 };

@@ -12,8 +12,6 @@ function App() {
     <Provider store={store}>
       <AuthProvider>
         <OrderedListProvider >
-
-        
         <AppRouter />
         <ToastContainer 
           position="top-right"

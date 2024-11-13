@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { AiOutlineFullscreen, AiOutlineFullscreenExit } from 'react-icons/ai';
 import DashboardGrid from './DashboardGrid';
 import axios from 'axios';
+import { OrderedListContext } from '../../context/OrderedListContext';
 
 const DashboardTienAreas = () => {
   const [machines, setMachines] = useState([]);
@@ -10,10 +11,25 @@ const DashboardTienAreas = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const cardsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  
+  // Truy cập orderedList từ OrderedListContext
+  const { orderedList } = useContext(OrderedListContext);
 
+  // Hàm lọc và sắp xếp máy TIEN theo orderedList
   const applyFilter = (machinesData) => {
-    // Chỉ lọc máy TIEN (deviceId bắt đầu với "P")
-    return machinesData.filter(machine => machine.deviceId.startsWith("T"));
+    const tienMachines = machinesData.filter(machine => machine.deviceId.startsWith("T"));
+    return orderedList.length
+      ? tienMachines.sort((a, b) => {
+          const indexA = orderedList.indexOf(a.deviceId);
+          const indexB = orderedList.indexOf(b.deviceId);
+
+          // Nếu không tìm thấy trong orderedList, đặt máy ở cuối
+          if (indexA === -1) return 1;
+          if (indexB === -1) return -1;
+
+          return indexA - indexB;
+        })
+      : tienMachines;
   };
 
   useEffect(() => {
@@ -22,7 +38,7 @@ const DashboardTienAreas = () => {
       try {
         const initialMachines = await fetchMachineDetails();
         setMachines(initialMachines);
-        setFilteredMachines(applyFilter(initialMachines));
+        setFilteredMachines(applyFilter(initialMachines)); // Áp dụng filter ban đầu
       } catch (error) {
         console.error('Lỗi khi lấy dữ liệu:', error);
       } finally {
@@ -31,7 +47,7 @@ const DashboardTienAreas = () => {
     };
 
     fetchDevicesAndAreas();
-  }, [apiUrl]);
+  }, [apiUrl, orderedList]); // Cập nhật khi orderedList thay đổi
 
   const fetchMachineDetails = async () => {
     try {
@@ -47,7 +63,7 @@ const DashboardTienAreas = () => {
     const interval = setInterval(async () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
-      setFilteredMachines(applyFilter(updatedMachines));
+      setFilteredMachines(applyFilter(updatedMachines)); // Áp dụng filter khi dữ liệu thay đổi
     }, 300000);
 
     return () => clearInterval(interval);
@@ -57,21 +73,21 @@ const DashboardTienAreas = () => {
     if (!isFullscreen) {
       if (cardsRef.current.requestFullscreen) {
         cardsRef.current.requestFullscreen();
-      } else if (cardsRef.current.mozRequestFullScreen) { /* Firefox */
+      } else if (cardsRef.current.mozRequestFullScreen) {
         cardsRef.current.mozRequestFullScreen();
-      } else if (cardsRef.current.webkitRequestFullscreen) { /* Chrome, Safari, and Opera */
+      } else if (cardsRef.current.webkitRequestFullscreen) {
         cardsRef.current.webkitRequestFullscreen();
-      } else if (cardsRef.current.msRequestFullscreen) { /* IE/Edge */
+      } else if (cardsRef.current.msRequestFullscreen) {
         cardsRef.current.msRequestFullscreen();
       }
     } else {
       if (document.exitFullscreen) {
         document.exitFullscreen();
-      } else if (document.mozCancelFullScreen) { /* Firefox */
+      } else if (document.mozCancelFullScreen) {
         document.mozCancelFullScreen();
-      } else if (document.webkitExitFullscreen) { /* Chrome, Safari, and Opera */
+      } else if (document.webkitExitFullscreen) {
         document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) { /* IE/Edge */
+      } else if (document.msExitFullscreen) {
         document.msExitFullscreen();
       }
     }
@@ -91,51 +107,25 @@ const DashboardTienAreas = () => {
   }, []);
 
   return (
-    <div className="w-full h-screen  bg-[#35393c]  overflow-hidden">
-      
-      {/* Dòng chứa tiêu đề và các nút */}
-      {/* <div className="flex justify-between items-center mb-4">
-        <h2 className="text-white text-3xl text-center ml-10 flex-1">Nhà máy chuyển đổi số cơ khí Q.C.S</h2>
-        <div className="flex items-center space-x-2">
-          <button className="bg-white border border-gray-300 rounded-lg py-2 px-4 leading-tight text-gray-800">
-            Tổng số máy chạy: {filteredMachines.filter(m => m.currentStatus === 'Run').length}/{filteredMachines.length} máy
-          </button>
-          <button
-            value="TIEN"
-            className="appearance-none bg-white border border-gray-100 rounded-lg py-2 px-8 leading-tight"
-            disabled // Vô hiệu hóa dropdown để người dùng không thể thay đổi
-          >
-            <option value="TIEN">Khu vực TIỆN</option>
-          </button>
-        </div>
-      </div> */}
-
-      <div ref={cardsRef} >
+    <div className="w-full h-screen bg-[#35393c] overflow-hidden">
+      <div ref={cardsRef}>
         {loading ? (
           <div className="flex justify-center text-2xl items-center h-64">
             Loading...
           </div>
         ) : (
-          <DashboardGrid machines={filteredMachines} />
+          <DashboardGrid machines={filteredMachines} orderedList={orderedList} />
         )}
       </div>
-            
-            {/* <button
-                    className="fixed bottom-4 right-16 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-blue-500 hover:bg-blue-600"
-                    onClick={toggleFullscreen}
-                >
-                    {isFullscreen ? <AiOutlineFullscreenExit size={30} /> : <AiOutlineFullscreen size={30} />}
-                </button> */}
 
-                {/* Nút thu nhỏ màn hình */}
-                {isFullscreen && (
-                    <button
-                    className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
-                    onClick={toggleFullscreen} // Sử dụng lại hàm toggleFullscreen để thoát chế độ toàn màn hình
-                    >
-                    <span className="text-white">&#8722;</span> {/* Dấu trừ để thu nhỏ */}
-                    </button>
-                )}
+      {isFullscreen && (
+        <button
+          className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
+          onClick={toggleFullscreen}
+        >
+          <span className="text-white">&#8722;</span>
+        </button>
+      )}
     </div>
   );
 };
