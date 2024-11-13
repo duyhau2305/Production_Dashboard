@@ -81,7 +81,7 @@ const Dashboard1 = () => {
     const interval = setInterval(async () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
-    }, 3000);
+    }, 300000);
 
     return () => clearInterval(interval);
   }, []);

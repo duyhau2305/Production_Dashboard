@@ -54,17 +54,18 @@ const MachineWorkScheduleList = () => {
       showNoSelectionWarning();
       return;
     }
-
+  
     if (key === 'update') {
-      setActionType('update'); // Cập nhật loại hành động là cập nhật
-      setIsUpdateModalOpen(true); // Mở modal cập nhật nhiệm vụ
+      setActionType('update');
+      setIsCustomModalOpen(true); // Open CustomUpdateModal directly for update
     } else if (key === 'delete') {
-      setIsDeleteConfirmModalOpen(true); // Mở modal xác nhận xóa
+      setIsDeleteConfirmModalOpen(true); // Open modal for delete confirmation
     } else if (key === 'add') {
-      setActionType('add'); // Cập nhật loại hành động là thêm mới
-      setIsUpdateModalOpen(true); // Mở modal thêm mới nhiệm vụ
+      setActionType('add');
+      setIsUpdateModalOpen(true); // Open update modal only for adding new tasks
     }
   };
+  
 
   // Nội dung tiêu đề và văn bản của Modal dựa trên `actionType`
   const getModalContent = () => {
@@ -298,8 +299,6 @@ const handleMachineClick = (machine) => {
     setIsUpdateModalOpen(false); // Close modal on confirm
     setIsCustomModalOpen(true); // Show custom modal after confirmation
   };
-
-  // Handle canceling the update (close modal and clear selections)
   // Handle canceling the update (close modal and clear selections)
 const handleCancelUpdate = () => {
   setIsUpdateModalOpen(false); // Close the update confirmation modal
@@ -399,7 +398,7 @@ const handleCancelUpdate = () => {
           actionType === 'update' ? handleConfirmUpdate() : handleAddNewTask(); // Gọi hàm đúng với hành động
           setIsUpdateModalOpen(false); // Đóng modal
         }}
-        okText={okText}
+        // okText={okText}
         cancelText="Hủy"
       >
         <p>{content}</p>

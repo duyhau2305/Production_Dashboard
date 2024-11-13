@@ -146,7 +146,7 @@ const MachineCard3 = ({ machine }) => {
           </span>
           <span className="text-[9px] font-bold  flex items-center  ">Hôm qua</span>
           </div>
-          <div className={`absolute  mt-2  text-xs font-semibold -translate-x-1/5   ${isCalling ? 'calling-effect': ''}`} >
+          <div className={`absolute  mt-2  text-[11px] font-semibold -translate-x-1/5   ${isCalling ? 'calling-effect': ''}`} >
               {displayInfo} 
           </div>
           

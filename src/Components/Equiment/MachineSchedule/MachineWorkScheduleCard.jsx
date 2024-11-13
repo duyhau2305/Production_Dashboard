@@ -45,12 +45,12 @@ const MachineWorkScheduleCard = ({ machine, tasks, selectedDate }) => {
           const signalLightColors = getSignalLightColors(firstShiftStatus);
 
           return (
-            <div key={index} className="shadow-md bg-gray-100 rounded-md w-full h-full min-h-[300px] flex flex-col">
-              <div className="bg-gray-50 p-2 items-center justify-center flex">
-                <h2 className="text-xl font-bold text-[#375BA9]">{machine.deviceName}</h2> {/* Hiển thị tên thiết bị */}
+            <div key={index} className="shadow-md bg-gray-100 rounded-lg w-full h-full min-h-[300px] flex flex-col">
+              <div className="bg-[#375BA9] p-2 items-center justify-center flex rounded-t-lg ">
+                <h2 className="text-xl font-bold text-white">{machine.deviceName}</h2> {/* Hiển thị tên thiết bị */}
               </div>
 
-              <div className="flex items-start p-4 flex-grow">
+              <div className="flex items-start p-2 flex-grow">
                 {/* Đèn tín hiệu - Màu dựa trên trạng thái của ca đầu tiên */}
                 <div className="flex flex-col justify-center items-center p-2">
                   <div className="w-16 h-52 border border-black rounded-lg">
@@ -101,9 +101,9 @@ const MachineWorkScheduleCard = ({ machine, tasks, selectedDate }) => {
           );
         })
       ) : (
-        <div className="shadow-md bg-gray-100 rounded-md w-full min-h-[200px] flex flex-col">
-          <div className="bg-gray-50 p-2 items-center justify-center flex">
-            <h2 className="text-xl font-bold text-[#375BA9]">{machine.deviceName}</h2> {/* Hiển thị tên thiết bị */}
+        <div className="shadow-md bg-gray-100 rounded-lg w-full min-h-[200px] flex flex-col">
+          <div className="bg-gray-300 p-2 items-center rounded-t-lg justify-center flex">
+            <h2 className="text-xl font-bold text-black ">{machine.deviceName}</h2> {/* Hiển thị tên thiết bị */}
           </div>
 
           <div className="flex items-start flex-grow mt-2">
