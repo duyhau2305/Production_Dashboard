@@ -23,7 +23,7 @@ const getSignalLightColors = (status) => {
 
 const MachineCard = ({ machine }) => {
   const headerColor = getHeaderColor(machine.currentStatus || '');
-  const signalLightColors = getSignalLightColors(machine.productionTasks?.[0]?.shift?.status || '');
+  const signalLightColors = getSignalLightColors(machine.productionTasks?.[0]?.shifts[0]?.status || '');
   const blinkClass = machine?.status === 'Dừng' ? 'animate-blinkError' : '';
   function formatSecondsToTime(totalSeconds) {
     const hours = Math.floor(totalSeconds / 3600);
