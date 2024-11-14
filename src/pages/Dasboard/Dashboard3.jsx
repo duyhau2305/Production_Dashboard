@@ -44,7 +44,25 @@ const Dashboard3 = () => {
 
     fetchMachines();
   }, [apiUrl, orderedList]); // Chạy lại khi orderedList thay đổi
+  const fetchMachineDetails = async () => {
+    try {
+      const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy thông tin chi tiết máy:', error);
+      return [];
+    }
+  };
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const updatedMachines = await fetchMachineDetails();
+      setMachines(updatedMachines);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+  
   const toggleFullscreen = () => {
     if (!isFullscreen) {
       cardsRef.current.requestFullscreen?.();
