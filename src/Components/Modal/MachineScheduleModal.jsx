@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Calendar, Checkbox, Select, Tooltip } from 'antd';
 import axios from 'axios';
-
+import './MachineScheduleModal.css';
+import moment from 'moment';
+import 'moment/locale/vi'; // Import ngôn ngữ Việt Nam nếu cần
 const MachineScheduleModal = ({ open, onClose }) => {
   const [productionTasks, setProductionTasks] = useState([]); // Lưu dữ liệu lịch sản xuất từ API
   const [devices, setDevices] = useState([]); // Lưu danh sách thiết bị từ API
@@ -11,6 +13,15 @@ const MachineScheduleModal = ({ open, onClose }) => {
   const [checkedDevices, setCheckedDevices] = useState([]); // Thiết bị có lịch trong ngày
   const [selectedDate, setSelectedDate] = useState(null); // Ngày được chọn trên lịch
   const apiUrl =import.meta.env.VITE_API_BASE_URL;
+ 
+  useEffect(() => {
+    // Cấu hình `moment` để tuần bắt đầu từ Thứ Hai
+    moment.updateLocale('vi', {
+      week: {
+        dow: 1, // Đặt thứ hai là ngày đầu tuần
+      },
+    });
+  }, []);
   // Gọi API để lấy dữ liệu lịch sản xuất và thiết bị
   useEffect(() => {
     const fetchData = async () => {
@@ -59,8 +70,8 @@ const MachineScheduleModal = ({ open, onClose }) => {
     // Nếu có thiết bị trong ngày đó, thêm style để đổi màu nền cho cả ô ngày với Tailwind CSS
     if (tasksForDate.length > 0) {
       return (
-        <div className="w-full h-full bg-blue-500 text-white flex items-center justify-center">
-          {tasksForDate.length} Thiết bị
+        <div className="w-full h-full bg-blue-500 text-md text-center  text-white flex items-center justify-center">
+          {tasksForDate.length} Thiết bị đã được lên lịch
         </div>
       );
     }
@@ -97,19 +108,22 @@ const MachineScheduleModal = ({ open, onClose }) => {
       visible={open}
       onCancel={onClose}
       footer={null}
-      width={1000} // Điều chỉnh độ rộng modal để hiển thị đủ hai bên
+      width={1300} // Điều chỉnh độ rộng modal để hiển thị đủ hai bên
     >
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-5 gap-2">
         {/* Lịch ở bên trái */}
-        <div className="col-span-2 pr-4">
-          <Calendar
+        <div className="col-span-4 ">
+        <Calendar 
             dateCellRender={dateCellRender}
-            onSelect={handleDateSelect} // Gọi hàm khi người dùng chọn một ngày
-          />
+            onSelect={handleDateSelect}
+            locale={'vi'} // Thiết lập để bắt đầu từ Thứ Hai
+            
+    />
+
         </div>
 
         {/* Danh sách thiết bị ở bên phải */}
-        <div>
+        <div className="p-1">
           <h3>Danh sách thiết bị</h3>
           <Select
             defaultValue="all"
@@ -126,29 +140,32 @@ const MachineScheduleModal = ({ open, onClose }) => {
           </Select>
 
           <Checkbox.Group
-            style={{ width: '100%' }}
-            value={checkedDevices} // Thiết bị có lịch làm việc sẽ được tích xanh
-          >
-            {filteredDevices.map(device => {
-              const taskForDevice = getTaskForDevice(device.deviceName);
+        style={{ width: '100%' }}
+        value={checkedDevices} // Thiết bị có lịch làm việc sẽ được tích xanh
+      >
+        <div className="grid grid-cols-5 gap-2"> {/* Bố cục 3 cột */}
+          {filteredDevices.map(device => {
+            const taskForDevice = getTaskForDevice(device.deviceName);
 
-              return (
-                <Tooltip 
-                  key={device._id} 
-                  title={taskForDevice && taskForDevice.shifts ? taskForDevice.shifts.map((shift, index) => (
-                    <div key={index}>
-                      <p>Ca làm việc: {shift.shiftName}</p>
-                      <p>Trạng thái: {shift.status}</p>
-                    </div>
-                  )) : "Không có lịch làm việc"}
-                >
-                  <Checkbox value={device.deviceName}>
-                    {device.deviceName}
-                  </Checkbox>
-                </Tooltip>
-              );
-            })}
-          </Checkbox.Group>
+            return (
+              <Tooltip 
+                key={device._id} 
+                title={taskForDevice && taskForDevice.shifts ? taskForDevice.shifts.map((shift, index) => (
+                  <div key={index}>
+                    <p>Ca làm việc: {shift.shiftName}</p>
+                    <p>Trạng thái: {shift.status}</p>
+                  </div>
+                )) : "Không có lịch làm việc"}
+              >
+                <Checkbox value={device.deviceName}>
+                  {device.deviceName}
+                </Checkbox>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </Checkbox.Group>
+
         </div>
       </div>
     </Modal>

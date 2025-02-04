@@ -6,11 +6,11 @@ import TitleChart from '../../../Components/TitleChart/TitleChart';
 import { Select, DatePicker, Button, Dropdown, Menu } from 'antd';
 import { LeftOutlined, RightOutlined } from '@ant-design/icons';
 import RuntimeTrendChart from '../../../Components/Equiment/Reports/RuntimeTrendChart';
-import RepairBarChart from '../../../Components/Equiment/Reports/RepairBarChart';
-import StackedBarChart from '../../../Components/Equiment/Reports/StackedBarChart';
-import TimelineChart from '../../../Components/Equiment/Reports/TimelineChart';
 import { datastatus } from '../../../data/status';
 import moment from 'moment';
+import dayjs from 'dayjs';
+import DeviceTable from '../../../Components/Equiment/Analysis/DeviceTable';
+import TaskPieChart from '../../../Components/Equiment/Reports/TaskPieChart';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -20,8 +20,8 @@ function DeviceReport() {
   
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [selectedDate, setSelectedDate] = useState({
-    startDate: moment().subtract(6, 'days').startOf('day').toDate(),
-    endDate: moment().endOf('day').toDate(),
+    startDate: dayjs().subtract(6, 'days').startOf('day').toDate(),
+    endDate: dayjs().endOf('day').toDate(),
   });
   const [selectedMachine, setSelectedMachine] = useState([]);
   const [startDate, setStartDate] = useState(null);
@@ -34,8 +34,8 @@ function DeviceReport() {
   const [defaultValue, setDefaultValue] = useState([moment().subtract(5, 'days').startOf('day'),
   moment().endOf('day'),])
   const [dateRangePickerValue, setDateRangePickerValue] = useState([
-    moment().subtract(5, 'days'),
-    moment()
+    dayjs().subtract(6, 'days'),
+    dayjs()
   ]);
   const [runtimeChartData, setRuntimeChartData] = useState({
     labels: ['Run', 'Idle', 'Stop'],
@@ -49,6 +49,8 @@ function DeviceReport() {
     labels: [],
     datasets: []
   });
+  const [productionData, setProductionData] = useState([]); // State for production data
+
   useEffect(() => {
     const fetchMachineOptions = async () => {
       try {
@@ -71,36 +73,43 @@ function DeviceReport() {
 
   const handleDateChange = (dates) => {
     if (dates) {
-      console.log(dates)
-      setSelectedDate({ startDate: dates[0]?.toDate() || null, endDate: dates[1]?.toDate() || null });
+      setDateRangePickerValue([dayjs(dates[0]), dayjs(dates[1])]); // Đảm bảo đúng định dạng
+      setSelectedDate({ startDate: dates[0]?.toDate(), endDate: dates[1]?.toDate() });
     }
   };
+  
 
   const handleSelectCustomDays = (days, label) => {
     const endDate = moment().endOf('day').toDate();
     const startDate = moment().subtract(days, 'days').startOf('day').toDate();
-    setSelectedDate({ startDate, endDate });
-    setSelectedRangeLabel(label);
+  
+    setSelectedDate({ startDate, endDate }); // Cập nhật phạm vi ngày
+    setDateRangePickerValue([moment(startDate), moment(endDate)]); // Cập nhật giá trị cho RangePicker
+    setSelectedRangeLabel(label); // Cập nhật nhãn hiển thị
   };
+  
 
   const handlePrevWeek = () => {
     const startDate = moment(selectedDate.startDate).subtract(6, 'days').toDate();
     const endDate = moment(selectedDate.endDate).subtract(6, 'days').toDate();
     setSelectedDate({ startDate, endDate });
+    setDateRangePickerValue([moment(startDate), moment(endDate)]); // Đồng bộ RangePicker
     setSelectedRangeLabel('1 tuần');
   };
-
+  
   const handleNextWeek = () => {
     const startDate = moment(selectedDate.startDate).add(6, 'days').toDate();
     const endDate = moment(selectedDate.endDate).add(6, 'days').toDate();
     setSelectedDate({ startDate, endDate });
+    setDateRangePickerValue([moment(startDate), moment(endDate)]); // Đồng bộ RangePicker
     setSelectedRangeLabel('1 tuần');
   };
+  
   const disabledDate = (current) => {
-    // Allow the selected start date and next 7 days
-    if (!startDate) return false; // If no start date selected, allow all dates
+    if (!startDate) return false; // Nếu chưa chọn startDate, cho phép tất cả ngày
     return current < startDate || current > startDate.clone().add(6, 'days');
   };
+  
   const handleFullscreen = (chartRef) => {
     if (chartRef.current) {
       if (!document.fullscreenElement) {
@@ -114,15 +123,15 @@ function DeviceReport() {
   };
   useEffect(() => {
     if (selectedMachines && selectedDate && selectedDate.startDate && selectedDate.endDate) {
-      const startDate = selectedDate.startDate.toISOString();
-      const endDate = selectedDate.endDate.toISOString();
+      const startDate = moment(selectedDate.startDate);
+      const endDate = moment(selectedDate.endDate);
   
       const fetchRuntimeChartData = async () => {
         try {
           const response = await axios.get(`${apiUrl}/machine-operations/${selectedMachines}/summary-status`, {
             params: {
-              startTime: startDate,
-              endTime: endDate
+              startTime: startDate.toISOString(),
+              endTime: endDate.toISOString()
             }
           });
   
@@ -138,20 +147,28 @@ function DeviceReport() {
             values: [totalRunTime, totalIdleTime, totalStopTime]
           });
   
-          // Hàm chuyển đổi giây thành định dạng hh:mm
-          const formatSecondsToHHMM = (seconds) => {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-          };
+          // Tạo danh sách ngày đầy đủ từ startDate đến endDate
+          const allDates = [];
+          let currentDate = startDate.clone();
+          while (currentDate.isSameOrBefore(endDate)) {
+            allDates.push(currentDate.format('DD/MM'));
+            currentDate.add(1, 'day');
+          }
   
-          // Chuẩn bị dữ liệu cho biểu đồ xu hướng thời gian runtime
+          // Chuẩn hóa dữ liệu runtime với danh sách ngày đầy đủ
+          const runtimeDataMap = data.reduce((acc, entry) => {
+            const date = moment(entry.logTime).format('DD/MM');
+            acc[date] = entry.runTime;
+            return acc;
+          }, {});
+  
           const trendLabels = [];
-          const runtimeHours = data.map(entry => {
-            trendLabels.push(moment(entry.logTime).format('DD/MM')); // Lấy ngày từ logTime
-            return formatSecondsToHHMM(entry.runTime); // Đổi runTime thành hh:mm
+          const runtimeHours = allDates.map(date => {
+            trendLabels.push(date);
+            const runTime = runtimeDataMap[date] || 0; // Mặc định 0 nếu không có dữ liệu
+            return formatSecondsToHHMM(runTime);
           });
-          console.log(runtimeHours)
+  
           setRuntimeTrendData({
             labels: trendLabels,
             datasets: [
@@ -173,61 +190,107 @@ function DeviceReport() {
     }
   }, [selectedMachines, selectedDate]);
   
-
+  // Hàm chuyển đổi giây thành định dạng hh:mm
+  const formatSecondsToHHMM = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+  
+  
+  console.log(selectedDate)
   useEffect(() => {
-    if (selectedMachine && selectedDate && selectedDate.startDate && selectedDate.endDate) {
-      const startDate = moment(selectedDate.startDate).format('YYYY-MM-DD');
-      const endDate = moment(selectedDate.endDate).format('YYYY-MM-DD');
-
+    if (selectedDate && selectedMachines.length > 0) {
       const fetchTaskChartData = async () => {
         try {
-          const response = await axios.get(`${apiUrl}/downtime`, {
-            params: {
-              deviceId: selectedMachine,
-              startDate: startDate,
-              endDate: endDate
-            }
-          });
-
-          const data = response.data;
-
-          if (!data || data.length === 0) {
-            console.warn("No data received from API");
+          
+          const shiftResponse = await axios.get(`${apiUrl}/workShifts`);
+          const shifts = shiftResponse.data;
+  
+          if (!shifts || shifts.length === 0) {
+            console.warn("No shift data received from /api/workShifts");
+            setTaskChartData({ labels: ["1 người 1 máy", "1 người 2 máy", "Bảo Trì"], values: [0, 0, 0] });
             return;
           }
-
-          const durationMap = {};
-
+  
+         
+          const deviceIds = machineOptions
+            .filter(machine => selectedMachines.includes(machine.value))
+            .map(machine => machine.label); // Assuming `label` holds deviceId
+  
+          const startTime = selectedDate.startDate.toISOString();
+          const endTime = selectedDate.endDate.toISOString();
+  
+        
+          const responses = await Promise.all(
+            deviceIds.map(deviceId =>
+              axios.get(`${apiUrl}/productiontask`, {
+                params: {
+                  deviceId,
+                  startTime,
+                  endTime
+                }
+              })
+            )
+          );
+  
+           const data = responses.flatMap(response => response.data);
+  
+          if (!data || data.length === 0) {
+            console.warn("No data received from API");
+            setTaskChartData({ labels: ["1 người 1 máy", "1 người 2 máy", "Bảo Trì"], values: [0, 0, 0] });
+            return;
+          }
+  
+          const labelToStatusMapping = {
+            "1 người 1 máy": "Chạy",
+            "1 người 2 máy": "Chờ",
+            "Bảo Trì": "Dừng"
+          };
+          
+          let totalTimeByLabel = { "1 người 1 máy": 0, "1 người 2 máy": 0, "Bảo Trì": 0 };
+  
+             const calculateWorkingHours = (shift) => {
+            const shiftStart = moment(shift.startTime, "HH:mm");
+            const shiftEnd = moment(shift.endTime, "HH:mm");
+            let totalMinutes = shiftEnd.diff(shiftStart, "minutes");
+  
+              shift.breakTime.forEach(breakPeriod => {
+              const breakStart = moment(breakPeriod.startTime, "HH:mm");
+              const breakEnd = moment(breakPeriod.endTime, "HH:mm");
+              totalMinutes -= breakEnd.diff(breakStart, "minutes");
+            });
+  
+            return totalMinutes;
+          };
+  
+         
           data.forEach(item => {
-            if (!item.reasonName || !item.interval || item.interval.length === 0) {
-              console.warn("Missing reasonName or interval data for item:", item);
-              return;
-            }
-
-            const reasonName = item.reasonName;
-            const totalDuration = item.interval.reduce((acc, interval) => {
-              if (!interval.startTime || !interval.endTime) {
-                console.warn("Missing startTime or endTime for interval:", interval);
-                return acc;
+            item.shifts.forEach(shiftData => {
+           
+              const shift = shifts.find(s => s.shiftName === shiftData.shiftName);
+              const label = Object.keys(labelToStatusMapping).find(
+                key => labelToStatusMapping[key] === shiftData.status
+              );
+  
+              if (shift && label) {
+                const workingMinutes = calculateWorkingHours(shift);
+                totalTimeByLabel[label] += workingMinutes;
+  
+                console.log(`Shift: ${shift.shiftName}, Status: ${shiftData.status}, Label: ${label}, Working Minutes: ${workingMinutes}`);
+              } else {
+                console.warn(`Shift not found for shiftName: ${shiftData.shiftName}`);
               }
-
-              const start = new Date(interval.startTime);
-              const end = new Date(interval.endTime);
-              const duration = (end - start) / 1000;
-
-              return acc + duration;
-            }, 0);
-
-            if (durationMap[reasonName]) {
-              durationMap[reasonName] += totalDuration;
-            } else {
-              durationMap[reasonName] = totalDuration;
-            }
+            });
           });
-
-          const labels = Object.keys(durationMap);
-          const values = Object.values(durationMap);
-
+  
+          
+          console.log("Total time by label:", totalTimeByLabel);
+  
+         
+          const labels = ["1 người 1 máy", "1 người 2 máy", "Bảo Trì"];
+          const values = labels.map(label => (totalTimeByLabel[label] / 60).toFixed(2)); 
+  
           setTaskChartData({
             labels: labels,
             values: values
@@ -236,13 +299,91 @@ function DeviceReport() {
           console.error('Error fetching task chart data:', error);
         }
       };
-
+  
       fetchTaskChartData();
     }
-  }, [selectedMachine, selectedDate]);
+  }, [selectedDate, selectedMachines, machineOptions]);
+  console.log(selectedDate)
+  const fetchProductionData = async () => {
+    if (selectedMachines && selectedDate.startDate && selectedDate.endDate) {
+        // Chuyển đổi múi giờ UTC sang ISO (local)
+        const startDateISO = moment(selectedDate.startDate).startOf('day').toISOString();
+        const endDateISO = moment(selectedDate.endDate).endOf('day').toISOString();
+
+        try {
+            const response = await axios.get(
+                `${apiUrl}/machine-operations/topemployee?startTime=${startDateISO}&endTime=${endDateISO}`
+            );
+
+            const machineAnalysis = await response.data.data.find(value => value._id === selectedMachines);
+
+            // Tạo danh sách ngày trong khoảng thời gian (Local Time)
+            const dateRange = [];
+            let currentDate = new Date(selectedDate.startDate);
+            const endDate = new Date(selectedDate.endDate);
+
+            while (currentDate <= endDate) {
+                dateRange.push(
+                    moment(currentDate).format('YYYY-MM-DD') // Định dạng ngày theo Local Time
+                );
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Tạo Map cho summaryStatus (Local Time)
+            const summaryStatusMap = new Map(
+                machineAnalysis.summaryStatus.map(record => [
+                    moment(record.logTime).format('YYYY-MM-DD'), // Chuyển logTime về Local Date
+                    record
+                ])
+            );
+
+            // Tạo Map cho productionTasks (Local Time)
+            const productionTasksMap = new Map(
+                machineAnalysis.productionTasks.map(task => [
+                    moment(task.date).format('YYYY-MM-DD'), // Chuyển date về Local Date
+                    task
+                ])
+            );
+
+            // Duyệt qua từng ngày trong dateRange
+            const enrichedData = dateRange.map(date => {
+                const productionTask = productionTasksMap.get(date);
+                const summaryStatus = summaryStatusMap.get(date);
+
+                return {
+                    date,
+                    productionTask: productionTask ? productionTask : "Chưa lên lịch",
+                    summaryStatus: summaryStatus
+                        ? summaryStatus
+                        : {
+                              logTime: `${date}T00:00:00.000Z`,
+                              idleTime: 0,
+                              runTime: 0,
+                              stopTime: 0
+                          }
+                };
+            });
+
+            // Gắn enrichedData vào machineAnalysis
+            machineAnalysis.enrichedData = enrichedData;
+
+            // Cập nhật state với dữ liệu mới
+            setProductionData(machineAnalysis);
+        } catch (error) {
+            console.error('Error fetching production data:', error);
+        }
+    }
+};
+
+
+
+  useEffect(() => {
+    fetchProductionData(); // Fetch production data when selected machine or date range changes
+  }, [selectedMachines, selectedDate]);
+  console.log(productionData)
   const menu = ( 
     <Menu>
-      <Menu.Item onClick={() => handleSelectCustomDays(4, '3 ngày')}>3 ngày</Menu.Item>
+      <Menu.Item onClick={() => handleSelectCustomDays(2, '3 ngày')}>3 ngày</Menu.Item>
       <Menu.Item onClick={() => handleSelectCustomDays(3, '4 ngày')}>4 ngày</Menu.Item>
       <Menu.Item onClick={() => handleSelectCustomDays(6, '1 tuần')}>1 tuần</Menu.Item>
     </Menu>
@@ -251,9 +392,12 @@ function DeviceReport() {
     setDateRangePickerValue('')
   }
   const handleDateChangeChoose = (dates) => {
-    setStartDate(dates[0])
-    // setSelectedDate(dates);
+    if (dates) {
+      setDateRangePickerValue(dates);
+      setSelectedDate({ startDate: dates[0]?.toDate(), endDate: dates[1]?.toDate() });
+    }
   };
+  
   return (
     <>
       <div className="flex justify-end items-center mb-4">
@@ -272,6 +416,7 @@ function DeviceReport() {
           </Select>
           <RangePicker
             value={dateRangePickerValue} 
+            
             onChange={handleDateChange}
             onOpenChange={handleOpen}
             disabledDate={disabledDate}
@@ -308,7 +453,7 @@ function DeviceReport() {
             onPrint={() => window.print()}
           />
           <div className="w-full h-full">
-            <DowntimePieChart data={taskChartData} />
+            <TaskPieChart data={taskChartData} />
           </div>
         </div>
 
@@ -323,39 +468,13 @@ function DeviceReport() {
             <RuntimeTrendChart data={runtimeTrendData} />
           </div>
         </div>
+        
 
         
       </div>
-{/* 
-      <div className="grid grid-cols-2 gap-2 p-1">
-        <div className="bg-white p-3 col-span-1" ref={timelineChartRef}>
-          <TitleChart
-            title="Ngăn xếp trạng thái"
-            timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(timelineChartRef)}
-            onPrint={() => window.print()}
-          />
-          {selectedDate ? (
-            <TimelineChart
-              data={datastatus.status}
-              selectedDate={selectedDate}
-              selectedMchine={selectedMachines}
-              onDateChange={handleDateChange}
-            />
-          ) : (
-            <>No data</>
-          )}
+      <div className="w-full">
+          <DeviceTable downtimeData={[]} employeeData={[]} telemetryData={[]} productionData={productionData} type={'oeeAnalysis'} />
         </div>
-        <div className="bg-white p-3 col-span-1" ref={stackedBarChartRef}>
-          <TitleChart
-            title="Thống kê trạng thái"
-            timeWindow="Last 24 hours"
-            onFullscreen={() => handleFullscreen(stackedBarChartRef)}
-            onPrint={() => window.print()}
-          />
-          <StackedBarChart selectedDate={selectedDate} selectedMchine={selectedMachines} onDateChange={handleDateChange} />
-        </div>
-      </div> */}
     </>
   );
 }

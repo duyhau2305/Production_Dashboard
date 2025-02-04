@@ -10,7 +10,7 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [error, setError] = useState(null);
   const [dates, setDates] = useState([]);
   const [listGradient, setListGradient] = useState([]);
-  const [hour] = useState(Array.from({ length: 24 }, (_, i) => i));
+  const [hour] = useState(Array.from({ length: 11 }, (_, i) => `${i * 10}%`));
   const [arrayPercentOffline, setArrayPercentOffline] = useState([]);
   const [arrayPercentRun, setArrayPercentRun] = useState([]);
   const [arrayPercentStop, setArrayPercentStop] = useState([]);
@@ -91,11 +91,8 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   };
 
   useEffect(() => {
-    const startDate = selectedDate?.startDate;
-    const endDate = selectedDate?.endDate;
-
-    if (startDate && endDate) {
-      fetchData(startDate, endDate);
+    if (selectedDate?.startDate && selectedDate?.endDate) {
+      fetchData(selectedDate.startDate, selectedDate.endDate);
     }
   }, [selectedDate, selectedMchine]);
 
@@ -145,7 +142,7 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         <div style={{ position: 'absolute', width: '100%', display: 'flex', justifyContent: 'space-between' }}>
           {hour.map(value => (
             <div key={value} style={{ display: 'inline-block', width: '4.16%', textAlign: 'center', fontSize: '10px', marginTop: '5px' }}>
-              {`${value}:00`}
+              {`${value}`}
             </div>
           ))}
         </div>
@@ -153,7 +150,7 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       </div>
       <div style={{ paddingLeft: '33px', position: 'relative', height: '100%' }}>
         <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex',  padding: '10px 0', display: showYAxis ? 'flex' : 'none' ,flexDirection: 'column' }}>
-          {dates.map((date, index) => (
+          {dates.slice(0, 7).map((date, index) => (
             <div key={index} style={{
               textAlign: 'right', fontSize: '10px', display: 'flex', marginTop: index > 0 ? '58px' : '0',
  
@@ -163,81 +160,82 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
           ))}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', height: '99%' }}>
-          {data.length > 0 ? data.map((entry, index) => (
-            <div key={index} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave}>
-              <div className='gradient-container gradient-section gradient' style={{
-                height: '50px',
-                background: `linear-gradient(to right, ${listGradient[index]})`,
-                width: '100%',
-                marginTop: index > 0 ? '21px' : '0',
-                position: 'relative',
-              }}>
-                <div style={{ display: 'flex', position: 'absolute', top: '10px', width: '100%' }}>
-                  {arrayPercentRun[index] > 0 && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: `${arrayPercentRun[index]}%`,
-                      fontSize: '15px',
-                      fontWeight: '500',
-                      color: '#474747'
-                    }}>
-                      {arrayPercentRun[index]}%
-                    </div>
-                  )}
-                  {arrayPercentStop[index] > 0 && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: `${arrayPercentStop[index]}%`,
-                      fontSize: '15px',
-                      fontWeight: '500',
-                      color: 'white'
-                    }}>
-                      <span>{arrayPercentStop[index]}%</span>
-                    </div>
-                  )}
-                  {arrayPercentIdle[index] > 0 && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: `${arrayPercentIdle[index]}%`,
-                      fontSize: '15px',
-                      fontWeight: '500',
-                      color: '#474747'
-                    }}>
-                      <span>{arrayPercentIdle[index]}%</span>
-                    </div>
-                  )}
-                  {arrayPercentOffline[index] > 0 && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      position: 'absolute',
-                      right: '0',
-                      fontSize: '15px',
-                      fontWeight: '500',
-                      color: '#474747'
-                    }}>
-                      <span>{arrayPercentOffline[index]}%</span>
-                    </div>
-                  )}
-                </div>
-
-                {currentIndex === index && (
-                  <span style={{ display: 'flex', justifyContent: 'space-between', position: 'absolute', top: '0', marginLeft: `${positionToTooltip}%`, background: '#ffff95' }}>
-                    {textToTooltip}
-                  </span>
-                )}
-              </div>
+  {data.length > 0 ? data.slice(0, 7).map((entry, index) => (  // Chỉ lấy tối đa 7 phần tử
+    <div key={index} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave}>
+      <div className='gradient-container gradient-section gradient' style={{
+        height: '50px',
+        background: `linear-gradient(to right, ${listGradient[index]})`,
+        width: '100%',
+        marginTop: index > 0 ? '21px' : '0',
+        position: 'relative',
+      }}>
+        <div style={{ display: 'flex', position: 'absolute', top: '10px', width: '100%' }}>
+          {arrayPercentRun[index] > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: `${arrayPercentRun[index]}%`,
+              fontSize: '15px',
+              fontWeight: '500',
+              color: '#474747'
+            }}>
+              {arrayPercentRun[index]}%
             </div>
-          )) : (
-            <div style={{ height: '32px', backgroundColor: '#E7E7E7', marginTop: '10px', width: '100%' }} />
+          )}
+          {arrayPercentStop[index] > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: `${arrayPercentStop[index]}%`,
+              fontSize: '15px',
+              fontWeight: '500',
+              color: 'white'
+            }}>
+              <span>{arrayPercentStop[index]}%</span>
+            </div>
+          )}
+          {arrayPercentIdle[index] > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: `${arrayPercentIdle[index]}%`,
+              fontSize: '15px',
+              fontWeight: '500',
+              color: '#474747'
+            }}>
+              <span>{arrayPercentIdle[index]}%</span>
+            </div>
+          )}
+          {arrayPercentOffline[index] > 0 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              position: 'absolute',
+              right: '0',
+              fontSize: '15px',
+              fontWeight: '500',
+              color: '#474747'
+            }}>
+              <span>{arrayPercentOffline[index]}%</span>
+            </div>
           )}
         </div>
+
+        {currentIndex === index && (
+          <span style={{ display: 'flex', justifyContent: 'space-between', position: 'absolute', top: '0', marginLeft: `${positionToTooltip}%`, background: '#ffff95' }}>
+            {textToTooltip}
+          </span>
+        )}
+      </div>
+    </div>
+  )) : (
+    <div style={{ height: '32px', backgroundColor: '#E7E7E7', marginTop: '10px', width: '100%' }} />
+  )}
+</div>
+
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '25px' }}>
@@ -251,11 +249,11 @@ const StackedBarChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
           <div style={{ width: '15px', height: '15px', backgroundColor: '#FFC107', marginRight: '5px' }}></div>
-          <span>Idle</span>
+          <span>Chờ</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ width: '15px', height: '15px', backgroundColor: '#BFBFBF', marginRight: '5px' }}></div>
-          <span>Offline</span>
+          <span>Tắt máy</span>
         </div>
       </div>
     </div>

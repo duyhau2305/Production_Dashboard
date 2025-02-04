@@ -17,7 +17,7 @@ function MachineActionAnalysis() {
   const [selectedMachines, setSelectedMachines] = useState([]);
   const [selectedDate, setSelectedDate] = useState({
     startDate: moment().subtract(6, 'days').startOf('day').toDate(),
-    endDate: moment().endOf('day').toDate(),
+    endDate: moment().endOf('day').toDate(), 
   });
   const [selectedMachine, setSelectedMachine] = useState([]);
   const [startDate, setStartDate] = useState(null);
@@ -27,6 +27,7 @@ function MachineActionAnalysis() {
   const runtimePieChartRef = useRef(null);
   const timelineChartRef = useRef(null);
   const stackedBarChartRef = useRef(null);
+  const rangePickerRef = useRef(null);
   const [defaultValue, setDefaultValue] = useState([moment().subtract(5, 'days').startOf('day'),
   moment().endOf('day'),])
   const [dateRangePickerValue, setDateRangePickerValue] = useState([ 
@@ -47,7 +48,6 @@ function MachineActionAnalysis() {
     labels: [],
     datasets: []
   });
-  const [productionData, setProductionData] = useState([]); // State for production data
 
   useEffect(() => {
     const fetchMachineOptions = async () => {
@@ -85,19 +85,20 @@ function MachineActionAnalysis() {
   };
 
   const handlePrevWeek = () => {
-    const startDate = moment(selectedDate.startDate).subtract(6, 'days').toDate();
-    const endDate = moment(selectedDate.endDate).subtract(10, 'days').toDate();
+   console.log(dateRangePickerValue)
+    const startDate = dateRangePickerValue[0].subtract(6, 'days').toDate()
+    const endDate =  dateRangePickerValue[1].subtract(6, 'days').toDate();
     setSelectedDate({ startDate, endDate });
     setSelectedRangeLabel('1 tuần');
-    setDateRangePickerValue([moment(startDate), moment(endDate)]);  // Update the RangePicker value
+    setDateRangePickerValue([dateRangePickerValue[0], dateRangePickerValue[1]]);  // Update the RangePicker value
   };
 
   const handleNextWeek = () => {
-    const startDate = moment(selectedDate.startDate).add(6, 'days').toDate();
-    const endDate = moment(selectedDate.endDate).add(6, 'days').toDate();
+    const startDate = dateRangePickerValue[0].add(6, 'days').toDate()
+    const endDate =  dateRangePickerValue[1].add(6, 'days').toDate();
     setSelectedDate({ startDate, endDate });
     setSelectedRangeLabel('1 tuần');
-    setDateRangePickerValue([moment(startDate), moment(endDate)]);  // Update the RangePicker value
+    setDateRangePickerValue([dateRangePickerValue[0], dateRangePickerValue[1]]);  // Update the RangePicker value
   };
 
   const disabledDate = (current) => {
@@ -116,151 +117,8 @@ function MachineActionAnalysis() {
       }
     }
   };
-  useEffect(() => {
-    if (selectedMachines && selectedDate && selectedDate.startDate && selectedDate.endDate) {
-      const startDate = selectedDate.startDate.toISOString();
-      const endDate = selectedDate.endDate.toISOString();
-      const fetchRuntimeChartData = async () => {
-        try {
-          const response = await axios.get(`${apiUrl}/machine-operations/${selectedMachines}/summary-status`, {
-            params: {
-              startTime: startDate,
-              endTime: endDate
-            }
-          });
 
-          const data = response.data.data;
-
-          // Tính tổng thời gian idle, run, và stop cho biểu đồ pie chart
-          const totalIdleTime = data.reduce((acc, entry) => acc + entry.idleTime, 0);
-          const totalRunTime = data.reduce((acc, entry) => acc + entry.runTime, 0);
-          const totalStopTime = data.reduce((acc, entry) => acc + entry.stopTime, 0);
-          setRuntimeChartData({
-            labels: ['Run', 'Idle', 'Stop'],
-            values: [totalRunTime, totalIdleTime, totalStopTime]
-          });
-          // Hàm chuyển đổi giây thành định dạng hh:mm
-          const formatSecondsToHHMM = (seconds) => {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-          };
-          // Chuẩn bị dữ liệu cho biểu đồ xu hướng thời gian runtime
-          const trendLabels = [];
-          const runtimeHours = data.map(entry => {
-            trendLabels.push(moment(entry.logTime).format('DD/MM')); // Lấy ngày từ logTime
-            return formatSecondsToHHMM(entry.runTime); // Đổi runTime thành hh:mm
-          });
-          console.log(runtimeHours)
-          setRuntimeTrendData({
-            labels: trendLabels,
-            datasets: [
-              {
-                label: "Daily Runtime (hh:mm)",
-                data: runtimeHours,
-                fill: false,
-                borderColor: 'green',
-                borderWidth: 2,
-              }
-            ]
-          });
-        } catch (error) {
-          console.error('Error fetching runtime chart data:', error);
-        }
-      };
-
-      fetchRuntimeChartData(); 
-    }
-  }, [selectedMachines, selectedDate]);
-
-  const fetchProductionData = async () => {
-    if (selectedMachines && selectedDate.startDate && selectedDate.endDate) {
-      const startDateISO = moment(selectedDate.startDate).add(1, 'days').toISOString();
-      const endDateISO = moment(selectedDate.endDate).toISOString();
-      console.log(endDateISO)
-      try {
-        const response = await axios.get(`${apiUrl}/machine-operations/machine-analysis?startTime=${startDateISO}&endTime=${endDateISO}`);
-        const machineAnalysis =await response.data.data.find(value => value._id === selectedMachines);
-        console.log(machineAnalysis)
-        // const machineArraySlice =a machineAnalysis.slice(1)
-        setProductionData(machineAnalysis);   
-      } catch (error) {
-        console.error('Error fetching production data:', error);
-      }
-    }
-  };
-
-  useEffect(() => {
-    console.log(selectedMachines)
-    fetchProductionData(); // Fetch production data when selected machine or date range changes
-  }, [selectedMachines, selectedDate]);
-
-  useEffect(() => {
-    if (selectedMachine && selectedDate && selectedDate.startDate && selectedDate.endDate) {
-      const startDate = moment(selectedDate.startDate).format('YYYY-MM-DD');
-      const endDate = moment(selectedDate.endDate).format('YYYY-MM-DD');
-
-      const fetchTaskChartData = async () => {
-        try {
-          const response = await axios.get(`${apiUrl}/downtime`, {
-            params: {
-              deviceId: selectedMachine,
-              startDate: startDate,
-              endDate: endDate
-            }
-          });
-
-          const data = response.data;
-
-          if (!data || data.length === 0) {
-            console.warn("No data received from API");
-            return;
-          }
-
-          const durationMap = {};
-
-          data.forEach(item => {
-            if (!item.reasonName || !item.interval || item.interval.length === 0) {
-              console.warn("Missing reasonName or interval data for item:", item);
-              return;
-            }
-
-            const reasonName = item.reasonName;
-            const totalDuration = item.interval.reduce((acc, interval) => {
-              if (!interval.startTime || !interval.endTime) {
-                console.warn("Missing startTime or endTime for interval:", interval);
-                return acc;
-              }
-
-              const start = new Date(interval.startTime);
-              const end = new Date(interval.endTime);
-              const duration = (end - start) / 1000;
-
-              return acc + duration;
-            }, 0);
-
-            if (durationMap[reasonName]) {
-              durationMap[reasonName] += totalDuration;
-            } else {
-              durationMap[reasonName] = totalDuration;
-            }
-          });
-
-          const labels = Object.keys(durationMap);
-          const values = Object.values(durationMap);
-
-          setTaskChartData({
-            labels: labels,
-            values: values
-          });
-        } catch (error) {
-          console.error('Error fetching task chart data:', error);
-        }
-      };
-
-      fetchTaskChartData();
-    }
-  }, [selectedMachine, selectedDate]);
+ 
 
   const menu = (
     <Menu>
@@ -294,7 +152,7 @@ function MachineActionAnalysis() {
               </Option>
             ))}
           </Select>
-          <RangePicker
+          <RangePicker ref={rangePickerRef}
             value={dateRangePickerValue} // This will now reflect the selected date range
             onChange={handleDateChange}
             onOpenChange={handleOpen}
@@ -320,7 +178,6 @@ function MachineActionAnalysis() {
           />
           {selectedDate ? (
             <TimelineChart
-              data={datastatus.status}
               selectedDate={selectedDate}
               selectedMchine={selectedMachines}
               onDateChange={handleDateChange}
@@ -340,9 +197,9 @@ function MachineActionAnalysis() {
         </div>
         
       </div>
-      <div className="">
+      {/* <div className="">
           <DeviceTable downtimeData={[]} employeeData={[]} telemetryData={[]} productionData={productionData} type={'oeeAnalysis'} />
-        </div>
+        </div> */}
     </>
   );
 }

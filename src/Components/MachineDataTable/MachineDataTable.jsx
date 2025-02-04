@@ -1,22 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Table } from 'antd';
+import moment from 'moment'; 
 
-const MachineDataTable = ({ machineSerial }) => {
+const MachineDataTable = ({selectedDate , machineSerial }) => {
+  console.log(selectedDate)
+ 
+  
   const [dataSource, setDataSource] = useState([]);
-  const [startDate, setStartDate] = useState('2024-11-01T17:00:00Z');  // Example startDate
-  const [endDate, setEndDate] = useState('2024-11-10T16:59:59Z');    // Example endDate
+   
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-
-  const fetchData = async () => {
+  
+  const fetchData = async (startDate , endDate) => { 
     try {
+      const start = startDate.toISOString();
+      const end = new Date(endDate);
+      const utcDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1, 16, 59, 59, 0));
+      const isoDate = utcDate.toISOString();
+      
       const response = await axios.get(
-        `${apiUrl}/machine-operations/top-ten?startTime=2024-11-01T17:00:00Z&endTime=2024-11-10T16:59:59Z&machineSerial=${machineSerial}&type=1`
+        `${apiUrl}/machine-operations/top-ten?startTime=${start}&endTime=${isoDate}&machineSerial=${machineSerial}&type=1`
       );
        
       const data = response.data.data.data;
-      const formattedData = data.map(record => ({
+      const formattedData = data.map((record, index) => ({
         key: record._id,
+        index: index + 1,  // Adding STT index here
         machineSerialNum: record.machineSerialNum,
         totalRunTime: record.totalRunTime,
         totalStopTime: record.totalStopTime,
@@ -33,29 +42,34 @@ const MachineDataTable = ({ machineSerial }) => {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [machineSerial, startDate, endDate]);
+    if (selectedDate?.startDate && selectedDate?.endDate) {
+      fetchData(selectedDate.startDate, selectedDate.endDate);
+    };
+  }, [machineSerial,selectedDate]);
 
   const columns = [
+    {
+      title: 'STT',
+      dataIndex: 'index',
+      key: 'index',
+    },
     {
       title: 'Mã Máy',
       dataIndex: 'machineSerialNum',
       key: 'machineSerialNum',
     },
     {
-        title: 'Ngày Bắt Đầu',
-        dataIndex: 'startDate',
-        key: 'startDate',
-        render: (value) => `${value.split('T')[0]}`,
-  
-      },
-      {
-        title: 'Ngày Kết Thúc',
-        dataIndex: 'endDate',
-        key: 'endDate',
-        render: (value) => `${value.split('T')[0]}`,
-  
-      },
+      title: 'Ngày Bắt Đầu',
+      dataIndex: 'startDate',
+      key: 'startDate',
+      render: (value) => `${value.split('T')[0]}`,
+    },
+    {
+      title: 'Ngày Kết Thúc',
+      dataIndex: 'endDate',
+      key: 'endDate',
+      render: (value) => `${value.split('T')[0]}`,
+    },
     {
       title: 'Tổng Thời Gian Chạy',
       dataIndex: 'totalRunTime',
@@ -74,7 +88,6 @@ const MachineDataTable = ({ machineSerial }) => {
       key: 'totalIdleTime',
       render: (value) => `${Math.floor(value / 3600)}h ${Math.floor((value % 3600) / 60)}m`,
     },
-    
   ];
 
   return (

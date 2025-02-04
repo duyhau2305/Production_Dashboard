@@ -15,38 +15,33 @@ const MachineTimeline = ({ deviceId, selectedDate,machineName }) => {
   const addOfflineIntervals = (data) => {
     const newData = [];
     const startOfDay = moment('00:00', 'HH:mm');
-    const endOfDay = moment('23:59', 'HH:mm');
-
+  
+    // Nếu không có dữ liệu, chỉ thêm toàn bộ ngày là offline
     if (data.length === 0) {
-      newData.push({ startTime: startOfDay.format('HH:mm'), endTime: endOfDay.format('HH:mm'), status: 'Offline' });
+      newData.push({
+        startTime: startOfDay.format('HH:mm'),
+        endTime: '23:59',
+        status: 'Offline',
+      });
       return newData;
     }
-
+  
+    // Lấy khoảng offline từ 00:00 đến khoảng thời gian đầu tiên có dữ liệu
     const firstIntervalStart = moment(data[0].startTime, 'HH:mm');
     if (firstIntervalStart.isAfter(startOfDay)) {
-      newData.push({ startTime: startOfDay.format('HH:mm'), endTime: firstIntervalStart.format('HH:mm'), status: 'Offline' });
+      newData.push({
+        startTime: startOfDay.format('HH:mm'),
+        endTime: firstIntervalStart.format('HH:mm'),
+        status: 'Offline',
+      });
     }
-
-    data.forEach((interval, i) => {
-      newData.push(interval);
-      if (i < data.length - 1) {
-        const nextInterval = data[i + 1];
-        const currentEndTime = moment(interval.endTime, 'HH:mm');
-        const nextStartTime = moment(nextInterval.startTime, 'HH:mm');
-
-        if (currentEndTime.isBefore(nextStartTime)) {
-          newData.push({ startTime: currentEndTime.format('HH:mm'), endTime: nextStartTime.format('HH:mm'), status: 'Offline' });
-        }
-      }
-    });
-
-    const lastIntervalEnd = moment(data[data.length - 1].endTime, 'HH:mm');
-    if (lastIntervalEnd.isBefore(endOfDay)) {
-      newData.push({ startTime: lastIntervalEnd.format('HH:mm'), endTime: endOfDay.format('HH:mm'), status: 'Offline' });
-    }
-
+  
+    // Thêm các khoảng có dữ liệu vào danh sách
+    newData.push(...data);
+  
     return newData;
   };
+  
 
   const calculateTotalTimes = (data) => {
     const totalTime = { 'Chạy': 0, 'Dừng': 0, 'Chờ': 0, 'Offline': 0 };
@@ -257,10 +252,14 @@ const MachineTimeline = ({ deviceId, selectedDate,machineName }) => {
   }, []);
 
   return (
-    <div ref={wrapperRef} className="flex justify-center ">  
-         <h2 className="text-xl font-semibold mt-6">{machineName}
-          </h2><svg ref={svgRef} width="100%" height={fixedHeight} />
+    <div>
+       <h2 className="text-xs font-semibold">{machineName}
+       </h2>
+       <div ref={wrapperRef} className="flex justify-center -mt-2 ">  
+        <svg ref={svgRef} width="100%" height={fixedHeight} />
     </div>
+    </div>
+    
   );
 };
 

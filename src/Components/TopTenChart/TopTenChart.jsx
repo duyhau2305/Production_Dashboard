@@ -6,7 +6,7 @@ import { Radio } from 'antd';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const TopTenChart = ({ machineSerial }) => {
+const TopTenChart = ({ selectedDate , machineSerial  }) => {
   const [chartLabels, setChartLabels] = useState([]);
   const [chartValues, setChartValues] = useState([]);
   const [chartTitle, setChartTitle] = useState('Run Time');
@@ -14,13 +14,18 @@ const TopTenChart = ({ machineSerial }) => {
   const [selectedType, setSelectedType] = useState(1);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-  const fetchData = async (type) => {
+  const fetchData = async (startDate , endDate , type) => {
     try {
+      const start = startDate.toISOString();
+      const end = new Date(endDate);
+      const utcDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1, 16, 59, 59, 0));
+      const isoDate = utcDate.toISOString();
       const response = await axios.get(
-        `${apiUrl}/machine-operations/top-ten?startTime=2024-11-01T17:00:00Z&endTime=2024-11-10T16:59:59Z&machineSerial=${machineSerial}&type=${type}`
+        `${apiUrl}/machine-operations/top-ten?startTime=${start}&endTime=${isoDate}&machineSerial=${machineSerial}&type=${type}`
       ); 
-
+      
       const data = response.data.data.data;
+      console.log(data)
       const labels = data.map(record => record.machineSerialNum);
       const values = data.map(record => 
         type === 1 ? record.totalRunTime : 
@@ -39,8 +44,10 @@ const TopTenChart = ({ machineSerial }) => {
   };
 
   useEffect(() => {
-    fetchData(selectedType);
-  }, [machineSerial, selectedType]);
+    if (selectedDate?.startDate && selectedDate?.endDate) {
+      fetchData(selectedDate.startDate, selectedDate.endDate , selectedType);
+    };
+  }, [machineSerial,selectedDate , selectedType]);
 
   const formatTimeForX = (value) => {
     const hours = Math.floor(value / 3600);  // Only show hours for X-axis
@@ -52,6 +59,20 @@ const TopTenChart = ({ machineSerial }) => {
     const minutes = Math.floor((value % 3600) / 60);
     return `${String(hours).padStart(2, '0')} giờ ${String(minutes).padStart(2, '0')} phút`;
   };
+
+  // Tính tổng thời gian và bước (stepSize) cho trục X
+  const totalTime = Math.max(...chartValues); // Tính tổng thời gian lớn nhất từ dữ liệu chart
+
+  // Tính bước stepSize theo cách lẻ hay chẵn
+  let stepSize = totalTime / 10; // Chia tổng thời gian cho 10 để có bước đều cho trục X
+  
+  if (totalTime % 2 === 0) {
+    // Nếu totalTime là số chẵn, làm tròn stepSize thành số chẵn
+    stepSize = Math.round(stepSize / 2) * 2; 
+  } else {
+    // Nếu totalTime là số lẻ, làm tròn stepSize thành số lẻ
+    stepSize = Math.round(stepSize / 2) * 2 + 1;
+  }
 
   const data = {
     labels: chartLabels, 
@@ -73,9 +94,9 @@ const TopTenChart = ({ machineSerial }) => {
       x: { 
         beginAtZero: true,
         ticks: {
-          stepSize: 10,  // Adjust the step size based on your data range
+          stepSize: stepSize,  // Sử dụng stepSize đã tính toán ở trên
           callback: function(value) {
-            return formatTimeForX(value);  // Use the formatTimeForX function to display hours only
+            return formatTimeForX(value);  // Hiển thị thời gian trên trục X
           }
         }
       },
@@ -91,8 +112,8 @@ const TopTenChart = ({ machineSerial }) => {
         bodyColor: 'white',
         callbacks: {
           label: function(tooltipItem) {
-            const formattedValue = formatTimeForTooltip(tooltipItem.raw);  // Format time for tooltip (hours and minutes)
-            return `${tooltipItem.label}: ${formattedValue}`;  // Custom tooltip format
+            const formattedValue = formatTimeForTooltip(tooltipItem.raw);  // Định dạng thời gian cho tooltip (giờ và phút)
+            return `${tooltipItem.label}: ${formattedValue}`;  // Hiển thị tooltip tùy chỉnh
           }
         }
       }
@@ -105,7 +126,7 @@ const TopTenChart = ({ machineSerial }) => {
       <div className="text-center mb-4">
         <Radio.Group
           value={selectedType}
-          onChange={(e) => setSelectedType(e.target.value)} // Update selectedType
+          onChange={(e) => setSelectedType(e.target.value)} // Cập nhật selectedType
           buttonStyle="solid"
         >
           <Radio.Button value={1}>Run Time</Radio.Button>

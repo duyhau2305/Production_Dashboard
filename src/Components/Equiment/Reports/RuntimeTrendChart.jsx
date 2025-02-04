@@ -1,12 +1,12 @@
 import React from 'react';
 import { Line } from 'react-chartjs-2';
+import { Empty } from 'antd'; // Import Empty từ Ant Design
 import 'chartjs-plugin-datalabels';
-import { text } from 'd3';
 
 const RuntimeTrendChart = ({ data }) => {
   if (!data || !data.labels || !data.datasets || !data.datasets[0] || !data.datasets[0].data) {
     console.error("Data format is incorrect or missing properties.", data);
-    return <p>No data available for chart.</p>;
+    return <Empty description="No data available for chart" />;
   }
 
   // Convert hh:mm to total minutes for Chart.js compatibility
@@ -14,6 +14,13 @@ const RuntimeTrendChart = ({ data }) => {
     const [hours, minutes] = time.split(':').map(Number);
     return hours * 60 + minutes; // Convert to total minutes
   });
+
+  // Check if all values are 0
+  const isAllValuesZero = processedData.every(value => value === 0);
+
+  if (isAllValuesZero) {
+    return <Empty description="Không có dữ liệu hiển thị" />;
+  }
 
   const chartOptions = {
     responsive: true,
@@ -24,24 +31,27 @@ const RuntimeTrendChart = ({ data }) => {
         ticks: {
           callback: function(value) {
             const hours = Math.floor(value / 60);
-            const minutes =Math.floor(value / 3600);
-            return `${hours.toString().padStart(2, )}:${minutes.toString().padStart(2,"0")}` ;
-            
+            const minutes = value % 60; // Correctly calculate minutes
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
           },
-           },
+        },
+        title: {
+          display: true,
+          text: "Runtime (hh:mm)", // Label for the Y-axis
+        },
       },
     },
     plugins: {
       datalabels: {
-        display: false,
+        display: false, // Disable labels on the chart
       },
       legend: {
-        display: false,
+        display: false, // Disable legend
       },
       tooltip: {
         callbacks: {
           label: function(context) {
-            const value = context.raw;
+            const value = context.raw; // Total minutes
             const hours = Math.floor(value / 60);
             const minutes = value % 60;
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
@@ -55,7 +65,7 @@ const RuntimeTrendChart = ({ data }) => {
     labels: data.labels,
     datasets: [
       {
-        label: "Daily Runtime (hh:mm)",
+        label: "Daily Runtime (hh:mm)", // Label for the dataset
         data: processedData, // Use the converted data here
         fill: false,
         borderWidth: 4,

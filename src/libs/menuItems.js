@@ -11,14 +11,12 @@ export const imprtDataItems = [
 ];
 
 export const QCStItems = [
-
     { name: 'Tỷ lệ máy chạy', link: '/QCS/availablerate' },
     { name: 'Phân tích hoạt động máy', link: '/QCS/analysis' },
-    { name: 'Phân tích OEE/A', link: '/QCS/analysis/oee' },
-    { name: 'Phân tích dừng máy', link: '/QCS/analysis/downtime' },
+    { name: 'Phân tích OEE/A', link: '/QCS/oee' },
+    { name: 'Phân tích dừng máy', link: '/QCS/downtime' },
+    { name: 'Phân tích xếp hạng ', link: '/QCS/topemployee' },
     { name: 'Báo cáo ', link: '/QCS/reports' },
-
-
 ];
 
 

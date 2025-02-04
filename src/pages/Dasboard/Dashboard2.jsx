@@ -13,14 +13,18 @@ const Dashboard2 = () => {
   const [areas, setAreas] = useState([]);
   const [devices, setDevices] = useState([]);
   const [filteredDevices, setFilteredDevices] = useState([]);
-
-  const selectedDate = useSelector((state) => state.interval?.selectedDate);
+  const todayDate = new Date().toISOString().split('T')[0]; 
+  const selectedDate = useSelector((state) => state.interval?.selectedDate || todayDate);
   const selectedMachine = useSelector((state) => state.interval?.selectedMachine);
   console.log(selectedMachine)
   useEffect(() => {
+    // Reset selectedDate to today's date when the page is loaded or the user logs out
+    dispatch(setMachineData({ selectedDate: todayDate, selectedMachine }));
+
+    // Fetch data for areas and devices
     fetchAreas();
     fetchDevices();
-  }, []);
+  }, [dispatch, todayDate, selectedMachine]);
 
   const fetchAreas = async () => {
     try {
@@ -82,7 +86,8 @@ const Dashboard2 = () => {
         <div>
           <input
             type="date"
-            value={selectedDate}
+            defaultValue={todayDate}
+            value={ selectedDate || todayDate }
             onChange={handleDateChange}
             className="block w-[90%] h-20 text-4xl ml-8 border border-gray-300 rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />

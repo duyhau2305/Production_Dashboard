@@ -15,6 +15,7 @@ const DashboardPhayAreas = () => {
   // Truy cập orderedList từ OrderedListContext
   const { orderedList } = useContext(OrderedListContext);
   console.log("orderedList from context:", orderedList); 
+
   // Hàm lọc và sắp xếp máy Phay theo orderedList
   const applyFilter = (machinesData) => {
     const phayMachines = machinesData.filter(machine => machine.deviceId.startsWith("P"));
@@ -29,7 +30,20 @@ const DashboardPhayAreas = () => {
 
           return indexA - indexB;
         })
-      : phayMachines;
+      : phayMachines.sort((a, b) => {
+          const regex = /^([a-zA-Z]+)(\d+)(.*)$/; // Tách chữ, số và ký tự đặc biệt
+          const [, aLetter, aNumber, aSpecial] = a.deviceId.match(regex) || [];
+          const [, bLetter, bNumber, bSpecial] = b.deviceId.match(regex) || [];
+
+          // So sánh theo chữ trước, số sau, rồi đến ký tự đặc biệt
+          if (aLetter === bLetter) {
+            if (parseInt(aNumber, 10) === parseInt(bNumber, 10)) {
+              return (aSpecial || '').localeCompare(bSpecial || '');
+            }
+            return parseInt(aNumber, 10) - parseInt(bNumber, 10);
+          }
+          return aLetter.localeCompare(bLetter);
+        });
   };
 
   useEffect(() => {
@@ -64,46 +78,9 @@ const DashboardPhayAreas = () => {
       const updatedMachines = await fetchMachineDetails();
       setMachines(updatedMachines);
       setFilteredMachines(applyFilter(updatedMachines)); // Áp dụng filter khi dữ liệu thay đổi
-    }, 3000);
+    }, 4500);
 
     return () => clearInterval(interval);
-  }, []);
-
-  const toggleFullscreen = () => {
-    if (!isFullscreen) {
-      if (cardsRef.current.requestFullscreen) {
-        cardsRef.current.requestFullscreen();
-      } else if (cardsRef.current.mozRequestFullScreen) {
-        cardsRef.current.mozRequestFullScreen();
-      } else if (cardsRef.current.webkitRequestFullscreen) {
-        cardsRef.current.webkitRequestFullscreen();
-      } else if (cardsRef.current.msRequestFullscreen) {
-        cardsRef.current.msRequestFullscreen();
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-      } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
-      }
-    }
-    setIsFullscreen(!isFullscreen);
-  };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
   }, []);
 
   return (
@@ -117,15 +94,6 @@ const DashboardPhayAreas = () => {
           <DashboardGrid machines={filteredMachines} orderedList={orderedList} />
         )}
       </div>
-
-      {isFullscreen && (
-        <button
-          className="fixed bottom-4 right-4 z-50 text-white p-3 rounded-full shadow-lg focus:outline-none bg-red-500 hover:bg-red-600"
-          onClick={toggleFullscreen}
-        >
-          <span className="text-white">&#8722;</span>
-        </button>
-      )}
     </div>
   );
 };

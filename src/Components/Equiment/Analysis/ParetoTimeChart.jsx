@@ -1,28 +1,24 @@
 import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 
-const ParetoTimeChart = ({ data }) => {
+const ParetoTimeChart = ({ data, isLoading }) => {
   const chartRef = useRef(null);
 
   useEffect(() => {
+    if (!data || !data.labels || !data.values || data.labels.length === 0 || data.values.length === 0) {
+      return; // Do nothing if no valid data
+    }
+
     const ctx = chartRef.current.getContext('2d');
+    let { labels, values } = data;
 
     // Sort data descending for Pareto logic (80/20)
-    let { labels, values } = data || {};
     const sortedData = values
       .map((value, index) => ({ label: labels[index], value }))
       .sort((a, b) => b.value - a.value);
 
     labels = sortedData.map(item => item.label);
     values = sortedData.map(item => item.value);
-
-    console.log('Sorted Labels:', labels); // Debugging
-    console.log('Sorted Values:', values); // Debugging
-
-    if (!labels || !values || labels.length === 0 || values.length === 0) {
-      console.error('No data or labels available');
-      return;
-    }
 
     // Calculate cumulative percentages
     const total = values.reduce((acc, value) => acc + value, 0);
@@ -31,6 +27,7 @@ const ParetoTimeChart = ({ data }) => {
       return (cumulativeSum / total) * 100;
     });
 
+    // Create chart instance
     const chart = new Chart(ctx, {
       type: 'bar',
       data: {
@@ -59,6 +56,20 @@ const ParetoTimeChart = ({ data }) => {
       },
       options: {
         responsive: true,
+        plugins: {
+          legend: {
+            display: false,
+            position: 'top',
+            labels: {
+              font: {
+                size: 10,
+              },
+              boxWidth: 20,
+              padding: 10,
+            },
+            align: 'center',
+          },
+        },
         scales: {
           x: {
             grid: { display: false },
@@ -82,13 +93,10 @@ const ParetoTimeChart = ({ data }) => {
             grid: { drawOnChartArea: false }, // Prevent grid overlap
           },
         },
-        plugins: {
-          legend: {
-            display: false,
-            position: 'top',
-            labels: {
-              font: { size: 10 },
-            },
+        layout: {
+          padding: {
+            top: 10,
+            bottom: 5,
           },
         },
       },
@@ -98,7 +106,27 @@ const ParetoTimeChart = ({ data }) => {
     return () => chart.destroy();
   }, [data]);
 
-  return <canvas ref={chartRef} />;
+  if (isLoading) {
+    return (
+      <div style={{ width: '100%', height: '280px' }} className="flex justify-center items-center">
+        <p>Đang tải dữ liệu...</p>
+      </div>
+    );
+  }
+
+  if (!data || !data.labels || !data.labels.length) {
+    return (
+      <div style={{ width: '100%', height: '280px' }} className="flex justify-center items-center">
+        <p>Không có dữ liệu để hiển thị</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: '100%', height: '280px' }} className="flex justify-center">
+      <canvas ref={chartRef}></canvas>
+    </div>
+  );
 };
 
 export default ParetoTimeChart;

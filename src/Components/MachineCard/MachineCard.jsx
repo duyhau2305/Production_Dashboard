@@ -4,6 +4,7 @@ import 'react-circular-progressbar/dist/styles.css';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
 import io from "socket.io-client";
+import moment from 'moment-timezone';
 
 const getHeaderColor = (status) => {
   if (status === 'Run') return '#60ec60';  // Green for Active
@@ -55,9 +56,26 @@ const MachineCard = ({ machine }) => {
   const [callingDepartment, setCallingDepartment] = useState('');
   const socketRef = useRef(null);
 
+  const formatName = (fullName) => {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(' ');
+  
+    // Nếu có ít hơn 4 từ, giữ nguyên tên
+    if (parts.length < 4) return fullName;
+  
+    // Nếu có 4 từ trở lên, rút gọn tên
+    const lastName = parts[0];
+    const middleNames = parts.slice(1, -1).map(name => name[0] + '.').join(' ');
+    const firstName = parts[parts.length - 1];
+    return `${lastName} ${middleNames} ${firstName}`; // Hiển thị dạng "Lại N. H. Phúc"
+  };
+  
   const displayInfo = isCalling
-  ? `Đang gọi  ${callingDepartment}`
-  : machine.productionTasks?.[0]?.shifts[0]?.employeeName?.[0] || '';
+    ? `Đang gọi ${callingDepartment}`
+    : formatName(machine.productionTasks?.[0]?.shifts[0]?.employeeName?.[0]) || '';
+  
+  
+  
 
   useEffect(() => {
     const apiSocket = import.meta.env.VITE_API_BASE_SOCKET;
@@ -90,7 +108,35 @@ const MachineCard = ({ machine }) => {
   const isDecrease = numericPercentDiff < 0;
   const displayPercentDiff = Math.abs(numericPercentDiff).toFixed(2) + '%';
   const arrowColor = headerColor === '#ff3333' ? 'text-white' : (isIncrease ? 'text-green-700' : 'text-red-500');
+ const calculateShiftDurationWithFixedStart = (machine) => {
+  const endTime = machine.productionTasks?.[0]?.shifts[0]?.shiftDetails?.endTime || null;
 
+  if (!endTime) {
+      return 8 * 60 * 60; // Mặc định 8 tiếng = 28,800 giây
+  }
+
+  // Chuẩn hóa định dạng HH:mm
+  const normalizeTime = (time) => {
+      const [hour, minute] = time.split(':');
+      return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  };
+
+  const today = moment().format("YYYY-MM-DD");
+  const fixedStartTime = "08:00"; // Start time cố định
+  const normalizedEndTime = normalizeTime(endTime);
+
+  const start = moment.tz(`${today}T${fixedStartTime}`, "Asia/Ho_Chi_Minh").valueOf();
+  const end = moment.tz(`${today}T${normalizedEndTime}`, "Asia/Ho_Chi_Minh").valueOf();
+
+  // Tính duration (ms -> s)
+  return (end - start) / 1000;
+};
+
+  const durationInSeconds = calculateShiftDurationWithFixedStart(machine);
+
+console.log("Duration in seconds:", durationInSeconds);
+
+ 
 
   return (
     <div className={`shadow-md flex flex-col justify-between `} style={{ backgroundColor: headerColor }}>
@@ -121,7 +167,7 @@ const MachineCard = ({ machine }) => {
         {/* OEE Circular Progress */}
         <div className="relative ml-2" style={{ width: 165, height: 165 }}>
           <CircularProgressbar
-            value={(machine.summaryStatus / 50400) *100}
+            value={(machine.summaryStatus / durationInSeconds) *100}
             styles={buildStyles({
               pathColor: '#0782f4',
               textColor: '#122a35',
@@ -134,15 +180,18 @@ const MachineCard = ({ machine }) => {
           <div className="absolute mb-1 -top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-center w-full h-full">
           {/* <span className="text-xl font-bold ">
           Total Run </span> */}
-        <span className="text-5xl font-bold mt-6  ">
-        {formatMinutesToTime(machine.summaryStatus || 0)}p
+        <span className="text-5xl font-bold mt-6 ">
+        {formatMinutesToTime(machine.summaryStatus-machine.totalTimeRun|| 0)}p
         </span>
-          <span className=" font-bold  flex items-center mt-4">
+        <span className="text-3xl font-bold "  style={{ color: headerColor === '#ff3333' ? '#ffffff' : '#ff3333' }} >
+        {formatMinutesToTime(machine.summaryStatusIdle+machine.summaryStatusStop-machine.totalTimeIdle-machine.totalTimeStop-(machine.totalBreakTimeInMinutes*60)|| 0)}p
+        </span>
+          <span className=" font-bold  flex items-center mt-2 ">
             {isIncrease && <FaArrowUp className={`${arrowColor} mr-1 text-xl  `} />}
             {isDecrease && <FaArrowDown className={`${arrowColor} mr-1 text-xl `} />}
-            <span className={`${arrowColor} mr-1 text-xl`}>{displayPercentDiff} </span>
+            <span className={`${arrowColor}  text-md`}>{displayPercentDiff} </span>
           </span>
-          <span className="text-md font-bold  flex items-center ">Hôm qua</span>
+         
           </div>
           <div className={`absolute  font-bold text-[16px] -translate-x-1/5  ${isCalling ? 'calling-effect' : ''}`} >
             {displayInfo}

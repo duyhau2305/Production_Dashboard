@@ -1,28 +1,28 @@
 import React, { useEffect, useRef } from 'react';
 import Chart from 'chart.js/auto';
 
-const ParetoFrequencyChart = ({ data }) => {
+const ParetoFrequencyChart = ({ data, isLoading }) => {
   const chartRef = useRef(null);
 
   useEffect(() => {
-    const ctx = chartRef.current.getContext('2d');
+    if (!data || !data.labels || !data.values || data.labels.length === 0 || data.values.length === 0) {
+      return; // Exit early if no valid data
+    }
 
-    // Sort data descending based on values for Pareto 80/20 logic
-    let { labels, values } = data || {};
+    const ctx = chartRef.current.getContext('2d');
+    let { labels, values } = data;
+
+    // Ensure values are integers
+    console.log('Raw values:', values);
+    values = values.map((value) => Math.round(value)); // Ensure values are whole numbers
+
+    // Sort data descending for Pareto logic (80/20)
     const sortedData = values
       .map((value, index) => ({ label: labels[index], value }))
       .sort((a, b) => b.value - a.value);
 
     labels = sortedData.map(item => item.label);
     values = sortedData.map(item => item.value);
-
-    console.log('Sorted Labels:', labels); // Debugging
-    console.log('Sorted Values:', values); // Debugging
-
-    if (!labels || !values || labels.length === 0 || values.length === 0) {
-      console.error('No data or labels available');
-      return;
-    }
 
     // Calculate cumulative percentage
     const total = values.reduce((acc, value) => acc + value, 0);
@@ -39,14 +39,14 @@ const ParetoFrequencyChart = ({ data }) => {
         labels: labels,
         datasets: [
           {
-            label: 'Cumulative Percentage',
+            label: 'Cumulative Percentage (%)',
             data: cumulativeData,
             type: 'line',
             borderColor: '#c21224',
             backgroundColor: '#c21224',
             borderWidth: 2,
             pointRadius: 3,
-            yAxisID: 'y1',
+            yAxisID: 'y1', // Assign to second y-axis
           },
           {
             label: 'Frequency',
@@ -54,7 +54,7 @@ const ParetoFrequencyChart = ({ data }) => {
             backgroundColor: barColors,
             borderColor: barColors,
             borderWidth: 1,
-            yAxisID: 'y',
+            yAxisID: 'y', // Assign to first y-axis
           },
         ],
       },
@@ -63,13 +63,14 @@ const ParetoFrequencyChart = ({ data }) => {
         scales: {
           x: {
             grid: { display: false },
-            title: { display: false, text: 'Reason Names' },
+            title: { display: false, text: 'Reasons' },
           },
           y: {
             beginAtZero: true,
             position: 'left',
             ticks: {
-              callback: (value) => `${value} lần`,
+              stepSize: 1, // Force tick increments of 1
+              callback: (value) => `${value} lần`, // Ensure integer display with label
             },
           },
           y1: {
@@ -82,7 +83,18 @@ const ParetoFrequencyChart = ({ data }) => {
           },
         },
         plugins: {
-          legend: { display: false, position: 'top' },
+          legend: {
+            display: false,
+            position: 'top',
+            labels: {
+              font: {
+                size: 10,
+              },
+              boxWidth: 20,
+              padding: 10,
+            },
+            align: 'center',
+          },
         },
       },
     });
@@ -90,7 +102,27 @@ const ParetoFrequencyChart = ({ data }) => {
     return () => chart.destroy();
   }, [data]);
 
-  return <canvas ref={chartRef} />;
+  if (isLoading) {
+    return (
+      <div style={{ width: '100%', height: '280px' }} className="flex justify-center items-center">
+        <p>Đang tải dữ liệu...</p>
+      </div>
+    );
+  }
+
+  if (!data || !data.labels || !data.labels.length) {
+    return (
+      <div style={{ width: '100%', height: '280px' }} className="flex justify-center items-center">
+        <p>Không có dữ liệu để hiển thị</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: '100%', height: '280px' }} className="flex justify-center">
+      <canvas ref={chartRef}></canvas>
+    </div>
+  );
 };
 
 export default ParetoFrequencyChart;

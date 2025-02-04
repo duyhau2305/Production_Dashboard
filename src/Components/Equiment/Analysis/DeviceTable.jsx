@@ -1,4 +1,4 @@
-import React from 'react';
+import React , {useState,useEffect} from 'react';
 
 // Helper functions (giữ nguyên như bạn đã định nghĩa)
 const formatDate = (dateString) => {
@@ -43,7 +43,7 @@ const calculateDuration = (startTime, endTime) => {
   const minutes = totalMinutes % 60;
 
   // Return formatted duration as "HH:mm"
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
 };
 
 
@@ -88,11 +88,11 @@ function getTimeDifference(startTime, endTime) {
   const hours = Math.floor(differenceInMinutes / 60);
   const minutes = differenceInMinutes % 60;
 
-  return `${hours} giờ ${minutes} phút`;
+  return `${hours}:${minutes}`;
 }
 
 function calculateActualRunTime(shift) {
-  const { startTime, endTime, breakTime } = shift;
+  const { startTime, endTime, breakTime, lastBreakTime } = shift;
   if (!startTime || !endTime) {
     return '';
   }
@@ -103,17 +103,68 @@ function calculateActualRunTime(shift) {
   };
 
   const scheduledRunTime = timeToMinutes(endTime) - timeToMinutes(startTime);
-  const totalBreakTime = breakTime.reduce((total, breakPeriod) => {
-    const breakStart = timeToMinutes(breakPeriod.startTime);
-    const breakEnd = timeToMinutes(breakPeriod.endTime);
-    return total + (breakEnd - breakStart);
-  }, 0);
-  console.log(scheduledRunTime)
+
+  // Helper function to calculate total break time
+  const calculateTotalBreakTime = (breakPeriods) => {
+    return breakPeriods.reduce((total, breakPeriod) => {
+      const breakStart = timeToMinutes(breakPeriod.startTime);
+      const breakEnd = timeToMinutes(breakPeriod.endTime);
+      return total + (breakEnd - breakStart);
+    }, 0);
+  };
+
+  // Check if breakTime and lastBreakTime are the same
+  let totalBreakTime = 0;
+  if (JSON.stringify(breakTime) === JSON.stringify(lastBreakTime)) {
+    // If they're the same, calculate only once
+    totalBreakTime = calculateTotalBreakTime(breakTime);
+  } else {
+    // If they're different, calculate both
+    totalBreakTime = calculateTotalBreakTime(breakTime) + calculateTotalBreakTime(lastBreakTime || []);
+  }
+
   const actualRunTimeInMinutes = scheduledRunTime - totalBreakTime;
   const hours = Math.floor(actualRunTimeInMinutes / 60);
   const minutes = actualRunTimeInMinutes % 60;
 
-  return `${hours} giờ ${minutes} phút`;
+  return `${hours}:${minutes}`;
+}
+
+function calculateActualRunTimePercent(shift) {
+  const { startTime, endTime, breakTime, lastBreakTime } = shift;
+  if (!startTime || !endTime) {
+    return '';
+  }
+
+  const timeToMinutes = (time) => {
+    const [hour, minute] = time.split(':').map(Number);
+    return hour * 60 + minute;
+  };
+
+  const scheduledRunTime = timeToMinutes(endTime) - timeToMinutes(startTime);
+
+  // Helper function to calculate total break time
+  const calculateTotalBreakTime = (breakPeriods) => {
+    return breakPeriods.reduce((total, breakPeriod) => {
+      const breakStart = timeToMinutes(breakPeriod.startTime);
+      const breakEnd = timeToMinutes(breakPeriod.endTime);
+      return total + (breakEnd - breakStart);
+    }, 0);
+  };
+
+  // Check if breakTime and lastBreakTime are the same
+  let totalBreakTime = 0;
+  if (JSON.stringify(breakTime) === JSON.stringify(lastBreakTime)) {
+    totalBreakTime = calculateTotalBreakTime(breakTime);
+  } else {
+    totalBreakTime = calculateTotalBreakTime(breakTime) + calculateTotalBreakTime(lastBreakTime || []);
+  }
+  console.log(totalBreakTime)
+  const actualRunTimeInMinutes = scheduledRunTime - totalBreakTime;
+  const hours = Math.floor(actualRunTimeInMinutes / 60); 
+  const minutes = actualRunTimeInMinutes % 60;
+  const totalInMinutes = hours*60*60 + minutes*60
+  return totalInMinutes;
 }
 const getDowntimeInfoByInterval = (startTime, endTime, downtimeData) => {
   const matchingDowntime = downtimeData.find((item) =>
@@ -145,6 +196,33 @@ function convertSecondsToTime(seconds) {
 }
 
 const DeviceTable = ({ downtimeData, telemetryData, productionData, employeeData, type }) => {
+  const [loading, setLoading] = useState(true); // Trạng thái loading
+
+  useEffect(() => {
+    // Giả sử dữ liệu được tải ở đây (nếu dùng props từ cha, có thể bỏ phần này)
+    if (downtimeData || telemetryData || productionData) {
+      setLoading(false); // Tắt loading khi có dữ liệu
+    }
+  }, [downtimeData, telemetryData, productionData]);
+
+  // Nếu đang tải dữ liệu
+  if (loading) {
+    return (
+      <div className="text-center mt-4">
+        <p className="text-blue-500">Loading data...</p>
+      </div>
+    );
+  }
+
+  // Nếu không có dữ liệu
+  if (!downtimeData?.length && !telemetryData?.length && !productionData?.productionTasks?.length) {
+    return (
+      <div className="text-center mt-4">
+        <p className="text-gray-500">No data available</p>
+      </div>
+    );
+  }
+  
   const sortedTelemetryData = [...telemetryData].sort(
     (a, b) => new Date(a.date) - new Date(b.date)
   );
@@ -230,44 +308,83 @@ const TableProduction = ({ productionData }) => (
   <table className="min-w-full bg-white border border-gray-200 mt-4">
     <thead>
       <tr className="bg-gray-100">
-        {['STT', 'Ngày', 'Thời gian bắt đầu', 'Thời gian kết thúc',
-          'Thời gian công việc', 'Thời gian chạy theo kế hoạch',
-          'Thời gian chạy thực tế', 'Thời gian chờ',
-          'Thời gian tắt máy', 'Thời gian bảo trì', 'Tỉ lệ chạy'].map((header) => (
-            <th key={header} className="border px-4 py-2 text-xs">
-              {header}
-            </th>
-          ))}
+        {[
+          'STT',
+          'Ngày',
+          'Thời gian bắt đầu',
+          'Thời gian kết thúc',
+          'Thời gian công việc',
+          'Thời gian chạy theo kế hoạch',
+          'Thời gian chạy thực tế',
+          'Thời gian chờ',
+          'Thời gian tắt máy',
+          'Thời gian Dừng',
+          'Tỉ lệ chạy',
+        ].map((header) => (
+          <th key={header} className="border px-4 py-2 text-xs">
+            {header}
+          </th>
+        ))}
       </tr>
     </thead>
     <tbody>
-      {productionData.productionTasks.map((item, index) => {
-        const summaryStatus = productionData.summaryStatus.find(value => {
-          const logDate = new Date(value.logTime).toISOString().split("T")[0];
-          const itemDate = new Date(item.date).toISOString().split("T")[0];
-          return logDate === itemDate;
-        }) || {};
+       {productionData?.enrichedData?.map((item, index) => {
+        const productionTask = item.productionTask !== "Chưa lên lịch" ? item.productionTask : null;
+        const summaryStatus = item.summaryStatus || {};
+
+        const shifts = productionTask?.shifts || [];
+        const firstShift = shifts[0]?.shiftDetails;
+        const lastShift = shifts[shifts.length - 1]?.shiftDetails;
 
         return (
           <tr key={index}>
             <td className="border px-4 py-2">{index + 1}</td>
-            <td className="border px-4 py-2">{new Date(item.date).toISOString().split('T')[0]}</td>
-            <td className="border px-4 py-2">{item.shifts[0]?.shiftDetails?.startTime || ''}</td>
-            <td className="border px-4 py-2">{item.shifts[item.shifts.length-1]?.shiftDetails?.endTime || ''}</td>
-            <td className="border px-4 py-2">{getTimeDifference(item.shifts[0]?.shiftDetails?.startTime, item.shifts[item.shifts.length-1]?.shiftDetails?.endTime)}</td>
+            <td className="border px-4 py-2">{item.date}</td>
             <td className="border px-4 py-2">
-              {calculateActualRunTime({
-                startTime: item.shifts[0]?.shiftDetails?.startTime,
-                endTime: item.shifts[item.shifts.length-1]?.shiftDetails?.endTime,
-                breakTime: item.shifts[0]?.shiftDetails?.breakTime,
-              })}
+              {firstShift?.startTime ? `${firstShift.startTime}:00` : 'Chưa lên lịch sản xuất'}
+            </td>
+            <td className="border px-4 py-2">
+              {lastShift?.endTime ? `${lastShift.endTime}:00` : 'Chưa lên lịch sản xuất'}
+            </td>
+            <td className="border px-4 py-2">
+              {firstShift?.startTime && lastShift?.endTime
+                ? `${getTimeDifference(firstShift.startTime, lastShift.endTime)}:00`
+                : '00:00:00'}
+            </td>
+            <td className="border px-4 py-2">
+              {firstShift?.startTime && lastShift?.endTime
+                ? `${calculateActualRunTime({
+                    startTime: firstShift.startTime,
+                    endTime: lastShift.endTime,
+                    breakTime: firstShift.breakTime,
+                    lastBreakTime: lastShift.breakTime,
+                  })}:00`
+                : '00:00:00'}
             </td>
             <td className="border px-4 py-2">{convertSecondsToTime(summaryStatus.runTime || 0)}</td>
             <td className="border px-4 py-2">{convertSecondsToTime(summaryStatus.idleTime || 0)}</td>
-            <td className="border px-4 py-2">{convertSecondsToTime(summaryStatus.stopTime || 0)}</td>
-            <td className="border px-4 py-2"></td>
             <td className="border px-4 py-2">
-              {((summaryStatus.runTime || 0) / 86400 * 100).toFixed(2)}
+              {convertSecondsToTime(
+                86400 -
+                  (summaryStatus.runTime || 0) -
+                  (summaryStatus.idleTime || 0) -
+                  (summaryStatus.stopTime || 0)
+              )}
+            </td>
+            <td className="border px-4 py-2">{convertSecondsToTime(summaryStatus.stopTime || 0)}</td>
+            <td className="border px-4 py-2">
+              {firstShift?.startTime && lastShift?.endTime
+                ? `${(
+                    ((summaryStatus.runTime || 0) /
+                      calculateActualRunTimePercent({
+                        startTime: firstShift.startTime,
+                        endTime: lastShift.endTime,
+                        breakTime: firstShift.breakTime,
+                        lastBreakTime: lastShift.breakTime,
+                      })) *
+                    100
+                  ).toFixed(2)}%`
+                : '0.00%'}
             </td>
           </tr>
         );
@@ -275,5 +392,6 @@ const TableProduction = ({ productionData }) => (
     </tbody>
   </table>
 );
+
 
 export default DeviceTable;

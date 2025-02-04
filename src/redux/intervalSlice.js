@@ -1,6 +1,8 @@
 // src/redux/intervalSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 
+const getTodayDate = () => new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+
 const loadStateFromLocalStorage = () => {
   try {
     const serializedState = localStorage.getItem('intervalState');
@@ -12,13 +14,13 @@ const loadStateFromLocalStorage = () => {
 };
 
 const initialState = loadStateFromLocalStorage() || {
-  selectedDate: new Date().toISOString().split('T')[0],
+  selectedDate: getTodayDate(),  // Default to today's date
   selectedMachine: null,
   selectedIntervals: [],
   declaredIntervals: {},
   isCalling: false,
   callingDepartment: '',
-  callingDeviceId: null,  // Lưu `deviceId` của máy đang gọi
+  callingDeviceId: null,
 };
 
 const intervalSlice = createSlice({
@@ -43,12 +45,12 @@ const intervalSlice = createSlice({
     startCallHelp: (state, action) => {
       state.isCalling = true;
       state.callingDepartment = action.payload.department;
-      state.callingDeviceId = action.payload.deviceId;  // Lưu `deviceId` của máy đang gọi
+      state.callingDeviceId = action.payload.deviceId;
     },
     stopCallHelp: (state) => {
       state.isCalling = false;
       state.callingDepartment = '';
-      state.callingDeviceId = null;  // Xóa `deviceId` khi kết thúc cuộc gọi
+      state.callingDeviceId = null;
     },
   },
 });

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaEdit, FaTrash, FaLock, FaEye, FaUnlock, FaPlus ,FaEyeSlash} from 'react-icons/fa';
+import { FaEdit, FaTrash, FaLock, FaEye, FaUnlock, FaPlus, FaEyeSlash } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { message } from 'antd';
 import DynamicFormModal from '../../Components/Modal/DynamicFormModal';
 import * as yup from 'yup';
 
@@ -10,13 +11,13 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
   const [showPasswordMap, setShowPasswordMap] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
   const [plainTextPasswords, setPlainTextPasswords] = useState({});
 
-  const currentRole = localStorage.getItem('role'); // Lấy role hiện tại từ localStorage
-  const apiUrl = import.meta.env.VITE_API_BASE_URL
-  // Fetch users from API
+  const currentRole = localStorage.getItem('role');
+  const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -25,56 +26,107 @@ const UserManagement = () => {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
+        
         setUsers(response.data);
+  
+        // Tạo map chứa plainTextPassword
+        const passwordsMap = response.data.reduce((acc, user) => {
+          acc[user._id] = user.plainTextPassword || '*****';
+          return acc;
+        }, {});
+        setPlainTextPasswords(passwordsMap);
       } catch (error) {
         toast.error('Failed to fetch users');
       }
     };
     fetchUsers();
   }, []);
+  
 
-  // Handle creating a new user
   const handleCreateUser = () => {
     setSelectedUser(null);
     setIsModalOpen(true);
   };
-
-  // Save user (Create or Update)
+  const checkDuplicate = (data) => {
+    let duplicateFields = {};
+    
+    users.forEach(user => {
+      if (user._id !== (selectedUser?._id || '')) { // Loại trừ user đang chỉnh sửa
+        if (user.employeeId === data.employeeId) {
+          duplicateFields.employeeId = true;
+        }
+        if (user.email === data.email) {
+          duplicateFields.email = true;
+        }
+        if (user.username === data.username) {
+          duplicateFields.username = true;
+        }
+      }
+    });
+  
+    return duplicateFields;
+  };
+  
+ 
   const handleSave = async (data) => {
+    const duplicates = checkDuplicate(data);
+    const duplicateFields = [];
+  
+    // Thêm các trường bị trùng vào danh sách
+    if (duplicates.employeeId) duplicateFields.push('Mã nhân viên');
+    if (duplicates.email) duplicateFields.push('Email');
+    if (duplicates.username) duplicateFields.push('Tên đăng nhập');
+  
+    // Nếu có bất kỳ trường nào bị trùng, hiển thị thông báo
+    if (duplicateFields.length > 0) {
+      const fields = duplicateFields.join(', ');
+      message.warning(`${fields} đã tồn tại!`);
+      return;
+    }
+  
     try {
-      const { password, ...userData } = data;
+      const { password, role, ...userData } = data;
+      userData.role = role;
   
-      // Lưu mật khẩu dạng plaintext trong state
-      setPlainTextPasswords(prev => ({
-        ...prev,
-        [selectedUser ? selectedUser._id : 'new']: password,
-      }));
+      if (password && password !== plainTextPasswords[selectedUser?._id]) {
+        userData.plainTextPassword = password;
+        userData.password = password; // Hash the password before saving to the database
+      } else if (selectedUser) {
+        userData.password = selectedUser.password; // Use the existing hashed password
+      }
   
+      userData.isAdmin = role === 'Admin';
+  
+      if (!selectedUser) {
+        userData.locked = false;
+      }
+  
+      let response;
       if (selectedUser) {
-        // Gửi bản sao không có mật khẩu plaintext để cập nhật
-        await axios.put(`${apiUrl}/users/${selectedUser._id}`, userData, {
+        response = await axios.put(`${apiUrl}/users/${selectedUser._id}`, userData, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
-        setUsers(users.map(user => user._id === selectedUser._id ? { ...user, ...userData } : user));
-        toast.success('User updated successfully');
+        setUsers(users.map(user => user._id === selectedUser._id ? { ...user, ...response.data } : user));
+        message.success('User updated successfully');
       } else {
-        // Gửi bản sao không có mật khẩu plaintext để tạo mới
-        const response = await axios.post(`${apiUrl}/users`, userData, {
+        response = await axios.post(`${apiUrl}/users`, userData, {
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
         });
         setUsers([...users, response.data]);
-        toast.success('User created successfully');
+        message.success('User created successfully');
       }
+  
+      setPlainTextPasswords(prev => ({
+        ...prev,
+        [selectedUser ? selectedUser._id : response.data._id]: password,
+      }));
     } catch (error) {
-      toast.error('Failed to save user');
+      message.error('Failed to save user');
     }
     setIsModalOpen(false);
     setSelectedUser(null);
   };
-  
-  
-
-  // Delete user
+    
   const handleDeleteUser = async (id) => {
     try {
       await axios.delete(`${apiUrl}/users/${id}`, {
@@ -83,13 +135,12 @@ const UserManagement = () => {
         },
       });
       setUsers(users.filter(user => user._id !== id));
-      toast.success('User deleted successfully');
+      message.success('User deleted successfully');
     } catch (error) {
-      toast.error('Failed to delete user');
+      message.error('Failed to delete user');
     }
   };
 
-  // Toggle user lock status
   const handleToggleLockUser = async (id) => {
     try {
       const response = await axios.put(`${apiUrl}/users/${id}/lock`, {}, {
@@ -98,22 +149,23 @@ const UserManagement = () => {
         },
       });
       setUsers(users.map(user => (user._id === id ? { ...user, locked: response.data.locked } : user)));
-      toast.success(response.data.locked ? 'User locked' : 'User unlocked');
+      message.success(response.data.locked ? 'User locked' : 'User unlocked');
     } catch (error) {
-      toast.error('Failed to toggle lock status');
+      message.error('Failed to toggle lock status');
     }
   };
-
+  
   const handleEditUser = (user) => {
     setSelectedUser(user);
     setIsModalOpen(true);
   };
 
   const togglePasswordVisibility = (userId) => {
-    setShowPasswordMap((prevMap) => ({
+    setShowPasswordMap(prevMap => ({
       ...prevMap,
-      [userId]: !prevMap[userId], // Đảo ngược trạng thái hiện tại của user đó
+      [userId]: !prevMap[userId],
     }));
+    setShowPassword(prev => !prev);
   };
 
   return (
@@ -147,17 +199,16 @@ const UserManagement = () => {
                 <td className="py-3 px-4">{user.employeeId}</td>
                 <td className="py-3 px-4">{user.username}</td>
                 <td className="py-3 px-4 relative">
-                  {showPasswordMap[user._id] ? user.password : '*****'}
+                  {showPasswordMap[user._id] ? plainTextPasswords[user._id] : '*****'}
                   <button
                     type="button"
                     onClick={() => togglePasswordVisibility(user._id)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
                     title="Hiển thị/Mật khẩu"
                   >
-                    {showPasswordMap[user._id] ? <FaEyeSlash /> : <FaEye />}
+                    {showPasswordMap[user._id] ? <FaEye />:<FaEyeSlash />  }
                   </button>
                 </td>
-
                 <td className="py-3 px-4">{user.name}</td>
                 <td className="py-3 px-4">{user.email}</td>
                 <td className="py-3 px-4">{user.role}</td>
@@ -181,7 +232,7 @@ const UserManagement = () => {
                     title={user.locked ? 'Mở khóa' : 'Khóa'}
                     onClick={() => handleToggleLockUser(user._id)}
                   >
-                    {user.locked ? <FaUnlock /> : <FaLock />}
+                    {user.locked ?  <FaLock />:<FaUnlock /> }
                   </button>
                 </td>
               </tr>
@@ -194,51 +245,54 @@ const UserManagement = () => {
         </tbody>
       </table>
 
-      <DynamicFormModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedUser(null);
-          setShowPassword(false); 
-        }}
-        onSave={handleSave}
-        formFields={[
-          { 
-            name: 'employeeId', 
-            label: 'Mã Nhân Viên', 
-            type: 'text', 
-            validation: yup.string().required('Mã nhân viên là bắt buộc'), 
-            disabled: !!selectedUser 
-          },
-          { name: 'username', label: 'Tên đăng nhập', type: 'text', validation: yup.string().required('Tên tài khoản là bắt buộc') },
-          { name: 'name', label: 'Tên', type: 'text', validation: yup.string().required('Tên nhân viên là bắt buộc') },
-          { name: 'email', label: 'Email', type: 'email', validation: yup.string().email('Email không hợp lệ').required('Email là bắt buộc') },
-          {
-            name: 'password',
-            label: 'Mật khẩu',
-            type: showPassword ? 'text' : 'password', 
-            validation: yup.string().required('Mật khẩu là bắt buộc'),
-            extra: (
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
-              >
-                {showPassword ?<FaEyeSlash /> : <FaEye />   }
-              </button>
-            )
-          },
-          {
-            name: 'role',
-            label: 'Vai trò',
-            type: 'select',
-            options: ['Sản xuất', 'Kỹ thuật', 'Chất lượng', 'Kho', 'Admin','CNVH'],
-            validation: yup.string().required('Vai trò là bắt buộc')
-          }
-        ]}
-        contentLabel={selectedUser ? 'Chỉnh sửa tài khoản' : 'Thêm mới tài khoản'}
-        initialData={selectedUser || { employeeId: '', username: '', name: '', email: '', password: '', role: '' }}
-      />
+
+<DynamicFormModal
+  isOpen={isModalOpen}
+  onClose={() => {
+    setIsModalOpen(false);
+    setSelectedUser(null);
+    setShowPassword(false); // Đảm bảo mật khẩu bị ẩn khi modal đóng
+  }}
+  onSave={handleSave}
+  formFields={[
+    { name: 'employeeId', label: 'Mã Nhân Viên', type: 'text', validation: yup.string().required('Mã nhân viên là bắt buộc'), disabled: !!selectedUser },
+    { name: 'username', label: 'Tên đăng nhập', type: 'text', validation: yup.string().required('Tên tài khoản là bắt buộc') },
+    { name: 'name', label: 'Tên', type: 'text', validation: yup.string().required('Tên nhân viên là bắt buộc') },
+    { name: 'email', label: 'Email', type: 'email', validation: yup.string().email('Email không hợp lệ').required('Email là bắt buộc') },
+    {
+      name: 'password',
+      label: 'Mật khẩu',
+      type: showPassword ? 'text' : 'password',
+      validation: yup.string().required('Mật khẩu là bắt buộc'),
+      extra: (
+        <button
+          type="button"
+          onClick={togglePasswordVisibility}
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
+        >
+          {showPassword ? <FaEyeSlash /> : <FaEye />}
+        </button>
+      )
+    },
+    {
+      name: 'role',
+      label: 'Vai trò',
+      type: 'select',
+      options: ['Sản xuất', 'Kỹ thuật', 'Chất lượng', 'Kho', 'Admin', 'CNVH'],
+      validation: yup.string().required('Vai trò là bắt buộc')
+    }
+  ]}
+  contentLabel={selectedUser ? 'Chỉnh sửa tài khoản' : 'Thêm mới tài khoản'}
+  initialData={
+    selectedUser
+      ? { ...selectedUser, password: plainTextPasswords[selectedUser._id] } // Dùng plainTextPassword nếu chỉnh sửa
+      : { employeeId: '', username: '', name: '', email: '', password: '', role: '' }
+  }
+/>
+
+
+
+
 
       <ToastContainer />
     </div>

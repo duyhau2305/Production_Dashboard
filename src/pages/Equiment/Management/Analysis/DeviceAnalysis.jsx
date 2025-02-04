@@ -7,7 +7,8 @@ import ParetoTimeChart from '../../../../Components/Equiment/Analysis/ParetoTime
 import ParetoFrequencyChart from '../../../../Components/Equiment/Analysis/ParetoFrequencyChart'; 
 import Breadcrumb from '../../../../Components/Breadcrumb/Breadcrumb'; 
 import axios from 'axios';
-import TopTenChart from '../../../../Components/TopTenChart/TopTenChart';
+import dayjs from 'dayjs'
+
 
 
 const { RangePicker } = DatePicker;
@@ -56,8 +57,8 @@ useEffect(() => {
 
       const defaultDevice = devices[0];
       setSelectedDevice({ _id: defaultDevice.id, deviceId: defaultDevice.deviceId });
-      const endDate = moment();
-      const startDate = moment().subtract(3, 'days');
+      const endDate = dayjs();
+      const startDate = dayjs().subtract(3, 'days');
       setSelectedDateRange([startDate, endDate]);
 
       fetchAllData(defaultDevice, [startDate, endDate]);
@@ -252,7 +253,7 @@ const aggregateDowntimeHoursByReason = (data) => {
           <RangePicker 
             onChange={(dates) => {handleDateChange(dates);
             }} 
-            defaultValue={selectedDateRange}
+            value={selectedDateRange}
           />
         </Space>
       </div>
@@ -262,15 +263,15 @@ const aggregateDowntimeHoursByReason = (data) => {
                 </div>) :(<div>
           <div className="grid grid-cols-5 gap-2 mt-4">
             <div className="col-span-1 bg-white p-3">
-              <h4>Downtime Pie Chart</h4>
+              <h4>Phân bố DownTime theo giờ</h4>
               <DowntimePieChart data={aggregatedDowntimeData} />
             </div>
             <div className="col-span-2 bg-white p-3">
-              <h4>Pareto Time Chart</h4>
+              <h4>Biểu đồ Pareto Downtime theo giờ</h4>
               <ParetoTimeChart data={aggregatedData} />
             </div>
             <div className="col-span-2 bg-white p-3">
-              <h4>Pareto Frequency Chart</h4>
+              <h4>Biểu đồ Pareto Downtime theo tần suất</h4>
               <ParetoFrequencyChart data={aggregatedFrequencytimeData} />
             </div>
           </div>

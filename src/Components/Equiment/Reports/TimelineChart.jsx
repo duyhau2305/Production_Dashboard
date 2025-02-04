@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import moment from 'moment-timezone';
 import './TimelineChart.css';
-import { Slider, Checkbox, Radio, Dropdown, Menu, Button } from 'antd';
+import { Slider, Checkbox, Radio, Dropdown, Menu, Button, Spin } from 'antd';
 
 const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
+  console.log(selectedDate)
   const [data, setData] = useState([]);
   const [dataFilter, setDataFilter] = useState([]);
 
@@ -27,7 +28,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const [scale, setScale] = useState('1');
   const [showYAxis, setShowYAxis] = useState(true);
   const [showXAxis, setShowXAxis] = useState(true);
-  const [viewMode, setViewMode] = useState('24h'); 
+  const [viewMode, setViewMode] = useState('24h');
   const [shift, setShift] = useState('');
 
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
@@ -39,7 +40,12 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     return hours * 60 + minutes;
   };
 
-  const findGaps = (intervals) => {
+  const findGaps = (intervals, date) => {
+    const now = moment();
+
+    console.log(now);
+    const isToday = moment(date).isSame(moment(), 'day');
+
     const sortedIntervals = intervals.map(item => ({
       start: timeToMinutes(item.startTime),
       end: timeToMinutes(item.endTime),
@@ -60,16 +66,18 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       }
       lastEnd = Math.max(lastEnd, end);
     });
-
+    console.log(lastEnd)
     if (lastEnd < dayEnd) {
       gaps.push({
-        status: 'offline',
+        status: isToday ? 'yet' : 'offline',
         startTime: formatTime(lastEnd),
         endTime: formatTime(dayEnd),
       });
     }
+
     return gaps;
   };
+
 
   const formatTime = (minutes) => {
     const hours = String(Math.floor(minutes / 60)).padStart(2, '0');
@@ -123,13 +131,13 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     return gradientStops.join(', ');
   };
   const fetchData = async (startDate, endDate) => {
- 
+
     setLoading(true);
     setError(null);
     try {
       const start = startDate.toISOString();
       const end = new Date(endDate);
-      const utcDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() + 1, 16, 59, 59, 0));
+      const utcDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate(), 16, 59, 59, 0));
       const isoDate = utcDate.toISOString();
       const firstApiUrl = `${apiUrl}/machine-operations/${selectedMchine}/timeline?startTime=${start}&endTime=${new Date(endDate.setDate(endDate.getDate() + 1)).toISOString()}`;
       const secondApiUrl = `${apiUrl}/machine-operations/${selectedMchine}/summary-status?startTime=${start}&endTime=${isoDate}`;
@@ -150,10 +158,10 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         totalStop.push(entry.stopTime.toFixed(2));
       });
       const processedData = formattedData.map(entry => {
-        const gaps = findGaps(entry.intervals);
+        const gaps = findGaps(entry.intervals, entry.date);
         return { ...entry, intervals: [...entry.intervals, ...gaps].sort((a, b) => moment(a.startTime, 'HH:mm') - moment(b.startTime, 'HH:mm')) };
       });
-      setArrayPercentRun(totalRun);
+        setArrayPercentRun(totalRun);
       setArrayPercentIdle(totalIdle);
       setArrayPercentStop(totalStop);
       setDates(formattedData.map(value => moment(value.date).format('DD/MM')));
@@ -166,7 +174,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
     } finally {
       setLoading(false);
     }
-};
+  };
 
 
   const getStatusColor = (status) => {
@@ -175,6 +183,8 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       case 'Stop': return 'red';
       case 'Idle': return '#FFC107';
       case 'offline': return '#BFBFBF';
+      case 'yet': return 'white';
+
       default: return '#ffffff';
     }
   };
@@ -220,10 +230,10 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
       endMinute = 17 * 60 + 20;
     } else if (shift === 'sub1') {
       startMinute = 17 * 60 + 20;
-      endMinute = 18 * 60 + 20; 
+      endMinute = 18 * 60 + 20;
     } else {
-      startMinute = hour[0] * 60; 
-      endMinute = hour[hour.length - 1] * 60; 
+      startMinute = hour[0] * 60;
+      endMinute = hour[hour.length - 1] * 60;
     }
 
     const totalMinutes = (percentX / 100) * (endMinute - startMinute);
@@ -253,16 +263,16 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   const handleSliderChange = (newValue) => {
     // setListGradient(data.map(value => createGradientStops(value.intervals, newValue[0] * 1440 / 100, newValue[1] * 1440 / 100)));
     let newListHour
-    if(shift == ''){
-       newListHour = hourFil.filter((value, index) => {
+    if (shift == '') {
+      newListHour = hourFil.filter((value, index) => {
         if (index * 4.16 > newValue[0] && index * 4.16 < newValue[1]) {
           return value;
         }
       });
-    }else{
-      const hourFilSub = [8, 9, 10 , 11, 12, 13, 14 , 15, 16, 17]
-       newListHour = hourFilSub.filter((value, index) => {
-        if (index > newValue[0]/10 && index/10 < newValue[1]/10) {
+    } else {
+      const hourFilSub = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+      newListHour = hourFilSub.filter((value, index) => {
+        if (index > newValue[0] / 10 && index / 10 < newValue[1] / 10) {
           return value;
         }
       });
@@ -280,20 +290,22 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   }, [selectedDate, selectedMchine]);
 
   const renderXAxisLabels = useMemo(() => (
-    showXAxis && hour.map(value => (
+    showXAxis && hour.map((value, index) => (
       <div key={value} style={{ display: 'inline-block', width: '4.16%', textAlign: 'center', fontSize: '10px', marginTop: '5px' }}>
-        {`${value}:00`}
+        {(index === 0 && value === 17 || value === 18) || index === hour.length - 1 ? `${value}:20` : `${value}:00`}
       </div>
     ))
   ), [hour, showXAxis]);
 
+
   const renderYAxisLabels = useMemo(() => (
-    showYAxis && dates.map((date, index) => (
+    showYAxis && dates.slice(0, 7).map((date, index) => (  // Chỉ lấy tối đa 7 phần tử
       <div key={index} style={{ textAlign: 'right', fontSize: '10px', display: 'flex', height: '15px', marginTop: index > 0 ? '58px' : '0' }}>
         {date}
       </div>
     ))
   ), [dates, showYAxis]);
+  
 
   if (loading) return <div>Đang tải dữ liệu...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -333,27 +345,27 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   };
 
   const isTimeInRange = (time, startMinute, endMinute) => {
-    const [hours, minutes] = time.split(':').map(Number); 
+    const [hours, minutes] = time.split(':').map(Number);
     const totalMinutes = hours * 60 + minutes;
-    return totalMinutes >= startMinute && totalMinutes < endMinute; 
+    return totalMinutes >= startMinute && totalMinutes < endMinute;
   };
   const handleShift = async (shift, startDateHour, endDateHour, type) => {
     let startMinute, endMinute;
-  
+
     if (type !== 'slider') {
       if (shift === 'main') {
-        startMinute = 8 * 60; 
-        endMinute = 17 * 60 + 20; 
+        startMinute = 8 * 60;
+        endMinute = 17 * 60 + 20;
       } else if (shift === 'sub1') {
-        startMinute = 17 * 60 + 20; 
-        endMinute = 18 * 60 + 20; 
+        startMinute = 17 * 60 + 20;
+        endMinute = 18 * 60 + 20;
       } else if (shift === 'sub2') {
-        startMinute = 17 * 60 + 20; 
-        endMinute = 19 * 60 + 20; 
+        startMinute = 17 * 60 + 20;
+        endMinute = 19 * 60 + 20;
       }
     } else {
-      startMinute = startDateHour*60;
-      endMinute = endDateHour*60;
+      startMinute = startDateHour * 60;
+      endMinute = endDateHour * 60;
     }
     const filteredData = await Promise.all(dataFilter.map(async (entry) => {
       const intervals = entry.intervals.filter(interval => {
@@ -361,7 +373,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         const endInRange = isTimeInRange(interval.endTime, startMinute, endMinute);
         return startInRange && endInRange;
       });
-  
+
       const offlineIntervals = [];
       let currentMinute = startMinute;
       while (currentMinute < endMinute) {
@@ -372,7 +384,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
           const intervalEnd = moment(interval.endTime, 'HH:mm');
           return intervalStart.isBefore(currentEndTime) && intervalEnd.isAfter(currentStartTime);
         });
-  
+
         if (!isActive) {
           offlineIntervals.push({
             status: 'offline',
@@ -380,7 +392,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
             endTime: currentEndTime
           });
         }
-  
+
         currentMinute++;
       }
       const allIntervals = [...intervals, ...offlineIntervals].sort((a, b) => {
@@ -391,6 +403,7 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         intervals: allIntervals
       };
     }));
+    
     setData(filteredData);
     setListGradient(filteredData.map(value => createGradientStops(value.intervals, startMinute, endMinute)));
   };
@@ -410,6 +423,11 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
   );
   return (
     <div style={{ position: 'relative', width: '100%', height: '500px' }}>
+      {loading && (
+        <div className="loading-overlay">
+          <Spin size="large" /> {/* Ant Design spinner */}
+        </div>
+      )}
       <div style={{ position: 'absolute', top: '-35px', right: '70px', display: 'flex', alignItems: 'center', gap: '10px' }}>
         <Checkbox checked={showYAxis} onChange={(e) => setShowYAxis(e.target.checked)}></Checkbox>
         <Radio.Group value={viewMode} onChange={(e) => setViewMode(e.target.value)}>
@@ -433,8 +451,8 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         <div style={{ position: 'absolute', top: 0, left: 0, width: '60px', height: '99%', display: 'flex', flexDirection: 'column', padding: '10px 0' }}>
           {renderYAxisLabels}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', height: '99%'}}>
-          {data.length > 0 ? data.map((entry, index) => (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '99%' }}>
+        {data.length > 0 ? data.slice(0, 7).map((entry, index) => (  // Chỉ lấy tối đa 7 phần tử
             <div key={index} onMouseMove={(event) => handleMouseMove(event, index)} onMouseLeave={handleMouseLeave} style={{ overflow: 'hidden' }}>
               <div className="gradient-container gradient-section gradient" style={{
                 height: '50px',
@@ -466,6 +484,10 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
                   <div style={{ width: '15px', height: '15px', backgroundColor: 'red', marginRight: '5px' }}></div>
                   <span>Dừng : {formatSecondsToTime(arrayPercentStop[index])}</span>
                 </div>
+                <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px', fontSize: '10px', marginTop: '5px' }}>
+                  <div style={{ width: '15px', height: '15px', backgroundColor: '#BFBFBF', marginRight: '5px' }}></div>
+                  <span>Tắt máy : {formatSecondsToTime(86400 - arrayPercentStop[index] - arrayPercentIdle[index] - arrayPercentRun[index])}</span>
+                </div>
               </div>
             </div>
           )) : (
@@ -495,11 +517,11 @@ const TimelineChart = ({ selectedDate, selectedMchine, onDateChange }) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px' }}>
           <div style={{ width: '15px', height: '15px', backgroundColor: '#FFC107', marginRight: '5px' }}></div>
-          <span>Idle</span>
+          <span>Chờ</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div style={{ width: '15px', height: '15px', backgroundColor: '#BFBFBF', marginRight: '5px' }}></div>
-          <span>Offline</span>
+          <span>Tắt máy</span>
         </div>
       </div>
     </div>

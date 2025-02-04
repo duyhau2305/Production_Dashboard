@@ -64,8 +64,12 @@ const MobileMenuDropdown = () => {
               {userRole === 'CNVH' ? (
                 // Hiển thị menu đơn giản cho CNVH
                 <>
-                  <Link to="/profile" className="flex items-center hover:text-blue-500" onClick={toggleSidebar}>
-                    <FiSettings className="mr-4 text-lg" /> Thông tin cá nhân
+                <Link to="/dashboard/mobile" className="flex items-center hover:text-blue-500" onClick={toggleSidebar}>
+                    <FiHome className="mr-4 text-lg" /> Trang chủ
+                  </Link>
+                 
+                  <Link to="/workshift" className="flex items-center hover:text-blue-500" onClick={toggleSidebar}>
+                    <FiSettings className="mr-4 text-lg" /> Lịch làm việc
                   </Link>
                   <button
                     onClick={handleLogout}

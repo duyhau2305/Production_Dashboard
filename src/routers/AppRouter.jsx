@@ -24,6 +24,9 @@ import DashboardPhayAreas from '../pages/Dasboard/DashboardPhayAreas';
 import MachineActionAnalysis from '../pages/Equiment/Management/Analysis/MachineActionAnalysis';
 import OEEAnalysis from '../pages/Equiment/Management/Analysis/OEEAnalysis';
 import Dashboard3 from '../pages/Dasboard/Dashboard3';
+import TopEmployee from '../pages/Equiment/Management/Analysis/TopEmployee';
+import WorkSchedule from '../pages/CNVH/EmployeeWorkSchedule';
+import EmployeeWorkSchedule from '../pages/CNVH/EmployeeWorkSchedule';
 
 // Protected Route component sử dụng AuthContext để xác thực
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -210,7 +213,7 @@ const AppRouter = () => {
           }
         />
         <Route
-          path="/QCS/analysis/oee"
+          path="/QCS/oee"
           element={
             <ProtectedRoute>
               <MainLayout>
@@ -220,11 +223,21 @@ const AppRouter = () => {
           }
         />
         <Route
-          path="/QCS/analysis/downtime"
+          path="/QCS/downtime"
           element={
             <ProtectedRoute>
               <MainLayout>
                 <DeviceAnalysis />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/QCS/topemployee"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <TopEmployee />
               </MainLayout>
             </ProtectedRoute>
           }
@@ -246,6 +259,16 @@ const AppRouter = () => {
             <ProtectedRoute>
               <MainLayout>
                 <Profile />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+          <Route
+          path="/workshift"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <EmployeeWorkSchedule />
               </MainLayout>
             </ProtectedRoute>
           }

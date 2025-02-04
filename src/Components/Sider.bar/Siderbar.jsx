@@ -34,8 +34,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         <div className="flex justify-between w-full">
           {!isCollapsed && (
             <div>
-              <img src={logodark} alt="Logodark" className="w-[180px] h-auto object-contain hidden dark:block" />
-              <img src={logo} alt="Logo" className="w-[180px] h-auto object-contain dark:hidden" />
+              
+              
+
+              
               <h3 className="font-bold text-sky-700 ml-2 flex justify-center dark:text-white">DI.OEE</h3>
             </div>
           )}
@@ -124,7 +126,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 )}
               </>
             }
-            items={QCStItems.slice(1, 4)}  
+            items={QCStItems.slice(1,5)} 
             mainLink="/QCS/analysis"
             isCollapsed={isCollapsed}
             onSubmenuClick={() => {}}
@@ -169,7 +171,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
       </div>
 
       {!isCollapsed && (
-        <div className="p-4 text-white">
+        <div className="p-4 text-gray-500 dark:text-white">
           <h3 className="font-bold ml-1">Thông tin liên hệ</h3>
           <hr className="border-gray-400" />
           <p className="text-sm font-bold ml-2 text-justify mt-2">CÔNG TY TNHH CÔNG NGHỆ DATA INSIGHT VIỆT NAM</p>

@@ -38,11 +38,32 @@ const ProductionTaskManagement = ({ selectedMachines, setTaskData, taskData, sel
     });
     setFilteredDevices(filtered); // Lưu danh sách thiết bị đã lọc
   }, [devices, selectedMachines]);
-
+  const getMainShiftTask = () => {
+    return tasks.find((task) => task.selectedShift === 'Ca chính');
+  };
+  
   // Hàm để thêm nhiệm vụ mới
   const addTask = () => {
-    setTasks([...tasks, { selectedShift: '', selectedEmployees: [], selectedEmployee: '', status: 'Dừng' }]);
+    const mainShiftTask = getMainShiftTask();
+  
+    if (mainShiftTask) {
+      // Nếu đã có "Ca chính", thêm nhiệm vụ dựa trên dữ liệu "Ca chính"
+      setTasks([...tasks, { 
+        ...mainShiftTask, 
+        selectedShift: '', // Reset ca làm việc để người dùng chọn 
+      }]);
+      message.info('Nhiệm vụ sản xuất từ "Ca chính" đã được sao chép.');
+    } else {
+      // Nếu chưa có "Ca chính", thêm nhiệm vụ mới mặc định
+      setTasks([...tasks, { 
+        selectedShift: 'Ca chính', 
+        selectedEmployees: [], 
+        selectedEmployee: '', 
+        status: 'Chạy' 
+      }]);
+    }
   };
+   
 
   // Hàm để xóa nhiệm vụ
   const removeTask = (index) => {
@@ -54,8 +75,23 @@ const ProductionTaskManagement = ({ selectedMachines, setTaskData, taskData, sel
   const updateShift = (index, value) => {
     const updatedTasks = [...tasks];
     updatedTasks[index].selectedShift = value;
+  
+    if (value === 'Ca phụ 1h' || value === 'Ca phụ 2h') {
+      const mainShiftTask = getMainShiftTask();
+      if (mainShiftTask) {
+        updatedTasks[index] = {
+          ...mainShiftTask,
+          selectedShift: value, // Cập nhật thành ca phụ
+        };
+        message.info(`Nhiệm vụ từ "Ca chính" đã được sao chép vào ${value}.`);
+      } else {
+        message.warning(`Không tìm thấy nhiệm vụ của "Ca chính" để sao chép.`);
+      }
+    }
+  
     setTasks(updatedTasks);
   };
+  
 
   // Cập nhật nhân viên
   const updateEmployee = (index, employee) => {
@@ -119,9 +155,21 @@ const ProductionTaskManagement = ({ selectedMachines, setTaskData, taskData, sel
 
   // Xử lý khi ấn nút Hủy bỏ (Xóa các task)
   const handleCancel = () => {
-    setTasks([]); // Xóa tất cả các task đã tạo
+    // Xóa tất cả các nhiệm vụ hiện tại
+    setTasks([]);
+  
+    // Xóa nhiệm vụ liên quan trên CustomCalendar
+    const updatedTaskData = { ...taskData };
+    if (Array.isArray(selectedDates) && selectedDates.length > 0) {
+      selectedDates.forEach((date) => {
+        updatedTaskData[date] = { tasks: [], machines: [] }; // Xóa nhiệm vụ và máy đã chọn
+      });
+    }
+    
+    setTaskData(updatedTaskData);
     message.info('Các nhiệm vụ đã được hủy bỏ.');
   };
+  
 
   return (
     <div className="w-full p-2">

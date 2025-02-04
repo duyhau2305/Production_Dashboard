@@ -18,7 +18,7 @@ const DashboardGrid = ({ machines, orderedList, isFullscreen }) => {
 
   return (
     <div
-      className="grid lg:grid-cols-6 md:grid-cols-5 gap-0.5 h-screen sm:grid-cols-2"
+      className="grid lg:grid-cols-6  gap-0.5 h-screen sm:grid-cols-3"
       style={{ maxHeight: '100vh' }}
     >
       {sortedMachines.map((machine) => (

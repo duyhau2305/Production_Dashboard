@@ -19,6 +19,7 @@ const EmployeeCatalog = () => {
   const [employees, setEmployees] = useState([]);
   const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAreas, setSelectedAreas] = useState([]); // State để lưu khu vực được chọn
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [areas, setAreas] = useState([]); // State cho danh sách khu vực
   const [form] = Form.useForm(); // Ant Design Form
@@ -193,7 +194,7 @@ const EmployeeCatalog = () => {
             parentComponentName="DanhSachNhanVien"
             headers={[
               { key: 'employeeCode', label: 'Mã nhân viên' },
-              { key: 'employeeName', label: 'Tên Ca Làm Việc' },
+              { key: 'employeeName', label: 'Tên Nhân viên' },
               { key: 'areaName', label: 'Khu vực sản xuất' },
               
             ]}
@@ -217,7 +218,12 @@ const EmployeeCatalog = () => {
               <td className="border px-4 py-2 text-sm text-center">{index + 1}</td>
               <td className="border px-4 py-2 text-sm text-center">{employee.employeeCode}</td>
               <td className="border px-4 py-2 text-sm text-center">{employee.employeeName}</td>
-              <td className="border px-4 py-2 text-sm text-center">{employee.areaName}</td> {/* Hiển thị Khu vực */}
+              <td className="border px-4 py-2 text-sm text-center">
+              {Array.isArray(employee.areaName)
+                ? employee.areaName.join(', ') // Hiển thị danh sách khu vực cách nhau bằng dấu phẩy
+                : employee.areaName || 'Không có khu vực'} {/* Trường hợp không có khu vực */}
+            </td>
+ {/* Hiển thị Khu vực */}
               <td className="py-2 px-2 text-center border">
                 <button
                   className="mr-2 text-blue-500 hover:text-blue-700"
@@ -266,18 +272,25 @@ const EmployeeCatalog = () => {
           </Form.Item>
 
           <Form.Item
-            label="Khu Vực"
-            name="areaName"
-            rules={[{ required: true, message: 'Khu Vực là bắt buộc' }]}
-          >
-            <Select placeholder="Chọn khu vực">
-              {areas.map((area) => (
-                <Option key={area._id} value={area.areaName}>
-                  {area.areaName}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+              label="Khu Vực"
+              name="areaName"
+              rules={[{ required: true, message: 'Khu Vực là bắt buộc' }]}
+            >
+              <Select
+                mode="multiple"
+                placeholder="Chọn khu vực"
+                allowClear
+                style={{ width: '100%' }}
+                onChange={(value) => setSelectedAreas(value)}
+              >
+                {areas.map((area) => (
+                  <Option key={area._id} value={area.areaName}>
+                    {area.areaName}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+
         </Form>
       </Modal>
       <Modal

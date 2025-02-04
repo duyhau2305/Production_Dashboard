@@ -1,12 +1,37 @@
-import React, { Fragment } from 'react';
+import React, { Fragment,useState,useEffect } from 'react';
 import { Menu, Transition } from '@headlessui/react';
 import { FiChevronDown } from 'react-icons/fi';
 import { useNavigate, Link } from 'react-router-dom'; // Import Link và useNavigate
 import user_avatar from '../../assets/image/user.png';
 import {message} from 'antd'
+import { jwtDecode } from 'jwt-decode';
 
 const UserDropdown = () => {
   const navigate = useNavigate(); // Khởi tạo useNavigate
+  const [userInfo, setUserInfo] = useState({
+    name: '',
+    role: '',
+  });
+
+  // Lấy thông tin name và role từ localStorage khi component được mount
+  const decodeToken = () => {
+    const token = localStorage.getItem('token'); // Lấy token từ localStorage
+    if (token) {
+      try {
+        const decoded = jwtDecode(token); 
+        console.log(decoded)// Giải mã token
+        const name = decoded.user.name || 'Tên người dùng'; // Lấy name từ payload
+        const role = decoded.user.role || 'Vai trò'; // Lấy role từ payload
+        setUserInfo({ name, role });
+      } catch (error) {
+        console.error('Token không hợp lệ', error);
+      }
+    }
+  };
+  
+  useEffect(() => {
+    decodeToken();
+  }, []);
 
   const handleLogout = () => {
     // Xóa token khỏi localStorage
@@ -27,7 +52,7 @@ const UserDropdown = () => {
             alt="User Avatar"
             className="w-8 h-8 rounded-full"
           />
-          <span className="ml-2 text-gray-600 dark:text-white">Đồng Duy Hậu</span>
+          <span className="ml-2 text-gray-600 dark:text-white">{userInfo.name}</span>
           <FiChevronDown className="ml-1 text-gray-600 dark:text-white" />
         </Menu.Button>
       </div>
@@ -56,8 +81,8 @@ const UserDropdown = () => {
                     className="w-10 h-10 rounded-full mr-3"
                   />
                   <div>
-                    <div className="font-medium">Đồng Duy Hậu</div>
-                    <div className="text-xs text-gray-500">Nhân viên sản xuất</div>
+                    <div className="font-medium">{userInfo.name}</div>
+                    <div className="text-xs text-gray-500">{userInfo.role}</div>
                   </div>
                 </div>
               )}

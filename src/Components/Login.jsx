@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { FaGoogle, FaFacebook, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { Modal, Button, message } from 'antd';
@@ -15,8 +15,20 @@ function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const apiUrl =import.meta.env.VITE_API_BASE_URL
   console.log(apiUrl)
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('savedEmail');
+    const savedPassword = localStorage.getItem('savedPassword');
+    const savedRememberMe = localStorage.getItem('rememberMe') === 'true';
+
+    if (savedRememberMe) {
+      setEmail(savedEmail || '');
+      setPassword(savedPassword || '');
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,11 +40,19 @@ function Login() {
       if (response.status === 200) {
         const { token } = response.data;
         localStorage.setItem('token', token);
-  
         const decodedToken = jwtDecode(token);
         const role = decodedToken.user.role;
         localStorage.setItem('role', role);
         setUserRole(role);
+        if (rememberMe) {
+          localStorage.setItem('savedEmail', email);
+          localStorage.setItem('savedPassword', password);
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          localStorage.removeItem('savedEmail');
+          localStorage.removeItem('savedPassword');
+          localStorage.setItem('rememberMe', 'false');
+        }
   
         message.success('Đăng nhập thành công!');
         navigate(role === 'CNVH' ? '/dashboard/mobile' : '/dashboard');
@@ -109,7 +129,9 @@ function Login() {
 
           <div className="flex justify-between items-center p-2 text-sm text-gray-600 mb-4 mt-4 ">
             <label className="flex items-center space-x-2">
-              <input type="checkbox" className="form-checkbox" />
+              <input type="checkbox" className="form-checkbox" 
+              checked={rememberMe}
+              onChange={() => setRememberMe(!rememberMe)} />
               <span>Ghi nhớ đăng nhập</span>
             </label>
             <a href="#" className="text-blue-500 hover:underline">Quên mật khẩu?</a>
