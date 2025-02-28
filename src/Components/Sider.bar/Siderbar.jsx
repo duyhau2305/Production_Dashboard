@@ -35,7 +35,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           {!isCollapsed && (
             <div>
               
-              
+              <img src={logodark} alt="Logodark" className="w-[180px] h-auto object-contain hidden dark:block" />
+              <img src={logo} alt="Logo" className="w-[180px] h-auto object-contain dark:hidden" />
 
               
               <h3 className="font-bold text-sky-700 ml-2 flex justify-center dark:text-white">DI.OEE</h3>

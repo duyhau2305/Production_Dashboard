@@ -142,11 +142,11 @@ console.log("Duration in seconds:", durationInSeconds);
     <div className={`shadow-md flex flex-col justify-between `} style={{ backgroundColor: headerColor }}>
       {/* 1. Header */}
       <div className=" flex flex-col items-center justify-center" style={{ backgroundColor: headerColor }}>
-        <div className="text-[#122a35] bg-black-rgba w-full flex justify-center py-1">
-          <h2 className="text-4xl font-bold text-[#375BA9]">{machine.deviceId || ''}</h2>
+        <div className="text-[#122a35] bg-black-rgba w-full flex justify-center ">
+          <h2 className="text-[29px] font-bold text-[#375BA9]">{machine.deviceId || ''}</h2>
         </div>
         {/* Machine Time and Status */}
-        <div className="text-center mt-1">
+        <div className="text-center mt-0.5">
           <span className="text-2xl font-bold">
             {machine.currentStatus || ''} - {calculateDurationInHoursAndMinutes(machine.timelineStartTime, machine.timelineEndTime)}
           </span>
@@ -157,7 +157,7 @@ console.log("Duration in seconds:", durationInSeconds);
       <div className="flex items-center ml-2 justify-center bg-transparent p-3 mb-5">
         {/* Signal Light */}
         <div className="flex flex-col justify-center items-center">
-          <div className="w-12 h-32 border border-black rounded-lg mr-4 -ml-3">
+          <div className="w-12 h-28 border border-black rounded-lg mr-4 -ml-3">
             <div style={{ backgroundColor: signalLightColors.red, height: '33.33%' }} className={`rounded-t-lg ${blinkClass} border-l-red-600 border-l-4 rounded-t-lg border-b-2 border-b-red-600`}></div>
             <div style={{ backgroundColor: signalLightColors.yellow, height: '33.33%' }} className="border-[#FCFC00] border-l-4 border-b-2"></div>
             <div style={{ backgroundColor: signalLightColors.green, height: '33.33%' }} className="border-[#13a113] border-l-4 rounded-b-lg"></div>
@@ -165,7 +165,7 @@ console.log("Duration in seconds:", durationInSeconds);
         </div>
 
         {/* OEE Circular Progress */}
-        <div className="relative ml-2" style={{ width: 165, height: 165 }}>
+        <div className="relative ml-2" style={{ width: 160, height: 160 }}>
           <CircularProgressbar
             value={(machine.summaryStatus / durationInSeconds) *100}
             styles={buildStyles({
@@ -180,13 +180,13 @@ console.log("Duration in seconds:", durationInSeconds);
           <div className="absolute mb-1 -top-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center justify-center text-center w-full h-full">
           {/* <span className="text-xl font-bold ">
           Total Run </span> */}
-        <span className="text-5xl font-bold mt-6 ">
+        <span className="text-4xl font-bold mt-6 ">
         {formatMinutesToTime(machine.summaryStatus-machine.totalTimeRun|| 0)}p
         </span>
-        <span className="text-3xl font-bold "  style={{ color: headerColor === '#ff3333' ? '#ffffff' : '#ff3333' }} >
+        <span className="text-2xl font-bold "  style={{ color: headerColor === '#ff3333' ? '#ffffff' : '#ff3333' }} >
         {formatMinutesToTime(machine.summaryStatusIdle+machine.summaryStatusStop-machine.totalTimeIdle-machine.totalTimeStop-(machine.totalBreakTimeInMinutes*60)|| 0)}p
         </span>
-          <span className=" font-bold  flex items-center mt-2 ">
+          <span className=" font-bold  flex items-center mt-1 ">
             {isIncrease && <FaArrowUp className={`${arrowColor} mr-1 text-xl  `} />}
             {isDecrease && <FaArrowDown className={`${arrowColor} mr-1 text-xl `} />}
             <span className={`${arrowColor}  text-md`}>{displayPercentDiff} </span>

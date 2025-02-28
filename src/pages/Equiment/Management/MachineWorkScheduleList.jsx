@@ -625,16 +625,22 @@ const handleMachineClick = (machine) => {
     const updatedMachines = selectedMachines.filter((m) => m._id !== machine._id);
     setSelectedMachines(updatedMachines);
 
+    // Nếu không còn thiết bị nào được chọn, đặt trạng thái "Chọn Thiết Bị"
     if (updatedMachines.length === 0) {
-      setIsSelecting(false); // Chuyển lại trạng thái về "Chọn Thiết Bị" nếu không còn máy nào được chọn
+      setIsSelecting(false);
     }
   } else {
     // Nếu thiết bị chưa được chọn, thêm thiết bị vào danh sách cùng với nhiệm vụ của nó
     const tasksForDevice = getTasksForDevice(machine.deviceName);
     setSelectedMachines((prevMachines) => [...prevMachines, { ...machine, tasks: tasksForDevice }]);
-    setIsSelecting(true);
+
+    // Đảm bảo trạng thái "Chọn Thiết Bị" chỉ được set thành true nếu có thiết bị được chọn
+    if (selectedMachines.length === 0) {
+      setIsSelecting(true);
+    }
   }
 };
+
   // Sử dụng useEffect để theo dõi thay đổi của selectedMachines
   useEffect(() => {
     console.log('Selected Machines Updated:', selectedMachines); // Log mỗi khi selectedMachines thay đổi
@@ -819,16 +825,16 @@ const handleCancelUpdate = () => {
                   key={`${machine._id}-${index}`} // Đảm bảo key là duy nhất
                   onClick={() => handleMachineClick(machine)}
                   className={`relative cursor-pointer transition duration-300 ease-in-out h-full p-1
-                    ${isSelecting && selectedMachines.some((m) => m.id === machine._id) ? 'border-2 border-blue-700 round-lg bg-gray-600 ' : ''}`}
+                    ${isSelecting && selectedMachines.some((m) => m._id === machine._id) ? 'border-2 border-blue-700 round-lg bg-gray-600 ' : ''}`}
                 >
                   <MachineWorkScheduleCard
                     machine={machine} // Truyền thông tin máy vào card
                     tasks={[task]} // Truyền nhiệm vụ vào thẻ
                     selectedDate={selectedDates[0]} // Truyền ngày đã chọn
                   />
-                  {isSelecting && selectedMachines.some((m) => m.id === machine.id) && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
-                  )}
+                  {selectedMachines.length > 0 && selectedMachines.some((m) => m._id === machine._id) && (
+                  <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
+                )}
                 </div>
               ));
             } else {
@@ -844,12 +850,13 @@ const handleCancelUpdate = () => {
                     machine={machine} // Truyền thông tin máy vào card
                     tasks={[]} // Truyền một mảng rỗng nếu không có nhiệm vụ
                     selectedDate={selectedDates[0]} // Truyền ngày đã chọn
-                  />
-                  {isSelecting && selectedMachines.some((m) => m.id === machine.id) && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
-                  )}
+                      />
+                      {selectedMachines.length > 0 && selectedMachines.some((m) => m._id === machine._id) && (
+              <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">✓</div>
+            )}
                 
                 </div>
+            
               );
             }
           })}
