@@ -3,7 +3,6 @@ import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { useSelector } from 'react-redux';
-import io from "socket.io-client";
 
 const getHeaderColor = (status) => {
   if (status === 'Run') return '#60ec60';  // Green for Active
@@ -51,9 +50,8 @@ const MachineCard3 = ({ machine }) => {
   };
 
  
-  const [isCalling, setIsCalling] = useState(false);
-  const [callingDepartment, setCallingDepartment] = useState('');
-  const socketRef = useRef(null);
+  const [isCalling, setIsCalling] = useState(machine.isCalling || false);
+  const [callingDepartment, setCallingDepartment] = useState(machine.callingDepartment || '');
 
   const formatName = (fullName) => {
     if (!fullName) return '';
@@ -69,7 +67,7 @@ const MachineCard3 = ({ machine }) => {
     return `${lastName} ${middleNames} ${firstName}`; // Hiển thị dạng "Lại N. H. Phúc"
   };
   
-  const displayInfo = isCalling
+  const displayInfo = isCalling && callingDepartment
     ? `Đang gọi ${callingDepartment}`
     : formatName(machine.productionTasks?.[0]?.shifts[0]?.employeeName?.[0]) || '';
   
@@ -77,30 +75,9 @@ const MachineCard3 = ({ machine }) => {
   
 
   useEffect(() => {
-    const apiSocket = import.meta.env.VITE_API_BASE_SOCKET;
-    socketRef.current = io(`${apiSocket}`);
-
-    // Lắng nghe sự kiện gọi trợ giúp cho máy này
-    socketRef.current.on('update_call_status', (data) => {
-      if (data.deviceId === machine.deviceId) {
-        setIsCalling(true);
-        setCallingDepartment(data.department);
-      }
-    });
-
-    // Lắng nghe sự kiện hủy trợ giúp cho máy này
-    socketRef.current.on('cancel_call_status', (data) => {
-      if (data.deviceId === machine.deviceId) {
-        setIsCalling(false);
-        setCallingDepartment('');
-      }
-    });
-
-    // Ngắt kết nối socket khi component unmount
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, [machine.deviceId]);
+    setIsCalling(machine.isCalling || false);
+    setCallingDepartment(machine.callingDepartment || '');
+  }, [machine.isCalling, machine.callingDepartment]);
   const percentDiff = machine?.percentDiff || '0%';
   const numericPercentDiff = parseFloat(percentDiff);
   const isIncrease = numericPercentDiff > 0;

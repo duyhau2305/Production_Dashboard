@@ -18,7 +18,10 @@ const Dashboard1 = () => {
   const [sortOption, setSortOption] = useState('layout'); // Default: 'layout'
 
   const cardsRef = useRef(null);
+  const wsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const socketUrl = import.meta.env.VITE_API_BASE_SOCKET;
+  
   const naturalSort = (a, b) => {
     const getPrefixAndNumber = (deviceId) => {
       const match = deviceId.match(/^([A-Z]+)(\d+)/); // Tách prefix và số
@@ -104,19 +107,88 @@ const Dashboard1 = () => {
       return [];
     }
   };
+//4 phút fetch lại Details
+useEffect(() => {
+  const updateMachineDetails = async () => {
+    const updatedMachines = await fetchMachineDetails();
+    setMachines(updatedMachines);
+  };
 
+  updateMachineDetails();
+  const interval = setInterval(updateMachineDetails, 300000);
+  return () => clearInterval(interval);
+}, []);
   useEffect(() => {
     setFilteredMachines(applyFilter(machines, selectedArea));
   }, [selectedArea, machines, orderedList, sortOption]);
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const updatedMachines = await fetchMachineDetails();
-      setMachines(updatedMachines);
-    }, 5500);
 
-    return () => clearInterval(interval);
-  }, []);
+
+useEffect(() => {    
+    console.log(`🔌 Connecting to WebSocket: ${socketUrl}`);
+    
+    // Sử dụng socketUrl trực tiếp cho relative URL
+    const ws = new WebSocket(socketUrl);
+    wsRef.current = ws;
+    const testWs = new WebSocket('ws://192.168.1.60:5001/api/socket');
+  testWs.onopen = () => console.log('✅ Backend WebSocket OK');
+  testWs.onerror = (error) => console.log('❌ Backend WebSocket failed', error);
+  testWs.onmessage = (event) => console.log('📦 Message from backend:', event.data);
+
+    ws.onopen = () => {
+      console.log('✅ WebSocket connected successfully');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        
+        if (msg.event === 'current_status_update' && Array.isArray(msg.data)) {
+          setMachines((prevMachines) => {
+            return prevMachines.map((machine) => {
+              const found = msg.data.find((m) => 
+                m.machineId === machine._id || m.machineId === machine.deviceId
+              );
+              if (found) {
+                return { ...machine, currentStatus: found.status };
+              }
+              return machine;
+            });
+          });
+        } else if (msg.event === 'call_help' && msg.data) {
+          setMachines((prevMachines) => prevMachines.map((machine) => {
+            if (machine._id === msg.data.machineId || machine.deviceId === msg.data.machineId) {
+              return { ...machine, isCalling: true, callingDepartment: msg.data.message };
+            }
+            return machine;
+          }));
+        } else if (msg.event === 'cancel_help' && msg.data) {
+          setMachines((prevMachines) => prevMachines.map((machine) => {
+            if (machine._id === msg.data.machineId || machine.deviceId === msg.data.machineId) {
+              return { ...machine, isCalling: false, callingDepartment: '' };
+            }
+            return machine;
+          }));
+        }
+      } catch (err) {
+        console.error('❌ WebSocket message error:', err);
+      }
+    };
+
+    ws.onclose = (event) => {
+      console.log('🔌 WebSocket disconnected:', event.code, event.reason);
+    };
+
+    ws.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+}, [socketUrl]);
 
   useEffect(() => {
     const savedOrder = localStorage.getItem('orderedList');

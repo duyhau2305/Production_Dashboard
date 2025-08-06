@@ -10,7 +10,9 @@ const DashboardTienAreas = () => {
   const [loading, setLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const cardsRef = useRef(null);
+  const wsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const socketUrl = import.meta.env.VITE_API_BASE_SOCKET;
   
   // Truy cập orderedList từ OrderedListContext
   const { orderedList } = useContext(OrderedListContext);
@@ -62,6 +64,46 @@ const DashboardTienAreas = () => {
     fetchDevicesAndAreas();
   }, [apiUrl, orderedList]); // Cập nhật khi orderedList thay đổi
 
+  useEffect(() => {
+   console.log(`🔌 Connecting to WebSocket: ${socketUrl}`);
+    
+    // Sử dụng socketUrl trực tiếp cho relative URL
+    const ws = new WebSocket(socketUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('✅ WebSocket connected successfully');
+    };
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.event === 'current_status_update' && Array.isArray(msg.data)) {
+          setMachines((prevMachines) => {
+            // Cập nhật currentStatus cho từng máy, giữ nguyên các thông tin khác
+            const updated = prevMachines.map((machine) => {
+              const found = msg.data.find((m) => m.machineId === machine._id || m.machineId === machine.deviceId);
+              if (found) {
+                return { ...machine, currentStatus: found.status };
+              }
+              return machine;
+            });
+            // Áp dụng filter lại cho filteredMachines
+            setFilteredMachines(applyFilter(updated));
+            return updated;
+          });
+        }
+      } catch (err) {
+        // console.error('WebSocket message error:', err);
+      }
+    };
+    ws.onclose = () => {
+      // console.log('WebSocket disconnected');
+    };
+    return () => {
+      ws.close();
+    };
+  }, [socketUrl, orderedList]);
+
   const fetchMachineDetails = async () => {
     try {
       const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
@@ -71,17 +113,17 @@ const DashboardTienAreas = () => {
       return [];
     }
   };
+//4 phút fetch lại Details
+useEffect(() => {
+  const updateMachineDetails = async () => {
+    const updatedMachines = await fetchMachineDetails();
+    setMachines(updatedMachines);
+  };
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const updatedMachines = await fetchMachineDetails();
-      setMachines(updatedMachines);
-      setFilteredMachines(applyFilter(updatedMachines)); // Áp dụng filter khi dữ liệu thay đổi
-    }, 4500);
-
-    return () => clearInterval(interval);
-  }, []);
-
+  updateMachineDetails();
+  const interval = setInterval(updateMachineDetails, 300000);
+  return () => clearInterval(interval);
+}, []);
   return (
     <div className="w-full h-screen bg-[#35393c] overflow-hidden">
       <div ref={cardsRef}>

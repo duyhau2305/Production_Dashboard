@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import InfoCard from '../../Components/MachineCard/InfoCard';
-import io from "socket.io-client"
 import { message } from 'antd';
 import '../../index.css';
 import { FiChevronLeft } from 'react-icons/fi';
@@ -12,35 +11,33 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useDispatch, useSelector } from 'react-redux';
 import { setMachineData,startCallHelp, stopCallHelp } from '../../redux/intervalSlice';
 import moment from 'moment-timezone';
+import { useRef } from 'react';
+import { some } from 'd3';
 
 
 const ResponeIssue = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
-  const apiSocket = import.meta.env.VITE_API_BASE_SOCKET
-  const [socket, setSocket] = useState(null); 
+  const socketUrl = import.meta.env.VITE_API_BASE_SOCKET;
+  
+  const wsRef = useRef(null);
   useEffect(() => {
-    
-    const newSocket = io(`${apiSocket}`, {
-      transports: ['websocket'],
-    });
-    
-    setSocket(newSocket); 
+    // Kết nối websocket đúng endpoint /api/socket
+   
+    const newSocket = new WebSocket(socketUrl);
+    wsRef.current = newSocket;
 
-    newSocket.on('connect', () => {
+    newSocket.onopen = () => {
       console.log('Connected to server');
-    });
-    
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from server');
-    });
-
-    // Ngắt kết nối khi component bị unmount
-    return () => {
-      newSocket.disconnect();
     };
-  }, []);
+    newSocket.onclose = () => {
+      console.log('Disconnected from server');
+    };
+    return () => {
+      newSocket.close();
+    };
+  }, [socketUrl]);
 
   // Lấy dữ liệu từ Redux Store
   const { selectedDate, selectedMachine, declaredIntervals } = useSelector(
@@ -171,8 +168,8 @@ useEffect(() => {
 
   const handleOpenModal = () => {
     
-    if (socket && !socket.connected) {
-      socket.connect();
+    if (wsRef.current && wsRef.current.readyState !== 1) {
+      wsRef.current.open();
     }
     setIsModalOpen(true);
    
@@ -181,65 +178,47 @@ useEffect(() => {
 
   const handleOpenHelpTimerModal = () => {
     setIsHelpTimerModalOpen(true)
-    if (socket && !socket.connected) {
-      socket.connect();
+    if (wsRef.current && wsRef.current.readyState !== 1) {
+      wsRef.current.open();
     }
   };
   const handleCallHelp = (team) => {
-    if (socket) {
-      // Phát sự kiện `call_help` để hiển thị trạng thái gọi
-      socket.emit('call_help', { department: team, deviceId: selectedMachine.deviceId });
+    if (wsRef.current && wsRef.current.readyState === 1) {
+      wsRef.current.send(JSON.stringify({ event: 'call_help', data: { machineId: selectedMachine._id || selectedMachine.deviceId, message: team } }));
       message.success(`Đã gọi Đội ${team} thành công!`);
     }
-
     handleCloseModal();
     handleOpenHelpTimerModal();
   };
 
   const handleCloseHelpTimerModal = () => {
-    if (socket) {
-      // Phát sự kiện `cancel_call` để cập nhật trạng thái
-      socket.emit('cancel_call', { deviceId: selectedMachine.deviceId });
-      socket.disconnect(); // Ngắt kết nối sau khi xác nhận hoàn thành
+    if (wsRef.current && wsRef.current.readyState === 1) {
+      wsRef.current.send(JSON.stringify({ event: 'cancel_help', data: { machineId: selectedMachine._id || selectedMachine.deviceId } }));
     }
     setIsHelpTimerModalOpen(false);
     message.success("Trợ giúp đã hoàn thành!");
   };
 
   const handleCloseModal = () => {
-    if (socket) {
-     
-      socket.emit('cancel_call', { deviceId: selectedMachine.deviceId });
-      socket.disconnect(); // Ngắt kết nối socket khi modal đóng
+    if (wsRef.current && wsRef.current.readyState === 1) {
+      wsRef.current.send(JSON.stringify({ event: 'cancel_help', data: { machineId: selectedMachine._id || selectedMachine.deviceId } }));
     }
     setIsModalOpen(false);
   };
-  const sendTelegramMessage = async (team,deviceID) => {
-    const logTime = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-    try {
-        await axios.post(`${apiSocket}/send-telegram`, {
-            message: `Cần trợ giúp từ đội ${team} tới máy ${deviceID}!! Thời gian: ${logTime}`,
-        });
-        message.success(`Đã gửi thông báo đến Telegram cho đội ${team}`);
-    } catch (error) {
-        console.error('Error sending message:', error);
-        message.error(`Không thể gửi thông báo đến Telegram cho đội ${team}`);
-    }
-};
 
   
 const handleCallQC = () => {
-  sendTelegramMessage('PQC',selectedMachine.deviceId);
+  // sendTelegramMessage('PQC',selectedMachine.deviceId);
   handleCallHelp('PQC',);
 };
 
 const handleCallMaintenance = () => {
-  sendTelegramMessage('Bảo Trì',selectedMachine.deviceId);
+  // sendTelegramMessage('Bảo Trì',selectedMachine.deviceId);
   handleCallHelp('Bảo Trì');
 };
 
 const handleCallTechnical = () => {
-  sendTelegramMessage('Kỹ thuật',selectedMachine.deviceId);
+  // sendTelegramMessage('Kỹ thuật',selectedMachine.deviceId);
   handleCallHelp('Kỹ thuật');
 };
   const handleTimeClick = (interval, index) => {

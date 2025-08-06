@@ -8,7 +8,9 @@ const Dashboard3 = () => {
   const [loading, setLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const cardsRef = useRef(null);
+  const wsRef = useRef(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  const socketUrl = import.meta.env.VITE_API_BASE_SOCKET;
 
   // Truy cập orderedList từ OrderedListContext
   const { orderedList } = useContext(OrderedListContext);
@@ -27,41 +29,66 @@ const Dashboard3 = () => {
       return indexA - indexB;
     });
   };
-
-  useEffect(() => {
-    const fetchMachines = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
-        const initialMachines = response.data.data;
-        setMachines(applyOrder(initialMachines));
-      } catch (error) {
-        console.error('Lỗi khi lấy dữ liệu:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMachines();
-  }, [apiUrl, orderedList]); // Chạy lại khi orderedList thay đổi
-  const fetchMachineDetails = async () => {
+useEffect(() => {
+  const fetchMachines = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`${apiUrl}/machine-operations/machine-information`);
-      return response.data.data;
+      const initialMachines = response.data.data;
+      setMachines(applyOrder(initialMachines));
     } catch (error) {
-      console.error('Lỗi khi lấy thông tin chi tiết máy:', error);
-      return [];
+      console.error('Lỗi khi lấy dữ liệu:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const updatedMachines = await fetchMachineDetails();
-      setMachines(updatedMachines);
-    }, 4500);
+  // Gọi fetchMachines ngay khi component mount
+  fetchMachines();
 
-    return () => clearInterval(interval);
-  }, []);
+  // Thiết lập interval để gọi lại fetchMachines mỗi 5 phút
+  const intervalId = setInterval(fetchMachines, 5 * 60 * 1000); // 5 phút = 5 * 60 * 1000 milliseconds
+
+  // Xóa interval khi component unmount
+  return () => clearInterval(intervalId);
+}, [apiUrl, orderedList]); // Chạy lại khi apiUrl hoặc orderedList thay đổi
+
+  useEffect(() => {
+   console.log(`🔌 Connecting to WebSocket: ${socketUrl}`);
+    
+    // Sử dụng socketUrl trực tiếp cho relative URL
+    const ws = new WebSocket(socketUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('✅ WebSocket connected successfully');
+    };
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.event === 'current_status_update' && Array.isArray(msg.data)) {
+          setMachines((prevMachines) => {
+            // Cập nhật currentStatus cho từng máy, giữ nguyên các thông tin khác
+            return prevMachines.map((machine) => {
+              const found = msg.data.find((m) => m.machineId === machine._id || m.machineId === machine.deviceId);
+              if (found) {
+                return { ...machine, currentStatus: found.status };
+              }
+              return machine;
+            });
+          });
+        }
+      } catch (err) {
+        // console.error('WebSocket message error:', err);
+      }
+    };
+    ws.onclose = () => {
+      // console.log('WebSocket disconnected');
+    };
+    return () => {
+      ws.close();
+    };
+  }, [socketUrl]);
   
   const toggleFullscreen = () => {
     if (!isFullscreen) {
