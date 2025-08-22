@@ -125,16 +125,12 @@ useEffect(() => {
 
 
 useEffect(() => {    
-    console.log(`🔌 Connecting to WebSocket: ${socketUrl}`);
+    
     
     // Sử dụng socketUrl trực tiếp cho relative URL
     const ws = new WebSocket(socketUrl);
+  
     wsRef.current = ws;
-    const testWs = new WebSocket('ws://192.168.1.60:5001/api/socket');
-  testWs.onopen = () => console.log('✅ Backend WebSocket OK');
-  testWs.onerror = (error) => console.log('❌ Backend WebSocket failed', error);
-  testWs.onmessage = (event) => console.log('📦 Message from backend:', event.data);
-
     ws.onopen = () => {
       console.log('✅ WebSocket connected successfully');
     };
